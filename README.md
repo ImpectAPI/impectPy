@@ -26,6 +26,7 @@ following code snippet:
 
 ``` python
 import impectPy as ip
+import pandas as pd
 
 # define login credentials
 username = "yourUsername"
