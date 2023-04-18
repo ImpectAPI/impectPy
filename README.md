@@ -41,7 +41,7 @@ competition iterations that are enabled for your account.
 
 ``` python
 # get list of competition iterations
-competitions = getCompetitions(token = token)
+competitions = ip.getCompetitions(token = token)
 
 # print competition iterations to console
 competitions
@@ -55,7 +55,7 @@ matches for this competition and season:
 
 ``` python
 # get match plan for competition iteration
-matchplan = getMatchplan(competitionIterationId = 518, token = token)
+matchplan = ip.getMatchplan(competitionIterationId = 518, token = token)
 
 # print match to console
 matchplan
@@ -72,7 +72,7 @@ following code snippet:
 matchId = 84344
 
 # get event data for match
-events = getEventData(match = matchId, token = token)
+events = ip.getEventData(match = matchId, token = token)
 
 # print first few rows from events dataframe to console
 events.head()
@@ -86,7 +86,7 @@ match in a similar way:
 matchId = 84344
 
 # get matchsums for match
-matchsums = getMatchsums(match = matchId, token = token)
+matchsums = ip.getMatchsums(match = matchId, token = token)
 
 # print first few rows from matchsums dataframe to console
 matchsums.head()
