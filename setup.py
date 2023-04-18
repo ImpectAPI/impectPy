@@ -1,4 +1,8 @@
+import os
 from setuptools import setup
+
+with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "README.md")) as f:
+    README = f.read()
 
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
@@ -17,6 +21,5 @@ setup(
     # The license can be anything you like
     license="MIT",
     description="A Python package to facilitate interaction with the Impect customer API",
-    # We will also need a readme eventually (there will be a warning)
-    # long_description=open('README.txt').read(),
+    long_description=README,
 )
