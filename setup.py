@@ -16,7 +16,7 @@ setup(
     version="0.1",
     # The license can be anything you like
     license="MIT",
-    description="Access data from the Impect customer API",
+    description="A Python package to facilitate interaction with the Impect customer API",
     # We will also need a readme eventually (there will be a warning)
     # long_description=open('README.txt').read(),
 )
