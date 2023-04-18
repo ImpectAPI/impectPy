@@ -14,7 +14,7 @@ match level.
 You can install the developmental version of impectPy from
 [GitHub](https://github.com/) with:
 
-``` python
+``` cmd
 pip install git+https://github.com/ImpectAPI/impectPy.git
 ```
 
