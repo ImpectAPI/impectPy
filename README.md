@@ -117,6 +117,57 @@ Please keep in mind that Impect enforces a rate limit of 8 requests per
 second per user. As the function usually runs for about 2 seconds, there
 shouldn’t be any issues, but it might be a potential issue.
 
+## SportsCodeXML
+
+It is also possible to convert a dataframe containing event data into an XML file,
+that can be imported into Sportscode. Let's use the Bayern vs Dortmund game from 
+earlier as an example:
+
+``` python
+# define matchId
+match_id = 84344
+
+# get event data for matchId
+events = ip.getEventData(match_id, token)
+
+# define lead and lag time in seconds
+lead = 3
+lag = 3
+
+# define period start offsets from video start in seconds
+p1Start = 16
+p2Start = 48*60 + 53
+p3Start = 0 # set to 0 if there was no extra time
+p4Start = 0 # set to 0 if there was no extra time
+
+# generate xml
+xml_tree = ip.generateXML(events=events,
+                          lead=lead,
+                          lag=lag,
+                          p1Start=p1Start,
+                          p2Start=p2Start,
+                          p3Start=p3Start,
+                          p4Start=p4Start)
+
+# write to xml file 
+with open(f"match{match_id}_"
+          # add home team name
+          f"{events.squadHomeName.unique().tolist()[0].replace(' ', '_')}"
+          f"_vs_"
+          # add away team name
+          f"{events.squadAwayName.unique().tolist()[0].replace(' ', '_')}"
+          f".xml",
+          "wb") as file:
+    xml_tree.write(file,
+               xml_declaration=True,
+               encoding='utf-8',
+               method="xml")
+```
+
+If you wish to customize the XML file in terms of included KPIs or the applied
+grouping, please refer to the "define parameters" section of
+scripts/generateCustomXML.py
+
 ## Final Notes
 
 Further documentation on the data and explanations of variables can be
