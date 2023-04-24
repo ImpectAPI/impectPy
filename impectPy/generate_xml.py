@@ -10,7 +10,7 @@ import pandas as pd
 
 
 # define function
-def generateXML(events: pd.DataFrame,
+def generateSportsCodeXML(events: pd.DataFrame,
                 lead: int,
                 lag: int,
                 p1Start: int,
@@ -47,7 +47,7 @@ def generateXML(events: pd.DataFrame,
                {"label": "[3,5[",
                 "min": 3,
                 "max": 5},
-               {"label": ">5",
+               {"label": ">=5",
                 "min": 5,
                 "max": 50}]
 
@@ -267,6 +267,7 @@ def generateXML(events: pd.DataFrame,
 
     ## create copy of data to evaluate phases
     phases = players.copy()
+    phases = phases[phases.phase.notnull()]
 
     ## create lag columns for phase and squadId
     phases["phase_lag"] = phases.phase.shift(1)
@@ -417,7 +418,7 @@ def generateXML(events: pd.DataFrame,
         ### add labels
         for label in labels:
             ### check for nan and None (those values should be omitted and not added as label)
-            if (value := str(phases.iat[row, phases.columns.get_loc(label)])) not in ["None", "nan"]:
+            if (value := str(kickoffs.iat[row, kickoffs.columns.get_loc(label)])) not in ["None", "nan"]:
                 wrapper = ET.SubElement(instance, "label")
                 group = ET.SubElement(wrapper, "group")
                 group.text = label
