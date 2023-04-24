@@ -17,7 +17,7 @@ setup(
                       "pandas",
                       "numpy"],
     # *strongly* suggested for sharing
-    version="0.1",
+    version="0.1.1",
     # The license can be anything you like
     license="MIT",
     description="A Python package to facilitate interaction with the Impect customer API",

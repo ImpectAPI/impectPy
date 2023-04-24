@@ -1,3 +1,9 @@
+# impectPy 0.1.1
+
+## Minor improvements and bug fixes
+* renamed `generateXML()` to `generateSportsCodeXML()`
+* Minor bug fixes in `generateSportsCodeXML()`
+
 # impectPy 0.1
 
 ## Major changes
@@ -7,7 +13,6 @@
 * Added `getMatchplan()` function
 * Added `getEventData()` function
 * Added `getMatchsums()` function
-
 
 ## Minor improvements and bug fixes
 * Added a `NEWS.md` file to track changes to the package
