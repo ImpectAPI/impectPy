@@ -1,3 +1,11 @@
+# impectPy 1.0.0
+
+## Major changes
+* Release package
+
+## Minor changes
+* implement retry on HTTP response codes other than 200
+
 # impectPy 0.1.1
 
 ## Minor improvements and bug fixes
