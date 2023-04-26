@@ -135,19 +135,21 @@ lead = 3
 lag = 3
 
 # define period start offsets from video start in seconds
-p1Start = 16
-p2Start = 48*60 + 53
+p1Start = 16 # first half kickoff happens after 16 seconds in your video file
+p2Start = 48 * 60 + 53 # first half kickoff happens after 48 minutes and 53 seconds in your video file
 p3Start = 0 # set to 0 if there was no extra time
 p4Start = 0 # set to 0 if there was no extra time
 
 # generate xml
-xml_tree = ip.generateXML(events=events,
-                          lead=lead,
-                          lag=lag,
-                          p1Start=p1Start,
-                          p2Start=p2Start,
-                          p3Start=p3Start,
-                          p4Start=p4Start)
+xml_tree = ip.generateSportsCodeXML(
+    events=events,
+    lead=lead,
+    lag=lag,
+    p1Start=p1Start,
+    p2Start=p2Start,
+    p3Start=p3Start,
+    p4Start=p4Start
+    )
 
 # write to xml file 
 with open(f"match{match_id}_"
@@ -159,9 +161,9 @@ with open(f"match{match_id}_"
           f".xml",
           "wb") as file:
     xml_tree.write(file,
-               xml_declaration=True,
-               encoding='utf-8',
-               method="xml")
+                   xml_declaration=True,
+                   encoding='utf-8',
+                   method="xml")
 ```
 
 If you wish to customize the XML file in terms of included KPIs or the applied
