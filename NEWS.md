@@ -1,3 +1,8 @@
+# impectPy 1.0.1
+
+## Minor improvements and bug fixes
+* Fix issue in `getAccessToken()` with certain characters in password
+
 # impectPy 1.0.0
 
 ## Major changes
