@@ -47,7 +47,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
                {"label": "[3,5[",
                 "min": 3,
                 "max": 5},
-               {"label": ">=5",
+               {"label": "[5,∞]",
                 "min": 5,
                 "max": 50}]
 
@@ -145,7 +145,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
         # get period offset
         offset = offsets[f"p{periodId}"]
         # calculate and return start time
-        return gameTimeInSec - (periodId - 1) * 10000 + offset - lead
+        return max(gameTimeInSec - (periodId - 1) * 10000 + offset - lead, 0)
 
     ## define function to calculate end time
     def end_time(gameTimeInSec, periodId, duration):
@@ -395,7 +395,8 @@ def generateSportsCodeXML(events: pd.DataFrame,
     # add kickoff events to start each period
 
     ## define labels
-    labels = ["periodId"]
+    labels = [{"order": "02 | ",
+               "name": "periodId"}]
 
     ## add to xml structure
     for row in range(0, len(kickoffs)):
@@ -418,10 +419,10 @@ def generateSportsCodeXML(events: pd.DataFrame,
         ### add labels
         for label in labels:
             ### check for nan and None (those values should be omitted and not added as label)
-            if (value := str(kickoffs.iat[row, kickoffs.columns.get_loc(label)])) not in ["None", "nan"]:
+            if (value := str(kickoffs.iat[row, kickoffs.columns.get_loc(label["name"])])) not in ["None", "nan"]:
                 wrapper = ET.SubElement(instance, "label")
                 group = ET.SubElement(wrapper, "group")
-                group.text = label
+                group.text = label["order"] + label["name"]
                 text = ET.SubElement(wrapper, "text")
                 text.text = value
             else:
@@ -436,41 +437,76 @@ def generateSportsCodeXML(events: pd.DataFrame,
     players["actionTypeResult"] = players.apply(lambda x: x.actionType + "_" + x.result if x.result else None, axis=1)
 
     ## define labels to be added
-    labels = ["matchId",
-              "periodId",
-              "phase",
-              "gameState",
-              "playerDetailedPosition",
-              "action",
-              "actionType",
-              "bodyPart",
-              "actionTypeResult",
-              "startPackingZone",
-              "startPitchPosition",
-              "startLane",
-              "endPackingZone",
-              "endPitchPosition",
-              "endLane",
-              "opponents",
-              "pressure",
-              "pxTTeam",
-              "pressingPlayerName",
-              "duelType",
-              "duelPlayerName",
-              "fouledPlayerName",
-              "passDistance",
-              "passReceiverPlayerName",
-              "leadsToShot",
-              "leadsToGoal",
-              "PXT_DELTA",
-              "BYPASSED_OPPONENTS",
-              "BYPASSED_DEFENDERS",
-              "BYPASSED_OPPONENTS_RECEIVING",
-              "BYPASSED_DEFENDERS_RECEIVING",
-              "BALL_LOSS_ADDED_OPPONENTS",
-              "BALL_LOSS_REMOVED_TEAMMATES",
-              "BALL_WIN_ADDED_TEAMMATES",
-              "BALL_WIN_REMOVED_OPPONENTS"]
+    labels = [{"order": "01 | ",
+               "name": "matchId"},
+              {"order": "02 | ",
+               "name": "periodId"},
+              {"order": "03 | ",
+               "name": "phase"},
+              {"order": "04 | ",
+               "name": "gameState"},
+              {"order": "05 | ",
+               "name": "playerDetailedPosition"},
+              {"order": "06 | ",
+               "name": "action"},
+              {"order": "07 | ",
+               "name": "actionType"},
+              {"order": "08 | ",
+               "name": "bodyPart"},
+              {"order": "09 | ",
+               "name": "actionTypeResult"},
+              {"order": "10 | ",
+               "name": "startPackingZone"},
+              {"order": "11 | ",
+               "name": "startPitchPosition"},
+              {"order": "12 | ",
+               "name": "startLane"},
+              {"order": "13 | ",
+               "name": "endPackingZone"},
+              {"order": "14 | ",
+               "name": "endPitchPosition"},
+              {"order": "15 | ",
+               "name": "endLane"},
+              {"order": "16 | ",
+               "name": "opponents"},
+              {"order": "17 | ",
+               "name": "pressure"},
+              {"order": "18 | ",
+               "name": "pxTTeam"},
+              {"order": "19 | ",
+               "name": "pressingPlayerName"},
+              {"order": "20 | ",
+               "name": "duelType"},
+              {"order": "21 | ",
+               "name": "duelPlayerName"},
+              {"order": "22 | ",
+               "name": "fouledPlayerName"},
+              {"order": "23 | ",
+               "name": "passDistance"},
+              {"order": "24 | ",
+               "name": "passReceiverPlayerName"},
+              {"order": "25 | ",
+               "name": "leadsToShot"},
+              {"order": "26 | ",
+               "name": "leadsToGoal"},
+              {"order": "KPI: ",
+               "name": "PXT_DELTA"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_DEFENDERS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_RECEIVING"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_DEFENDERS_RECEIVING"},
+              {"order": "KPI: ",
+               "name": "BALL_LOSS_ADDED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "BALL_LOSS_REMOVED_TEAMMATES"},
+              {"order": "KPI: ",
+               "name": "BALL_WIN_ADDED_TEAMMATES"},
+              {"order": "KPI: ",
+               "name": "BALL_WIN_REMOVED_OPPONENTS"}]
 
     ## add data to xml structure
     ## the idea is to still iterate over each event separately but chose between
@@ -513,20 +549,20 @@ def generateSportsCodeXML(events: pd.DataFrame,
         ### add labels
         for label in labels:
             ### check for nan and None (those values should be omitted and not added as label)
-            if (value := str(players.iat[row, players.columns.get_loc(label)])) not in ["None", "nan"]:
+            if (value := str(players.iat[row, players.columns.get_loc(label["name"])])) not in ["None", "nan"]:
                 ### get value from previous event to compare if the value remains the same (and can be omitted
                 ### or if the value changed and therefore has to be added)
                 try:
-                    prev_value = players.at[row - 1, label]
+                    prev_value = players.at[row - 1, label["name"]]
                 ### if the key doesn't exist (previous to first row), assign current value
                 except KeyError:
-                    prev_value = players.at[row, label]
+                    prev_value = players.at[row, label["name"]]
                 ### check if first event of a sequence or the value is unequal to previous row
-                if seq_id_new != seq_id_current or players.at[row, label] != prev_value:
+                if seq_id_new != seq_id_current or players.at[row, label["name"]] != prev_value:
                     ### add label
                     wrapper = ET.SubElement(instance, "label")
                     group = ET.SubElement(wrapper, "group")
-                    group.text = label
+                    group.text = label["order"] + label["name"]
                     text = ET.SubElement(wrapper, "text")
                     text.text = value
             else:
@@ -539,23 +575,40 @@ def generateSportsCodeXML(events: pd.DataFrame,
     # add team level data
 
     ## define labels
-    labels = ["matchId",
-              "periodId",
-              "gameState",
-              "playerName",
-              "pxTTeamStart",
-              "pxTTeamEnd",
-              "PXT_DELTA",
-              "BYPASSED_OPPONENTS",
-              "BYPASSED_DEFENDERS",
-              "BYPASSED_OPPONENTS_RECEIVING",
-              "BYPASSED_DEFENDERS_RECEIVING",
-              "BALL_LOSS_ADDED_OPPONENTS",
-              "BALL_LOSS_REMOVED_TEAMMATES",
-              "BALL_WIN_ADDED_TEAMMATES",
-              "BALL_WIN_REMOVED_OPPONENTS",
-              "leadsToShot",
-              "leadsToGoal"]
+    labels = [{"order": "01 | ",
+               "name": "matchId"},
+              {"order": "02 | ",
+               "name": "periodId"},
+              {"order": "04 | ",
+               "name": "gameState"},
+              {"order": "27 | ",
+               "name": "playerName"},
+              {"order": "28 | ",
+               "name": "pxTTeamStart"},
+              {"order": "29 | ",
+               "name": "pxTTeamEnd"},
+              {"order": "25 | ",
+               "name": "leadsToShot"},
+              {"order": "26 | ",
+               "name": "leadsToGoal"},
+              {"order": "KPI: ",
+               "name": "PXT_DELTA"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_DEFENDERS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_RECEIVING"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_DEFENDERS_RECEIVING"},
+              {"order": "KPI: ",
+               "name": "BALL_LOSS_ADDED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "BALL_LOSS_REMOVED_TEAMMATES"},
+              {"order": "KPI: ",
+               "name": "BALL_WIN_ADDED_TEAMMATES"},
+              {"order": "KPI: ",
+               "name": "BALL_WIN_REMOVED_OPPONENTS"}]
 
     ## update max id after adding players
     max_id += players.sequence_id.max() + 1
@@ -579,20 +632,20 @@ def generateSportsCodeXML(events: pd.DataFrame,
         ### add labels
         for label in labels:
             ### check for label
-            if label == "playerName":
+            if label["name"] == "playerName":
                 ### for label "playerName" the list of players involved need to be unpacked
-                for player in phases.iat[row, phases.columns.get_loc(label)]:
+                for player in phases.iat[row, phases.columns.get_loc(label["name"])]:
                     wrapper = ET.SubElement(instance, "label")
                     group = ET.SubElement(wrapper, "group")
-                    group.text = "playerInvolved"
+                    group.text = "27 | playerInvolved"
                     text = ET.SubElement(wrapper, "text")
                     text.text = player
             else:
                 ### check for nan or None (those values should be omitted and not added as label)
-                if (value := str(phases.iat[row, phases.columns.get_loc(label)])) not in ["None", "nan"]:
+                if (value := str(phases.iat[row, phases.columns.get_loc(label["name"])])) not in ["None", "nan"]:
                     wrapper = ET.SubElement(instance, "label")
                     group = ET.SubElement(wrapper, "group")
-                    group.text = label
+                    group.text = label["order"] +  label["name"]
                     text = ET.SubElement(wrapper, "text")
                     text.text = value
                 else:
