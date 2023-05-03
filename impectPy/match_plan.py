@@ -12,7 +12,7 @@ import time
 
 
 # define function
-def getMatchplan(competitionIterationId: str, token: str) -> pd.DataFrame:
+def getMatchplan(competitionIterationId: int, token: str) -> pd.DataFrame:
     # construct header with access token
     my_header = {"Authorization": f"Bearer {token}"}
 
