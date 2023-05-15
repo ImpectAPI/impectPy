@@ -32,28 +32,112 @@ def generateSportsCodeXML(events: pd.DataFrame,
             "BALL_LOSS_ADDED_OPPONENTS",
             "BALL_LOSS_REMOVED_TEAMMATES",
             "BALL_WIN_ADDED_TEAMMATES",
-            "BALL_WIN_REMOVED_OPPONENTS"]
+            "BALL_WIN_REMOVED_OPPONENTS",
+            "REVERSE_PLAY_ADDED_OPPONENTS",
+            "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS",
+            "BYPASSED_OPPONENTS_RAW",
+            "BYPASSED_OPPONENTS_DEFENDERS_RAW",
+            "SHOT_XG",
+            "POSTSHOT_XG",
+            "PACKING_XG"]
 
     ## create empty dict to store bucket definitions for kpis
     kpi_buckets = {}
 
-    ## define bucket limits
-    buckets = [{"label": "[0,1[",
-                "min": 0,
-                "max": 1},
-               {"label": "[1,3[",
-                "min": 1,
-                "max": 3},
-               {"label": "[3,5[",
-                "min": 3,
-                "max": 5},
-               {"label": "[5,∞]",
-                "min": 5,
-                "max": 50}]
+    ## define bucket limits for kpis
+    buckets_packing = [
+        {"label": "[0,1[",
+         "min": 0,
+         "max": 1},
+        {"label": "[1,3[",
+         "min": 1,
+         "max": 3},
+        {"label": "[3,5[",
+         "min": 3,
+         "max": 5},
+        {"label": "[5,∞]",
+         "min": 5,
+         "max": 50}]
+
+    bucket_shotxg = [
+        {"label": "[0,0.02[",
+         "min": 0,
+         "max": 0.03},
+        {"label": "[0.02,0.05[",
+         "min": 0.03,
+         "max": 0.05},
+        {"label": "[0.05,0.1[",
+         "min": 0.05,
+         "max": 0.1},
+        {"label": "[0.1,0.15[",
+         "min": 0.1,
+         "max": 0.15},
+        {"label": "[0.15,1]",
+         "min": 0.15,
+         "max": 1.01}
+    ]
+
+    bucket_postshotxg = [
+        {"label": "[0,0.1[",
+         "min": 0,
+         "max": 0.1},
+        {"label": "[0.1,0.2[",
+         "min": 0.1,
+         "max": 0.2},
+        {"label": "[0.2,0.3[",
+         "min": 0.2,
+         "max": 0.3},
+        {"label": "[0.3,0.4[",
+         "min": 0.3,
+         "max": 0.4},
+        {"label": "[0.4,0.5]",
+         "min": 0.4,
+         "max": 0.5},
+        {"label": "[0.5,0.6[",
+         "min": 0.5,
+         "max": 0.6},
+        {"label": "[0.6,0.7[",
+         "min": 0.6,
+         "max": 0.7},
+        {"label": "[0.7,0.8[",
+         "min": 0.7,
+         "max": 0.8},
+        {"label": "[0.8,0.9[",
+         "min": 0.8,
+         "max": 0.9},
+        {"label": "[0.9,1]",
+         "min": 0.9,
+         "max": 1.01}
+    ]
+
+    bucket_packingxg = [
+        {"label": "[0,0.02[",
+         "min": 0,
+         "max": 0.03},
+        {"label": "[0.02,0.05[",
+         "min": 0.03,
+         "max": 0.05},
+        {"label": "[0.05,0.1[",
+         "min": 0.05,
+         "max": 0.1},
+        {"label": "[0.1,0.15[",
+         "min": 0.1,
+         "max": 0.15},
+        {"label": "[0.15,1]",
+         "min": 0.15,
+         "max": 1.1}
+    ]
 
     ## iterate over kpis and add buckets to dict
     for kpi in kpis:
-        kpi_buckets[kpi] = buckets
+        if kpi == "SHOT_XG":
+            kpi_buckets[kpi] = bucket_shotxg
+        elif kpi == "POSTSHOT_XG":
+            kpi_buckets[kpi] = bucket_postshotxg
+        elif kpi == "PACKING_XG":
+            kpi_buckets[kpi] = bucket_packingxg
+        else:
+            kpi_buckets[kpi] = buckets_packing
 
     ## define pressure buckets
     pressure_buckets = [{"label": "[0,30[",
@@ -301,6 +385,13 @@ def generateSportsCodeXML(events: pd.DataFrame,
          "BALL_LOSS_REMOVED_TEAMMATES": "sum",
          "BALL_WIN_ADDED_TEAMMATES": "sum",
          "BALL_WIN_REMOVED_OPPONENTS": "sum",
+         "REVERSE_PLAY_ADDED_OPPONENTS": "sum",
+         "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS": "sum",
+         "BYPASSED_OPPONENTS_RAW": "sum",
+         "BYPASSED_OPPONENTS_DEFENDERS_RAW": "sum",
+         "SHOT_XG": "sum",
+         "POSTSHOT_XG": "sum",
+         "PACKING_XG": "sum",
          "PXT_TEAM_DELTA": "sum",
          "pxTTeamStart": "first",
          "pxTTeamEnd": "last",
@@ -437,6 +528,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
     players["actionTypeResult"] = players.apply(lambda x: x.actionType + "_" + x.result if x.result else None, axis=1)
 
     ## define labels to be added
+
     labels = [{"order": "01 | ",
                "name": "matchId"},
               {"order": "02 | ",
@@ -506,7 +598,21 @@ def generateSportsCodeXML(events: pd.DataFrame,
               {"order": "KPI: ",
                "name": "BALL_WIN_ADDED_TEAMMATES"},
               {"order": "KPI: ",
-               "name": "BALL_WIN_REMOVED_OPPONENTS"}]
+               "name": "BALL_WIN_REMOVED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "REVERSE_PLAY_ADDED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_RAW"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_DEFENDERS_RAW"},
+              {"order": "KPI: ",
+               "name": "SHOT_XG"},
+              {"order": "KPI: ",
+               "name": "POSTSHOT_XG"},
+              {"order": "KPI: ",
+               "name": "PACKING_XG"}]
 
     ## add data to xml structure
     ## the idea is to still iterate over each event separately but chose between
@@ -608,7 +714,21 @@ def generateSportsCodeXML(events: pd.DataFrame,
               {"order": "KPI: ",
                "name": "BALL_WIN_ADDED_TEAMMATES"},
               {"order": "KPI: ",
-               "name": "BALL_WIN_REMOVED_OPPONENTS"}]
+               "name": "BALL_WIN_REMOVED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "REVERSE_PLAY_ADDED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_RAW"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_DEFENDERS_RAW"},
+              {"order": "KPI: ",
+               "name": "SHOT_XG"},
+              {"order": "KPI: ",
+               "name": "POSTSHOT_XG"},
+              {"order": "KPI: ",
+               "name": "PACKING_XG"}]
 
     ## update max id after adding players
     max_id += players.sequence_id.max() + 1
