@@ -1,3 +1,8 @@
+# impectPy 1.0.2
+
+## Minor changes
+* add features and KPIs to `generateSportsCodeXML()` function, finalize initial built for IMPECT portals  
+
 # impectPy 1.0.1
 
 ## Minor improvements and bug fixes
