@@ -284,9 +284,9 @@ def generateSportsCodeXML(events: pd.DataFrame,
 
     # add new columns
     events["startPackingZoneGroup"] = events.apply(
-        lambda x: zone_groups[x.startPackingZone] if x.startPackingZone.notnull() else x.startPackingZone, axis=1)
+        lambda x: zone_groups[x.startPackingZone] if x.startPackingZone in zone_groups.keys() else x.startPackingZone, axis=1)
     events["endPackingZoneGroup"] = events.apply(
-        lambda x: zone_groups[x.endPackingZone] if x.endPackingZone.notnull() else x.endPackingZone, axis=1)
+        lambda x: zone_groups[x.endPackingZone] if x.endPackingZone in zone_groups.keys() else x.endPackingZone, axis=1)
 
     # determine video timestamps
 
