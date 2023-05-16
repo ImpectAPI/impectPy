@@ -32,28 +32,112 @@ def generateSportsCodeXML(events: pd.DataFrame,
             "BALL_LOSS_ADDED_OPPONENTS",
             "BALL_LOSS_REMOVED_TEAMMATES",
             "BALL_WIN_ADDED_TEAMMATES",
-            "BALL_WIN_REMOVED_OPPONENTS"]
+            "BALL_WIN_REMOVED_OPPONENTS",
+            "REVERSE_PLAY_ADDED_OPPONENTS",
+            "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS",
+            "BYPASSED_OPPONENTS_RAW",
+            "BYPASSED_OPPONENTS_DEFENDERS_RAW",
+            "SHOT_XG",
+            "POSTSHOT_XG",
+            "PACKING_XG"]
 
     ## create empty dict to store bucket definitions for kpis
     kpi_buckets = {}
 
-    ## define bucket limits
-    buckets = [{"label": "[0,1[",
-                "min": 0,
-                "max": 1},
-               {"label": "[1,3[",
-                "min": 1,
-                "max": 3},
-               {"label": "[3,5[",
-                "min": 3,
-                "max": 5},
-               {"label": ">=5",
-                "min": 5,
-                "max": 50}]
+    ## define bucket limits for kpis
+    buckets_packing = [
+        {"label": "[0,1[",
+         "min": 0,
+         "max": 1},
+        {"label": "[1,3[",
+         "min": 1,
+         "max": 3},
+        {"label": "[3,5[",
+         "min": 3,
+         "max": 5},
+        {"label": "[5,∞]",
+         "min": 5,
+         "max": 50}]
+
+    bucket_shotxg = [
+        {"label": "[0,0.02[",
+         "min": 0,
+         "max": 0.03},
+        {"label": "[0.02,0.05[",
+         "min": 0.03,
+         "max": 0.05},
+        {"label": "[0.05,0.1[",
+         "min": 0.05,
+         "max": 0.1},
+        {"label": "[0.1,0.15[",
+         "min": 0.1,
+         "max": 0.15},
+        {"label": "[0.15,1]",
+         "min": 0.15,
+         "max": 1.01}
+    ]
+
+    bucket_postshotxg = [
+        {"label": "[0,0.1[",
+         "min": 0,
+         "max": 0.1},
+        {"label": "[0.1,0.2[",
+         "min": 0.1,
+         "max": 0.2},
+        {"label": "[0.2,0.3[",
+         "min": 0.2,
+         "max": 0.3},
+        {"label": "[0.3,0.4[",
+         "min": 0.3,
+         "max": 0.4},
+        {"label": "[0.4,0.5]",
+         "min": 0.4,
+         "max": 0.5},
+        {"label": "[0.5,0.6[",
+         "min": 0.5,
+         "max": 0.6},
+        {"label": "[0.6,0.7[",
+         "min": 0.6,
+         "max": 0.7},
+        {"label": "[0.7,0.8[",
+         "min": 0.7,
+         "max": 0.8},
+        {"label": "[0.8,0.9[",
+         "min": 0.8,
+         "max": 0.9},
+        {"label": "[0.9,1]",
+         "min": 0.9,
+         "max": 1.01}
+    ]
+
+    bucket_packingxg = [
+        {"label": "[0,0.02[",
+         "min": 0,
+         "max": 0.03},
+        {"label": "[0.02,0.05[",
+         "min": 0.03,
+         "max": 0.05},
+        {"label": "[0.05,0.1[",
+         "min": 0.05,
+         "max": 0.1},
+        {"label": "[0.1,0.15[",
+         "min": 0.1,
+         "max": 0.15},
+        {"label": "[0.15,1]",
+         "min": 0.15,
+         "max": 1.1}
+    ]
 
     ## iterate over kpis and add buckets to dict
     for kpi in kpis:
-        kpi_buckets[kpi] = buckets
+        if kpi == "SHOT_XG":
+            kpi_buckets[kpi] = bucket_shotxg
+        elif kpi == "POSTSHOT_XG":
+            kpi_buckets[kpi] = bucket_postshotxg
+        elif kpi == "PACKING_XG":
+            kpi_buckets[kpi] = bucket_packingxg
+        else:
+            kpi_buckets[kpi] = buckets_packing
 
     ## define pressure buckets
     pressure_buckets = [{"label": "[0,30[",
@@ -110,11 +194,17 @@ def generateSportsCodeXML(events: pd.DataFrame,
                     "max": -0.1}]
 
     ## define pass length buckets
-    pass_buckets = [{"label": "<15",
-                     "min": -1,
+    pass_buckets = [{"label": "[0,5[",
+                     "min": 0,
+                     "max": 5},
+                    {"label": "[5,15[",
+                     "min": 5,
                      "max": 15},
-                    {"label": ">=15",
+                    {"label": "[15,25[",
                      "min": 15,
+                     "max": 25},
+                    {"label": "[25,∞]",
+                     "min": 25,
                      "max": 200}]
 
     ## define color schemes
@@ -138,6 +228,66 @@ def generateSportsCodeXML(events: pd.DataFrame,
         lambda x: x.PXT_BLOCK + x.PXT_DRIBBLE + x.PXT_FOUL + x.PXT_BALL_WIN +
                   x.PXT_PASS + x.PXT_SHOT + x.PXT_SETPIECE, axis=1)
 
+    # add grouping for packing zones
+
+    # define zone groups
+    zone_groups = {
+        'AMC': 'AM',
+        'AML': 'AM',
+        'AMR': 'AM',
+        'CBC': 'CB',
+        'CBL': 'CB',
+        'CBR': 'CB',
+        'CMC': 'CM',
+        'CML': 'CM',
+        'CMR': 'CM',
+        'DMC': 'DM',
+        'DML': 'DM',
+        'DMR': 'DM',
+        'FBL': 'FBL',
+        'FBR': 'FBR',
+        'GKC': 'GK',
+        'GKR': 'GK',
+        'GKL': 'GK',
+        'IBC': 'IBC',
+        'IBR': 'IBC',
+        'IBL': 'IBC',
+        'IBWL': 'IBWL',
+        'IBWR': 'IBWR',
+        'WL': 'WL',
+        'WR': 'WR',
+        'OPP_AMC': 'OPP_AM',
+        'OPP_AML': 'OPP_AM',
+        'OPP_AMR': 'OPP_AM',
+        'OPP_CBC': 'OPP_CB',
+        'OPP_CBL': 'OPP_CB',
+        'OPP_CBR': 'OPP_CB',
+        'OPP_CMC': 'OPP_CM',
+        'OPP_CML': 'OPP_CM',
+        'OPP_CMR': 'OPP_CM',
+        'OPP_DMC': 'OPP_DM',
+        'OPP_DML': 'OPP_DM',
+        'OPP_DMR': 'OPP_DM',
+        'OPP_FBL': 'OPP_FBL',
+        'OPP_FBR': 'OPP_FBR',
+        'OPP_GKC': 'OPP_GK',
+        'OPP_GKR': 'OPP_GK',
+        'OPP_GKL': 'OPP_GK',
+        'OPP_IBC': 'OPP_IBC',
+        'OPP_IBR': 'OPP_IBC',
+        'OPP_IBL': 'OPP_IBC',
+        'OPP_IBWL': 'OPP_IBWL',
+        'OPP_IBWR': 'OPP_IBWR',
+        'OPP_WL': 'OPP_WL',
+        'OPP_WR': 'OPP_WR'
+    }
+
+    # add new columns
+    events["startPackingZoneGroup"] = events.apply(
+        lambda x: zone_groups[x.startPackingZone] if x.startPackingZone.notnull() else x.startPackingZone, axis=1)
+    events["endPackingZoneGroup"] = events.apply(
+        lambda x: zone_groups[x.endPackingZone] if x.endPackingZone.notnull() else x.endPackingZone, axis=1)
+
     # determine video timestamps
 
     ## define function to calculate start time
@@ -145,7 +295,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
         # get period offset
         offset = offsets[f"p{periodId}"]
         # calculate and return start time
-        return gameTimeInSec - (periodId - 1) * 10000 + offset - lead
+        return max(gameTimeInSec - (periodId - 1) * 10000 + offset - lead, 0)
 
     ## define function to calculate end time
     def end_time(gameTimeInSec, periodId, duration):
@@ -301,6 +451,13 @@ def generateSportsCodeXML(events: pd.DataFrame,
          "BALL_LOSS_REMOVED_TEAMMATES": "sum",
          "BALL_WIN_ADDED_TEAMMATES": "sum",
          "BALL_WIN_REMOVED_OPPONENTS": "sum",
+         "REVERSE_PLAY_ADDED_OPPONENTS": "sum",
+         "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS": "sum",
+         "BYPASSED_OPPONENTS_RAW": "sum",
+         "BYPASSED_OPPONENTS_DEFENDERS_RAW": "sum",
+         "SHOT_XG": "sum",
+         "POSTSHOT_XG": "sum",
+         "PACKING_XG": "sum",
          "PXT_TEAM_DELTA": "sum",
          "pxTTeamStart": "first",
          "pxTTeamEnd": "last",
@@ -395,7 +552,8 @@ def generateSportsCodeXML(events: pd.DataFrame,
     # add kickoff events to start each period
 
     ## define labels
-    labels = ["periodId"]
+    labels = [{"order": "02 | ",
+               "name": "periodId"}]
 
     ## add to xml structure
     for row in range(0, len(kickoffs)):
@@ -418,10 +576,10 @@ def generateSportsCodeXML(events: pd.DataFrame,
         ### add labels
         for label in labels:
             ### check for nan and None (those values should be omitted and not added as label)
-            if (value := str(kickoffs.iat[row, kickoffs.columns.get_loc(label)])) not in ["None", "nan"]:
+            if (value := str(kickoffs.iat[row, kickoffs.columns.get_loc(label["name"])])) not in ["None", "nan"]:
                 wrapper = ET.SubElement(instance, "label")
                 group = ET.SubElement(wrapper, "group")
-                group.text = label
+                group.text = label["order"] + label["name"]
                 text = ET.SubElement(wrapper, "text")
                 text.text = value
             else:
@@ -436,41 +594,95 @@ def generateSportsCodeXML(events: pd.DataFrame,
     players["actionTypeResult"] = players.apply(lambda x: x.actionType + "_" + x.result if x.result else None, axis=1)
 
     ## define labels to be added
-    labels = ["matchId",
-              "periodId",
-              "phase",
-              "gameState",
-              "playerDetailedPosition",
-              "action",
-              "actionType",
-              "bodyPart",
-              "actionTypeResult",
-              "startPackingZone",
-              "startPitchPosition",
-              "startLane",
-              "endPackingZone",
-              "endPitchPosition",
-              "endLane",
-              "opponents",
-              "pressure",
-              "pxTTeam",
-              "pressingPlayerName",
-              "duelType",
-              "duelPlayerName",
-              "fouledPlayerName",
-              "passDistance",
-              "passReceiverPlayerName",
-              "leadsToShot",
-              "leadsToGoal",
-              "PXT_DELTA",
-              "BYPASSED_OPPONENTS",
-              "BYPASSED_DEFENDERS",
-              "BYPASSED_OPPONENTS_RECEIVING",
-              "BYPASSED_DEFENDERS_RECEIVING",
-              "BALL_LOSS_ADDED_OPPONENTS",
-              "BALL_LOSS_REMOVED_TEAMMATES",
-              "BALL_WIN_ADDED_TEAMMATES",
-              "BALL_WIN_REMOVED_OPPONENTS"]
+
+    labels = [{"order": "01 | ",
+               "name": "matchId"},
+              {"order": "02 | ",
+               "name": "periodId"},
+              {"order": "03 | ",
+               "name": "phase"},
+              {"order": "04 | ",
+               "name": "gameState"},
+              {"order": "05 | ",
+               "name": "playerDetailedPosition"},
+              {"order": "06 | ",
+               "name": "action"},
+              {"order": "07 | ",
+               "name": "actionType"},
+              {"order": "08 | ",
+               "name": "bodyPart"},
+              {"order": "09 | ",
+               "name": "actionTypeResult"},
+              {"order": "10 | ",
+               "name": "startPackingZone"},
+              {"order": "11 | ",
+               "name": "startPackingZoneGroup"},
+              {"order": "12 | ",
+               "name": "startPitchPosition"},
+              {"order": "13 | ",
+               "name": "startLane"},
+              {"order": "14 | ",
+               "name": "endPackingZone"},
+              {"order": "15 | ",
+               "name": "endPackingZoneGroup"},
+              {"order": "16 | ",
+               "name": "endPitchPosition"},
+              {"order": "17 | ",
+               "name": "endLane"},
+              {"order": "18 | ",
+               "name": "opponents"},
+              {"order": "19 | ",
+               "name": "pressure"},
+              {"order": "20 | ",
+               "name": "pxTTeam"},
+              {"order": "21 | ",
+               "name": "pressingPlayerName"},
+              {"order": "22 | ",
+               "name": "duelType"},
+              {"order": "23 | ",
+               "name": "duelPlayerName"},
+              {"order": "24 | ",
+               "name": "fouledPlayerName"},
+              {"order": "25 | ",
+               "name": "passDistance"},
+              {"order": "26 | ",
+               "name": "passReceiverPlayerName"},
+              {"order": "27 | ",
+               "name": "leadsToShot"},
+              {"order": "28 | ",
+               "name": "leadsToGoal"},
+              {"order": "KPI: ",
+               "name": "PXT_DELTA"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_DEFENDERS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_RECEIVING"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_DEFENDERS_RECEIVING"},
+              {"order": "KPI: ",
+               "name": "BALL_LOSS_ADDED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "BALL_LOSS_REMOVED_TEAMMATES"},
+              {"order": "KPI: ",
+               "name": "BALL_WIN_ADDED_TEAMMATES"},
+              {"order": "KPI: ",
+               "name": "BALL_WIN_REMOVED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "REVERSE_PLAY_ADDED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_RAW"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_DEFENDERS_RAW"},
+              {"order": "KPI: ",
+               "name": "SHOT_XG"},
+              {"order": "KPI: ",
+               "name": "POSTSHOT_XG"},
+              {"order": "KPI: ",
+               "name": "PACKING_XG"}]
 
     ## add data to xml structure
     ## the idea is to still iterate over each event separately but chose between
@@ -513,20 +725,20 @@ def generateSportsCodeXML(events: pd.DataFrame,
         ### add labels
         for label in labels:
             ### check for nan and None (those values should be omitted and not added as label)
-            if (value := str(players.iat[row, players.columns.get_loc(label)])) not in ["None", "nan"]:
+            if (value := str(players.iat[row, players.columns.get_loc(label["name"])])) not in ["None", "nan"]:
                 ### get value from previous event to compare if the value remains the same (and can be omitted
                 ### or if the value changed and therefore has to be added)
                 try:
-                    prev_value = players.at[row - 1, label]
+                    prev_value = players.at[row - 1, label["name"]]
                 ### if the key doesn't exist (previous to first row), assign current value
                 except KeyError:
-                    prev_value = players.at[row, label]
+                    prev_value = players.at[row, label["name"]]
                 ### check if first event of a sequence or the value is unequal to previous row
-                if seq_id_new != seq_id_current or players.at[row, label] != prev_value:
+                if seq_id_new != seq_id_current or players.at[row, label["name"]] != prev_value:
                     ### add label
                     wrapper = ET.SubElement(instance, "label")
                     group = ET.SubElement(wrapper, "group")
-                    group.text = label
+                    group.text = label["order"] + label["name"]
                     text = ET.SubElement(wrapper, "text")
                     text.text = value
             else:
@@ -539,23 +751,54 @@ def generateSportsCodeXML(events: pd.DataFrame,
     # add team level data
 
     ## define labels
-    labels = ["matchId",
-              "periodId",
-              "gameState",
-              "playerName",
-              "pxTTeamStart",
-              "pxTTeamEnd",
-              "PXT_DELTA",
-              "BYPASSED_OPPONENTS",
-              "BYPASSED_DEFENDERS",
-              "BYPASSED_OPPONENTS_RECEIVING",
-              "BYPASSED_DEFENDERS_RECEIVING",
-              "BALL_LOSS_ADDED_OPPONENTS",
-              "BALL_LOSS_REMOVED_TEAMMATES",
-              "BALL_WIN_ADDED_TEAMMATES",
-              "BALL_WIN_REMOVED_OPPONENTS",
-              "leadsToShot",
-              "leadsToGoal"]
+    labels = [{"order": "01 | ",
+               "name": "matchId"},
+              {"order": "02 | ",
+               "name": "periodId"},
+              {"order": "04 | ",
+               "name": "gameState"},
+              {"order": "29 | ",
+               "name": "playerName"},
+              {"order": "30 | ",
+               "name": "pxTTeamStart"},
+              {"order": "31 | ",
+               "name": "pxTTeamEnd"},
+              {"order": "27 | ",
+               "name": "leadsToShot"},
+              {"order": "28 | ",
+               "name": "leadsToGoal"},
+              {"order": "KPI: ",
+               "name": "PXT_DELTA"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_DEFENDERS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_RECEIVING"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_DEFENDERS_RECEIVING"},
+              {"order": "KPI: ",
+               "name": "BALL_LOSS_ADDED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "BALL_LOSS_REMOVED_TEAMMATES"},
+              {"order": "KPI: ",
+               "name": "BALL_WIN_ADDED_TEAMMATES"},
+              {"order": "KPI: ",
+               "name": "BALL_WIN_REMOVED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "REVERSE_PLAY_ADDED_OPPONENTS"},
+              {"order": "KPI: ",
+               "name": "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_RAW"},
+              {"order": "KPI: ",
+               "name": "BYPASSED_OPPONENTS_DEFENDERS_RAW"},
+              {"order": "KPI: ",
+               "name": "SHOT_XG"},
+              {"order": "KPI: ",
+               "name": "POSTSHOT_XG"},
+              {"order": "KPI: ",
+               "name": "PACKING_XG"}]
 
     ## update max id after adding players
     max_id += players.sequence_id.max() + 1
@@ -579,20 +822,20 @@ def generateSportsCodeXML(events: pd.DataFrame,
         ### add labels
         for label in labels:
             ### check for label
-            if label == "playerName":
+            if label["name"] == "playerName":
                 ### for label "playerName" the list of players involved need to be unpacked
-                for player in phases.iat[row, phases.columns.get_loc(label)]:
+                for player in phases.iat[row, phases.columns.get_loc(label["name"])]:
                     wrapper = ET.SubElement(instance, "label")
                     group = ET.SubElement(wrapper, "group")
-                    group.text = "playerInvolved"
+                    group.text = "27 | playerInvolved"
                     text = ET.SubElement(wrapper, "text")
                     text.text = player
             else:
                 ### check for nan or None (those values should be omitted and not added as label)
-                if (value := str(phases.iat[row, phases.columns.get_loc(label)])) not in ["None", "nan"]:
+                if (value := str(phases.iat[row, phases.columns.get_loc(label["name"])])) not in ["None", "nan"]:
                     wrapper = ET.SubElement(instance, "label")
                     group = ET.SubElement(wrapper, "group")
-                    group.text = label
+                    group.text = label["order"] +  label["name"]
                     text = ET.SubElement(wrapper, "text")
                     text.text = value
                 else:
