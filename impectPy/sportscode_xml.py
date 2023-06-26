@@ -482,7 +482,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
 
     ## filter for kick off events of each period
     kickoffs = events.copy()[
-        (events.actionType == "KICK_OFF") & ((events.gameTimeInSec - (events.periodId - 1) * 10000) < 1)].reset_index()
+        (events.actionType == "KICK_OFF") & ((events.gameTimeInSec - (events.periodId - 1) * 10000) < 10)].reset_index()
 
     # apply bucket logic
 
@@ -688,65 +688,69 @@ def generateSportsCodeXML(events: pd.DataFrame,
     ## the idea is to still iterate over each event separately but chose between
     ## creating a new instance and appending to the existing instance
     for row in range(0, len(players)):
-        ### if first iteration set seq_id_current to 1
-        if row == 0:
-            seq_id_current = 0
-        else:
-            pass
 
-        ### get new sequence_id
-        seq_id_new = players.iat[row, players.columns.get_loc("sequence_id")]
+        # skip row if no player (e.g. no video, referee interception, etc)
+        if pd.notnull(players.iat[row, players.columns.get_loc("playerName")]):
 
-        ### check if new sequence_id or first iteration
-        if seq_id_new != seq_id_current or row == 0:
-            ### add instance
-            instance = ET.SubElement(instances, "instance")
-            ### add event id
-            event_id = ET.SubElement(instance, "ID")
-            event_id.text = str(players.iat[row, players.columns.get_loc("sequence_id")] + max_id)
-            ### add start time
-            start = ET.SubElement(instance, "start")
-            start.text = str(round(sequence_timing.at[seq_id_new - 1, "start"], 2))
-            ### add end time
-            end = ET.SubElement(instance, "end")
-            end.text = str(round(sequence_timing.at[seq_id_new - 1, "end"], 2))
-            ### add player as code
-            code = ET.SubElement(instance, "code")
-            code.text = players.iat[row, players.columns.get_loc("playerName")]
-            ### add description
-            free_text = ET.SubElement(instance, "free_text")
-            free_text.text = f"({players.iat[row, players.columns.get_loc('gameTime')]}) " \
-                             f"{players.iat[row, players.columns.get_loc('playerName')]}: " \
-                             f"{players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
-        else:
-            ### append current action to existing description
-            free_text.text += f" | {players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
-
-        ### add labels
-        for label in labels:
-            ### check for nan and None (those values should be omitted and not added as label)
-            if (value := str(players.iat[row, players.columns.get_loc(label["name"])])) not in ["None", "nan"]:
-                ### get value from previous event to compare if the value remains the same (and can be omitted
-                ### or if the value changed and therefore has to be added)
-                try:
-                    prev_value = players.at[row - 1, label["name"]]
-                ### if the key doesn't exist (previous to first row), assign current value
-                except KeyError:
-                    prev_value = players.at[row, label["name"]]
-                ### check if first event of a sequence or the value is unequal to previous row
-                if seq_id_new != seq_id_current or players.at[row, label["name"]] != prev_value:
-                    ### add label
-                    wrapper = ET.SubElement(instance, "label")
-                    group = ET.SubElement(wrapper, "group")
-                    group.text = label["order"] + label["name"]
-                    text = ET.SubElement(wrapper, "text")
-                    text.text = value
+            ### if first iteration set seq_id_current to 1
+            if row == 0:
+                seq_id_current = 0
             else:
-                ### don't add label
                 pass
 
-        ### update current sequence_id
-        seq_id_current = seq_id_new
+            ### get new sequence_id
+            seq_id_new = players.iat[row, players.columns.get_loc("sequence_id")]
+
+            ### check if new sequence_id or first iteration
+            if seq_id_new != seq_id_current or row == 0:
+                ### add instance
+                instance = ET.SubElement(instances, "instance")
+                ### add event id
+                event_id = ET.SubElement(instance, "ID")
+                event_id.text = str(players.iat[row, players.columns.get_loc("sequence_id")] + max_id)
+                ### add start time
+                start = ET.SubElement(instance, "start")
+                start.text = str(round(sequence_timing.at[seq_id_new - 1, "start"], 2))
+                ### add end time
+                end = ET.SubElement(instance, "end")
+                end.text = str(round(sequence_timing.at[seq_id_new - 1, "end"], 2))
+                ### add player as code
+                code = ET.SubElement(instance, "code")
+                code.text = players.iat[row, players.columns.get_loc("playerName")]
+                ### add description
+                free_text = ET.SubElement(instance, "free_text")
+                free_text.text = f"({players.iat[row, players.columns.get_loc('gameTime')]}) " \
+                                 f"{players.iat[row, players.columns.get_loc('playerName')]}: " \
+                                 f"{players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
+            else:
+                ### append current action to existing description
+                free_text.text += f" | {players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
+
+            ### add labels
+            for label in labels:
+                ### check for nan and None (those values should be omitted and not added as label)
+                if (value := str(players.iat[row, players.columns.get_loc(label["name"])])) not in ["None", "nan"]:
+                    ### get value from previous event to compare if the value remains the same (and can be omitted
+                    ### or if the value changed and therefore has to be added)
+                    try:
+                        prev_value = players.at[row - 1, label["name"]]
+                    ### if the key doesn't exist (previous to first row), assign current value
+                    except KeyError:
+                        prev_value = players.at[row, label["name"]]
+                    ### check if first event of a sequence or the value is unequal to previous row
+                    if seq_id_new != seq_id_current or players.at[row, label["name"]] != prev_value:
+                        ### add label
+                        wrapper = ET.SubElement(instance, "label")
+                        group = ET.SubElement(wrapper, "group")
+                        group.text = label["order"] + label["name"]
+                        text = ET.SubElement(wrapper, "text")
+                        text.text = value
+                else:
+                    ### don't add label
+                    pass
+
+            ### update current sequence_id
+            seq_id_current = seq_id_new
 
     # add team level data
 
