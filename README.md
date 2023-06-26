@@ -2,7 +2,7 @@
 
 A package provided by: Impect GmbH
 
-Updated: April 17th 2023
+Updated: June 26th 2023
 
 The goal of the impectPy package is to provide an easy way for Impect
 Customers to access data from the customer API. This API includes basic
