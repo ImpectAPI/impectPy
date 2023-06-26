@@ -1,3 +1,9 @@
+# impectPy 1.0.3
+
+## Minor changes
+* fix bug in `generateSportsCodeXML()` that did not filter out events of action type 'NO_VIDEO_AVAILABLE', 'FINAL_WHISTLE' or 'REFEREE_INTERCEPTION' correctly
+* fix bug in `generateSportsCodeXML()` that caused certain kickoffs to be missing
+
 # impectPy 1.0.2
 
 ## Minor changes
