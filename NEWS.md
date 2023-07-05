@@ -1,4 +1,11 @@
-# impectPy 1.0.3
+# impectPy 2.0.0
+
+## Major changes
+* Modify package to support the IMPECT API V5 instead of V4
+* Add `getPlayerIterationAverages()` function
+* Add `getSquadIterationAverages()` function
+* 
+* # impectPy 1.0.3
 
 ## Minor changes
 * fix bug in `generateSportsCodeXML()` that did not filter out events of action type 'NO_VIDEO_AVAILABLE', 'FINAL_WHISTLE' or 'REFEREE_INTERCEPTION' correctly
