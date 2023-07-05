@@ -1,30 +1,31 @@
+# load packages
+import pandas as pd
+import re
+import requests
+from typing import Optional
+from impectPy.helpers import RateLimitedAPI
+
 ######
 #
 # This function returns a dataframe containing all competitionIterations available to the user
 #
 ######
 
-import requests
-import pandas as pd
-import re
-import time
-from impectPy.helpers import make_api_request
-
 
 # define function
-def getIterations(token: str) -> pd.DataFrame:
+def getIterations(token: str, session: Optional[requests.Session] = None) -> pd.DataFrame:
+    # create an instance of RateLimitedAPI
+    rate_limited_api = RateLimitedAPI(session)
+
     # construct header with access token
     my_header = {"Authorization": f"Bearer {token}"}
 
     # request competition iteration information from API
-    response = make_api_request(
+    response = rate_limited_api.make_api_request_limited(
         "https://api.release.impect.com/v5/customerapi/iterations/",
         method="GET",
         headers=my_header
     )
-
-    # raise an HTTPError for a non-200 status code
-    response.raise_for_status()
 
     # get data from response
     data = response.json()["data"]
