@@ -1,3 +1,10 @@
+# load packages
+import pandas as pd
+import numpy as np
+from impectPy.helpers import RateLimitedAPI
+from .matches import getMatches
+from .iterations import getIterations
+
 ######
 #
 # This function returns a pandas dataframe that contains all events for a
@@ -5,245 +12,293 @@
 #
 ######
 
-# load packages
-import requests
-import pandas as pd
-import re
-import numpy as np
-import time
-from .helpers import make_api_request
-
 
 # define function
-def getEventData(match: str, token: str) -> pd.DataFrame:
+def getEvents(matches: list, token: str) -> pd.DataFrame:
+    # create an instance of RateLimitedAPI
+    rate_limited_api = RateLimitedAPI()
+
     # construct header with access token
     my_header = {"Authorization": f"Bearer {token}"}
 
-    # create session object
-    with requests.Session() as session:
-        # get match events
-        response = make_api_request(url=f"https://api.impect.com/v4/customerapi/matches/{match}/events",
-                                    method="GET",
-                                    headers=my_header,
-                                    session=session)
+    # check input for matches argument
+    if not type(matches) == list:
+        print("Input vor matches argument must be a list of integers")
 
-        # check response status
-        response.raise_for_status()
+    # get match events
+    events = pd.concat(
+        map(lambda match: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}/events",
+            method="GET",
+            headers=my_header
+        ).process_response(
+        ).assign(
+            matchId=match
+        ),
+            matches),
+        ignore_index=True)
 
-        # get data from response
-        response_data = response.json()["data"]
+    # get event scorings
+    scorings = pd.concat(
+        map(lambda match: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}/event-kpis",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            matches),
+        ignore_index=True)
 
-        # add matchId to each event and append to events list
-        events = [{**event, "matchId": response_data["matchId"]} for event in response_data["events"]]
+    # get match info
+    iterations = pd.concat(
+        map(lambda match: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            matches),
+        ignore_index=True)
 
-        # get match data
-        response = make_api_request(url=f"https://api.impect.com/v4/customerapi/matches/{match}",
-                                    method="GET",
-                                    headers=my_header,
-                                    session=session)
+    # extract iterationIds
+    iterations = list(iterations.iterationId.unique())
 
-        # check response status
-        response.raise_for_status()
+    # get players
+    players = pd.concat(
+        map(lambda iteration: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/players",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            iterations),
+        ignore_index=True)
 
-        # get data from response
-        response_data = response.json()["data"]
+    # get squads
+    squads = pd.concat(
+        map(lambda iteration: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            iterations),
+        ignore_index=True)
 
-        # create player list
-        players = {player["playerId"]: player["commonname"]
-                   for side in ["squadHome", "squadAway"]
-                   for squad in [response_data[side]]
-                   for player in squad["players"]}
+    # get kpis
+    kpis = rate_limited_api.make_api_request_limited(
+        url=f"https://api.release.impect.com/v5/customerapi/kpis/event",
+        method="GET",
+        headers=my_header
+    ).process_response()
 
-        # get competition info for match
-        match_info = {key: response_data["competition"].get(key) for key in [
-            "competition", "competitionId", "competitionType",
-            "competitionIterationId", "competitionIterationName",
-            "competitionIterationStepId", "competitionIterationStepName"]}
+    # get matches
+    matchplan = pd.concat(
+        map(lambda iteration: getMatches(
+            iteration=iteration,
+            token=token,
+            session=rate_limited_api.session
+        ),
+            iterations),
+        ignore_index=True)
 
-        # add basic match info
-        match_info.update({key: response_data.get(key) for key in ["matchId", "date", "dateTime"]})
+    # get iterations
+    iterations = getIterations(token=token, session=rate_limited_api.session)
 
-        # iterate over sides
-        for side in ["squadHome", "squadAway"]:
-            # add squad info
-            match_info.update({f'{side}{key[0].upper()}{key[1:]}': response_data.get(side).get(key)
-                               for key in ['squadId', 'name', 'squadholderType']})
+    # start merging dfs
 
-            match_info.update({f'{side}Country{key[0].upper()}{key[1:]}': response_data.get(side)['country'].get(key)
-                               for key in ['id', 'name']})
+    # merge events with squads
+    events = events.merge(
+        squads[["id", "name"]].rename(columns={"id": "squadId", "name": "squadName"}),
+        left_on="squadId",
+        right_on="squadId",
+        how="left",
+        suffixes=("", "_home")
+    ).merge(
+        squads[["id", "name"]].rename(columns={"id": "squadId", "name": "currentAttackingSquadName"}),
+        left_on="currentAttackingSquadId",
+        right_on="squadId",
+        how="left",
+        suffixes=("", "_away")
+    )
 
-        # convert to pandas df
-        events = pd.json_normalize(events)
+    # merge events with players
+    events = events.merge(
+        players[["id", "commonname"]].rename(columns={"id": "playerId", "commonname": "playerName"}),
+        left_on="playerId",
+        right_on="playerId",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        players[["id", "commonname"]].rename(
+            columns={"id": "pressingPlayerId", "commonname": "pressingPlayerName"}),
+        left_on="playerId",
+        right_on="pressingPlayerId",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        players[["id", "commonname"]].rename(columns={"id": "fouledPlayerId", "commonname": "fouledPlayerName"}),
+        left_on="playerId",
+        right_on="fouledPlayerId",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        players[["id", "commonname"]].rename(columns={"id": "duelPlayerId", "commonname": "duelPlayerName"}),
+        left_on="playerId",
+        right_on="duelPlayerId",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        players[["id", "commonname"]].rename(
+            columns={"id": "passReceiverPlayerId", "commonname": "passReceiverPlayerName"}),
+        left_on="playerId",
+        right_on="passReceiverPlayerId",
+        how="left",
+        suffixes=("", "_right")
+    )
 
-        # fix column names using regex
-        events = events.rename(columns=lambda x: re.sub("\.(.)", lambda y: y.group(1).upper(), x))
+    # merge with matches info
+    events = events.merge(
+        matchplan,
+        left_on="matchId",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    )
 
-        # drop columns that where nested but now hold only NA values
-        drop_cols = ["player", "start", "end", "pass", "shot", "duel", "pxT"]
+    # merge with competition info
+    events = events.merge(
+        iterations,
+        left_on="iterationId",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    )
 
-        # create list of columns containing player ids for which names are required
-        player_id_cols = ["playerId", "duelPlayerId", "pressingPlayerId", "fouledPlayerId", "passReceiverPlayerId"]
+    # unnest scorings and full join with kpi list to ensure all kpis are present
+    scorings = scorings.merge(kpis, left_on="kpiId", right_on="id", how="outer") \
+        .sort_values("kpiId") \
+        .drop("kpiId", axis=1) \
+        .fillna({"eventId": "", "position": "", "playerId": ""}) \
+        .pivot_table(index=["eventId", "position", "playerId"], columns="name", values="value", aggfunc="sum",
+                     fill_value=None) \
+        .reset_index() \
+        .loc[lambda df: df["eventId"].notna()]
 
-        # use list comprehension and map() to add playerName columns to events dataframe
-        events[[f"{col[:-2]}Name" for col in player_id_cols]] = events[player_id_cols].applymap(
-            lambda x: players.get(x))
+    # Replace empty strings with NaN in the eventId and playerId column
+    scorings["eventId"].replace('', np.nan, inplace=True)
+    scorings["playerId"].replace('', np.nan, inplace=True)
+    events["playerId"].replace('', np.nan, inplace=True)
 
-        # add the values from the match_info dictionary as new columns in the events dataframe
-        for key, value in match_info.items():
-            events[key] = pd.Series([value] * len(events))
+    # Convert column eventId from float to int
+    scorings["eventId"] = scorings["eventId"].astype(pd.Int64Dtype())
+    scorings["playerId"] = scorings["playerId"].astype(pd.Int64Dtype())
+    events["playerId"] = events["playerId"].astype(pd.Int64Dtype())
 
-        # add squadName
-        home_mask = events["squadHomeSquadId"] == events["squadId"]
-        away_mask = events["squadAwaySquadId"] == events["squadId"]
-        squad_name = np.where(home_mask, events["squadHomeName"],
-                              np.where(away_mask, events["squadAwayName"], None))
-        events["squadName"] = squad_name
+    # merge events and scorings
+    events = events.merge(scorings,
+                          left_on=["playerPosition", "playerId", "id"],
+                          right_on=["position", "playerId", "eventId"],
+                          how="left",
+                          suffixes=("", "_scorings"))
 
-        # add currentAttackingSquadName
-        home_mask = events["squadHomeSquadId"] == events["currentAttackingSquadId"]
-        away_mask = events["squadAwaySquadId"] == events["currentAttackingSquadId"]
-        attacking_squad_name = np.where(home_mask, events["squadHomeName"],
-                                        np.where(away_mask, events["squadAwayName"], None))
-        events["currentAttackingSquadName"] = attacking_squad_name
+    # rename some columns
+    events = events.rename(columns={
+        "currentAttackingSquadId": "attackingSquadId",
+        "currentAttackingSquadName": "attackingSquadName",
+        "duelDuelType": "duelType",
+        "scheduledDate": "dateTime",
+        "gameTimeGameTime": "gameTime",
+        "gameTimeGameTimeInSec": "gameTimeInSec",
+        "eventId": "eventId_scorings",
+        "id": "eventId",
+        "index": "eventNumber"
+    })
 
-        # get kpi list
-        response = make_api_request(url=f"https://api.impect.com/v4/customerapi/kpis",
-                                    method="GET",
-                                    headers=my_header,
-                                    session=session)
+    # define desired column order
+    attribute_cols = [
+        "matchId",
+        "dateTime",
+        "competitionId",
+        "competitionName",
+        "competitionType",
+        "iterationId",
+        "season",
+        "matchDayIndex",
+        "matchDayName",
+        "homeSquadId",
+        "homeSquadName",
+        "homeSquadCountryId",
+        "homeSquadCountryName",
+        "homeSquadType",
+        "awaySquadId",
+        "awaySquadName",
+        "awaySquadCountryId",
+        "awaySquadCountryName",
+        "awaySquadType",
+        "eventId",
+        "eventNumber",
+        "periodId",
+        "gameTime",
+        "gameTimeInSec",
+        "duration",
+        "squadId",
+        "squadName",
+        "attackingSquadId",
+        "attackingSquadName",
+        "phase",
+        "playerId",
+        "playerName",
+        "playerPosition",
+        "actionType",
+        "action",
+        "bodyPart",
+        "result",
+        "startCoordinatesX",
+        "startCoordinatesY",
+        "startAdjCoordinatesX",
+        "startAdjCoordinatesY",
+        "startPackingZone",
+        "startPitchPosition",
+        "startLane",
+        "endCoordinatesX",
+        "endCoordinatesY",
+        "endAdjCoordinatesX",
+        "endAdjCoordinatesY",
+        "endPackingZone",
+        "endPitchPosition",
+        "endLane",
+        "opponents",
+        "pressure",
+        "distanceToGoal",
+        "pxTTeam",
+        "pxTOpponent",
+        "pressingPlayerId",
+        "pressingPlayerName",
+        "distanceToOpponent",
+        "passReceiverType",
+        "passReceiverPlayerId",
+        "passReceiverPlayerName",
+        "passDistance",
+        "passAngle",
+        "shotDistance",
+        "shotAngle",
+        "shotTargetPointY",
+        "shotTargetPointZ",
+        "duelType",
+        "duelPlayerId",
+        "duelPlayerName",
+        "fouledPlayerId",
+        "fouledPlayerName"
+    ]
 
-        # check response status
-        response.raise_for_status()
+    # get list of kpi columns
+    kpi_cols = kpis['name'].tolist()
 
-        # get data from response
-        kpis = response.json()["data"]
+    # create order
+    order = attribute_cols + kpi_cols
 
-        # extract kpiIds
-        kpi_ids = [kpi["kpiId"] for kpi in kpis]
+    # reorder data
+    events = events[order]
 
-        # create dictionary to store sums for each kpiId
-        kpi_sums = {kpi: [] for kpi in kpi_ids}
+    # reorder rows
+    events = events.sort_values(["matchId", "eventNumber"])
 
-        # iterate over rows and update kpi_sums
-        for row in events.itertuples():
-            # initialize dict with 0 for each kpiId
-            row_sums = {kpi: 0 for kpi in kpi_ids}
-
-            # sum values for each kpiId
-            for score in row.scorings:
-                kpi_id = score["kpiId"]
-                if kpi_id in kpi_ids:
-                    row_sums[kpi_id] += score["value"]
-
-            # add row_sums to kpi_sums
-            for kpi in kpi_ids:
-                kpi_sums[kpi].append(row_sums[kpi])
-
-        # create new DataFrame from kpi_sums and merge dfs
-        events = pd.concat([events, pd.DataFrame(kpi_sums)], axis=1)
-
-        # add scorings to drop_cols list
-        drop_cols.append("scorings")
-
-        # remove original columns
-        events = events.drop(drop_cols, axis=1)
-
-        # get dict as input for rename method
-        names_map = {kpi["kpiId"]: kpi["kpiName"] for kpi in kpis}
-
-        # add some columns to be renamed
-        names_map["currentAttackingSquadId"] = "attackingSquadId"
-        names_map["currentAttackingSquadName"] = "attackingSquadName"
-        names_map["playerPositionPosition"] = "playerPosition"
-        names_map["playerPositionDetailedPosition"] = "playerDetailedPosition"
-        names_map["duelDuelType"] = "duelType"
-
-        # replace column headers
-        events = events.rename(columns=names_map)
-
-        # define desired column oder
-        attribute_cols = ["matchId",
-                          "date",
-                          "dateTime",
-                          "competition",
-                          "competitionId",
-                          "competitionType",
-                          "competitionIterationId",
-                          "competitionIterationName",
-                          "competitionIterationStepId",
-                          "competitionIterationStepName",
-                          "squadHomeSquadId",
-                          "squadHomeName",
-                          "squadHomeCountryId",
-                          "squadHomeCountryName",
-                          "squadHomeSquadholderType",
-                          "squadAwaySquadId",
-                          "squadAwayName",
-                          "squadAwayCountryId",
-                          "squadAwayCountryName",
-                          "squadAwaySquadholderType",
-                          "eventNumber",
-                          "periodId",
-                          "gameTime",
-                          "gameTimeInSec",
-                          "duration",
-                          "squadId",
-                          "squadName",
-                          "attackingSquadId",
-                          "attackingSquadName",
-                          "phase",
-                          "playerId",
-                          "playerName",
-                          "playerPosition",
-                          "playerDetailedPosition",
-                          "actionType",
-                          "action",
-                          "bodyPart",
-                          "result",
-                          'startCoordinatesX',
-                          "startCoordinatesY",
-                          "startAdjCoordinatesX",
-                          "startAdjCoordinatesY",
-                          "startPackingZone",
-                          "startPitchPosition",
-                          "startLane",
-                          "endCoordinatesX",
-                          "endCoordinatesY",
-                          "endAdjCoordinatesX",
-                          "endAdjCoordinatesY",
-                          "endPackingZone",
-                          "endPitchPosition",
-                          "endLane",
-                          "opponents",
-                          "pressure",
-                          "distanceToGoal",
-                          "pxTTeam",
-                          "pxTOpponent",
-                          "pressingPlayerId",
-                          "pressingPlayerName",
-                          "distanceToOpponent",
-                          "passReceiverType",
-                          "passReceiverPlayerId",
-                          "passReceiverPlayerName",
-                          "passDistance",
-                          "passAngle",
-                          "shotDistance",
-                          "shotAngle",
-                          "shotTargetPointY",
-                          "shotTargetPointZ",
-                          "duelType",
-                          "duelPlayerId",
-                          "duelPlayerName",
-                          "fouledPlayerId",
-                          "fouledPlayerName"]
-
-        # get list of kpi columns
-        kpi_cols = events.columns[events.columns.get_loc("BYPASSED_OPPONENTS"):].tolist()
-
-        # create order
-        order = attribute_cols + kpi_cols
-
-        # reorder data
-        events = events[order]
-
-        return events
+    # return events
+    return events
