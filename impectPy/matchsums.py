@@ -1,155 +1,378 @@
-######
-#
-# This function returns a pandas dataframe that contains all events for a
-# given match
-#
-######
-
-
 # load packages
-import requests
 import pandas as pd
-import time
-from .helpers import make_api_request
+from impectPy.helpers import RateLimitedAPI
+from .matches import getMatches
+from .iterations import getIterations
 
 
-# define function
-def getMatchsums(match: str, token: str) -> pd.DataFrame:
+######
+#
+# This function returns a pandas dataframe that contains all kpis for a
+# given match aggregated per player and position
+#
+######
+
+
+def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
+    # create an instance of RateLimitedAPI
+    rate_limited_api = RateLimitedAPI()
+
     # construct header with access token
     my_header = {"Authorization": f"Bearer {token}"}
 
-    # create session object
-    with requests.Session() as session:
-        # get match info
-        response = make_api_request(url=f"https://api.impect.com/v4/customerapi/matches/{match}",
-                                    method="GET",
-                                    headers=my_header,
-                                    session=session)
+    # check input for matches argument
+    if not type(matches) == list:
+        print("Input vor matches argument must be a list of integers")
 
-        # check response status
-        response.raise_for_status()
+    # get player match sums
+    matchsums_raw = pd.concat(
+        map(lambda match: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}/player-kpis",
+            method="GET",
+            headers=my_header
+        ).process_response(
+        ).assign(
+            matchId=match
+        ),
+            matches),
+        ignore_index=True)
 
-        # get data from response
-        match_info = response.json()["data"]
+    # get match info
+    iterations = pd.concat(
+        map(lambda match: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            matches),
+        ignore_index=True)
 
-        # define function to extract players
-        def extract_players(dict, side):
+    # extract iterationIds
+    iterations = list(iterations.iterationId.unique())
+
+    # get players
+    players = pd.concat(
+        map(lambda iteration: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/players",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            iterations),
+        ignore_index=True)
+
+    # get squads
+    squads = pd.concat(
+        map(lambda iteration: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            iterations),
+        ignore_index=True)
+
+    # get kpis
+    kpis = rate_limited_api.make_api_request_limited(
+        url=f"https://api.release.impect.com/v5/customerapi/kpis",
+        method="GET",
+        headers=my_header
+    ).process_response()
+
+    # get matches
+    matchplan = pd.concat(
+        map(lambda iteration: getMatches(
+            iteration=iteration,
+            token=token,
+            session=rate_limited_api.session
+        ),
+            iterations),
+        ignore_index=True)
+
+    # get iterations
+    iterations = getIterations(token=token, session=rate_limited_api.session)
+
+    # create empty df to store matchsums
+    matchsums = pd.DataFrame()
+
+    # manipulate matchsums
+
+    # iterate over matches
+    for i in range(len(matchsums_raw)):
+
+        # iterate over sides
+        for side in ["squadHomePlayers", "squadAwayPlayers"]:
+            # get data for index
+            temp = matchsums_raw[side].loc[i]
+
             # convert to pandas df
-            df = pd.json_normalize(dict,
-                                   record_path=[side, "players"],
-                                   meta=["matchId", "date", "dateTime", "competition"])
+            temp = pd.DataFrame(temp).assign(
+                matchId=matchsums_raw.matchId.loc[i],
+                squadId=matchsums_raw[side.replace("Players", "Id")].loc[i]
+            )
 
-            # filter for players with playtime only
-            df = df.loc[df.playTime.str.len() > 0]
+            # explode kpis column
+            temp = temp.explode("kpis")
 
-            # add columns for squadId and squadName
-            df["squadId"] = dict[side]["squadId"]
-            df["squadName"] = dict[side]["name"]
-
-            # apply json_normalize to unnest the 'competition' column and reorder columns
-            df = pd.concat([df[["matchId", "date", "dateTime"]],
-                            df["competition"].apply(pd.Series),
-                            df[["squadId", "squadName", "playerId", "commonname", "playTime"]]],
-                           axis=1)
-
-            # return df
-            return df
-
-        # apply function to both sides
-        players_home = extract_players(match_info, "squadHome")
-        players_away = extract_players(match_info, "squadAway")
-
-        # merge home and away players to one list
-        players = pd.concat([players_home, players_away])
-
-        # explode playTime column
-        players = players.explode("playTime")
-
-        # unnest dictionary in playTime column
-        players = pd.concat([players.drop(["playTime"], axis=1),
-                             players["playTime"].apply(pd.Series)],
-                            axis=1)
-
-        # get match sums
-        response = make_api_request(url=f"https://api.impect.com/v4/customerapi/matches/{match}/matchsums",
-                                    method="GET",
-                                    headers=my_header,
-                                    session=session)
-
-        # check response status
-        response.raise_for_status()
-
-        # get data from response
-        match_sums = response.json()["data"]
-
-        # get kpi list
-        kpis = make_api_request(url=f"https://api.impect.com/v4/customerapi/kpis",
-                                method="GET",
-                                headers=my_header,
-                                session=session)
-
-        # check response status
-        kpis.raise_for_status()
-
-        # get data from response
-        kpis = kpis.json()["data"]
-
-        # convert to df
-        kpis = pd.DataFrame(kpis)
-
-        # define function to extract matchsums
-        def extract_matchsums(dict, side):
-            # normalize dictionary into dataframe
-            match_sums = pd.json_normalize(dict, record_path=[side, "players"])
-
-            # filter for players with playtime only
-            match_sums = match_sums.loc[match_sums.scorings.str.len() > 0]
-
-            # explode playTime column
-            match_sums = match_sums.explode("scorings")
-
-            # unnest dictionary in playTime column
-            match_sums = pd.concat([match_sums.drop(["scorings"], axis=1),
-                                    match_sums["scorings"].apply(pd.Series)],
-                                   axis=1)
+            # unnest dictionary in kpis column
+            temp = pd.concat(
+                [temp.drop(["kpis"], axis=1), temp["kpis"].apply(pd.Series)],
+                axis=1
+            )
 
             # merge with kpis to ensure all kpis are present
-            match_sums = pd.merge(match_sums, kpis, on="kpiId", how="outer")
+            temp = pd.merge(
+                temp,
+                kpis,
+                left_on="kpiId",
+                right_on="id",
+                how="outer",
+                suffixes=("", "right")
+            )
 
             # pivot data
-            match_sums = pd.pivot_table(match_sums,
-                                        values="totalValue",
-                                        index=["playerId", "detailedPosition"],
-                                        columns="kpiId",
-                                        aggfunc="sum",
-                                        fill_value=0,
-                                        dropna=False)
+            temp = pd.pivot_table(
+                temp,
+                values="value",
+                index=["matchId", "squadId", "id", "position", "matchShare"],
+                columns="name",
+                aggfunc="sum",
+                fill_value=0,
+                dropna=False
+            ).reset_index()
 
-            # return data
-            return match_sums
+            # append to matchsums
+            matchsums = pd.concat([matchsums, temp])
 
-        # apply function to both sides
-        match_sums_home = extract_matchsums(match_sums, "squadHome")
-        match_sums_away = extract_matchsums(match_sums, "squadAway")
+    # merge with other data
+    matchsums = matchsums.merge(
+        matchplan,
+        left_on="matchId",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        iterations,
+        left_on="iterationId",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        squads[["id", "name"]].rename(
+            columns={"id": "squadId", "name": "squadName"}
+        ),
+        left_on="squadId",
+        right_on="squadId",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        players[["id", "commonname"]].rename(
+            columns={"commonname": "playerName"}
+        ),
+        left_on="id",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    )
 
-        # merge home and away players to one list
-        match_sums = pd.concat([match_sums_home, match_sums_away])
+    # rename some columns
+    matchsums = matchsums.rename(columns={
+        "scheduledDate": "dateTime",
+        "id": "playerId"
+    })
 
-        # merge dfs
-        data = pd.merge(players.reset_index(),
-                        match_sums.reset_index(),
-                        how="left",
-                        left_on=["playerId", "detailedPosition"],
-                        right_on=["playerId", "detailedPosition"])
+    # define column order
+    order = [
+        "matchId",
+        "dateTime",
+        "competitionName",
+        "competitionId",
+        "competitionType",
+        "iterationId",
+        "season",
+        "matchDayIndex",
+        "matchDayName",
+        "squadId",
+        "squadName",
+        "playerId",
+        "playerName",
+        "position",
+        "matchShare"
+    ]
 
-        # create dict to fix kpi names
-        names_fix = {row.kpiId: row.kpiName for index, row in kpis.iterrows()}
+    # add kpiNames to order
+    order += kpis['name'].to_list()
 
-        # use the rename method to replace the column names
-        data = data.rename(columns=names_fix)
+    # select columns
+    matchsums = matchsums[order]
 
-        # drop index column
-        data = data.drop("index", axis=1)
+    # return data
+    return matchsums
 
-        # return data
-        return data
+
+######
+#
+# This function returns a pandas dataframe that contains all kpis for a
+# given match aggregated per squad
+#
+######
+
+
+def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
+    # create an instance of RateLimitedAPI
+    rate_limited_api = RateLimitedAPI()
+
+    # construct header with access token
+    my_header = {"Authorization": f"Bearer {token}"}
+
+    # check input for matches argument
+    if not type(matches) == list:
+        print("Input vor matches argument must be a list of integers")
+
+    # get player match sums
+    matchsums_raw = pd.concat(
+        map(lambda match: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}/squad-kpis",
+            method="GET",
+            headers=my_header
+        ).process_response(
+        ).assign(
+            matchId=match
+        ),
+            matches),
+        ignore_index=True)
+
+    # get match info
+    iterations = pd.concat(
+        map(lambda match: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            matches),
+        ignore_index=True)
+
+    # extract iterationIds
+    iterations = list(iterations.iterationId.unique())
+
+    # get squads
+    squads = pd.concat(
+        map(lambda iteration: rate_limited_api.make_api_request_limited(
+            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            iterations),
+        ignore_index=True)
+
+    # get kpis
+    kpis = rate_limited_api.make_api_request_limited(
+        url=f"https://api.release.impect.com/v5/customerapi/kpis",
+        method="GET",
+        headers=my_header
+    ).process_response()
+
+    # get matches
+    matchplan = pd.concat(
+        map(lambda iteration: getMatches(
+            iteration=iteration,
+            token=token,
+            session=rate_limited_api.session
+        ),
+            iterations),
+        ignore_index=True)
+
+    # get iterations
+    iterations = getIterations(token=token, session=rate_limited_api.session)
+
+    # create empty df to store matchsums
+    matchsums = pd.DataFrame()
+
+    # manipulate matchsums
+
+    # iterate over matches
+    for i in range(len(matchsums_raw)):
+
+        # iterate over sides
+        for side in ["squadHomeKpis", "squadAwayKpis"]:
+            # get data for index
+            temp = matchsums_raw[side].loc[i]
+
+            # convert to pandas df
+            temp = pd.DataFrame(temp).assign(
+                matchId=matchsums_raw.matchId.loc[i],
+                squadId=matchsums_raw[side.replace("Kpis", "Id")].loc[i]
+            )
+
+            # merge with kpis to ensure all kpis are present
+            temp = temp.merge(
+                kpis,
+                left_on="kpiId",
+                right_on="id",
+                how="outer",
+                suffixes=("", "right")
+            )
+
+            # pivot data
+            temp = pd.pivot_table(
+                temp,
+                values="value",
+                index=["matchId", "squadId"],
+                columns="name",
+                aggfunc="sum",
+                fill_value=0,
+                dropna=False
+            ).reset_index()
+
+            # append to matchsums
+            matchsums = pd.concat([matchsums, temp])
+
+    # merge with other data
+    matchsums = matchsums.merge(
+        matchplan,
+        left_on="matchId",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        iterations,
+        left_on="iterationId",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        squads[["id", "name"]].rename(
+            columns={"id": "squadId", "name": "squadName"}
+        ),
+        left_on="squadId",
+        right_on="squadId",
+        how="left",
+        suffixes=("", "_home")
+    )
+
+    # rename some columns
+    matchsums = matchsums.rename(columns={
+        "scheduledDate": "dateTime"
+    })
+
+    # define column order
+    order = [
+        "matchId",
+        "dateTime",
+        "competitionName",
+        "competitionId",
+        "competitionType",
+        "iterationId",
+        "season",
+        "matchDayIndex",
+        "matchDayName",
+        "squadId",
+        "squadName"
+    ]
+
+    # add kpiNames to order
+    order += kpis['name'].to_list()
+
+    # select columns
+    matchsums = matchsums[order]
+
+    # return data
+    return matchsums
