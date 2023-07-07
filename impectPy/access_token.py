@@ -15,7 +15,7 @@ def getAccessToken(username: str, password: str) -> str:
     rate_limited_api = RateLimitedAPI()
 
     # create tokenURL
-    token_url = "https://login.impect.com/auth/realms/release/protocol/openid-connect/token"
+    token_url = "https://login.impect.com/auth/realms/production/protocol/openid-connect/token"
 
     # define request parameters
     login = 'client_id=api&grant_type=password&username=' + urllib.parse.quote(

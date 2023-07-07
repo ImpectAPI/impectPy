@@ -22,7 +22,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
 
     # get match data
     matches = rate_limited_api.make_api_request_limited(
-        url="https://api.release.impect.com/v5/customerapi/iterations/"
+        url="https://api.impect.com/v5/customerapi/iterations/"
             f"{iteration}/matches",
         method="GET",
         headers=my_header)
@@ -32,7 +32,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
 
     # get squads data
     squads = rate_limited_api.make_api_request_limited(
-        url="https://api.release.impect.com/v5/customerapi/iterations/"
+        url="https://api.impect.com/v5/customerapi/iterations/"
             f"{iteration}/squads",
         method="GET",
         headers=my_header)
@@ -42,7 +42,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
 
     # get country data
     countries = rate_limited_api.make_api_request_limited(
-        url="https://api.release.impect.com/v5/customerapi/countries",
+        url="https://api.impect.com/v5/customerapi/countries",
         method="GET",
         headers=my_header)
 

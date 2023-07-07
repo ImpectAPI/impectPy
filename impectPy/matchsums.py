@@ -27,7 +27,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
     # get player match sums
     matchsums_raw = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}/player-kpis",
+            url=f"https://api.impect.com/v5/customerapi/matches/{match}/player-kpis",
             method="GET",
             headers=my_header
         ).process_response(
@@ -40,7 +40,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
     # get match info
     iterations = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}",
+            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
             method="GET",
             headers=my_header
         ).process_response(),
@@ -53,7 +53,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
     # get players
     players = pd.concat(
         map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/players",
+            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
             method="GET",
             headers=my_header
         ).process_response(),
@@ -63,7 +63,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
     # get squads
     squads = pd.concat(
         map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
         ).process_response(),
@@ -72,7 +72,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
 
     # get kpis
     kpis = rate_limited_api.make_api_request_limited(
-        url=f"https://api.release.impect.com/v5/customerapi/kpis",
+        url=f"https://api.impect.com/v5/customerapi/kpis",
         method="GET",
         headers=my_header
     ).process_response()
@@ -230,7 +230,7 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
     # get player match sums
     matchsums_raw = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}/squad-kpis",
+            url=f"https://api.impect.com/v5/customerapi/matches/{match}/squad-kpis",
             method="GET",
             headers=my_header
         ).process_response(
@@ -243,7 +243,7 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
     # get match info
     iterations = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.release.impect.com/v5/customerapi/matches/{match}",
+            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
             method="GET",
             headers=my_header
         ).process_response(),
@@ -256,7 +256,7 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
     # get squads
     squads = pd.concat(
         map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
         ).process_response(),
@@ -265,7 +265,7 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
 
     # get kpis
     kpis = rate_limited_api.make_api_request_limited(
-        url=f"https://api.release.impect.com/v5/customerapi/kpis",
+        url=f"https://api.impect.com/v5/customerapi/kpis",
         method="GET",
         headers=my_header
     ).process_response()

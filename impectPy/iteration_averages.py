@@ -25,7 +25,7 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
 
     # get squads
     squads = rate_limited_api.make_api_request_limited(
-        url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/squads",
+        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
         method="GET",
         headers=my_header
     ).process_response()
@@ -36,7 +36,7 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     # get player iteration averages per squad
     averages_raw = pd.concat(
         map(lambda squadId: rate_limited_api.make_api_request_limited(
-            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/"
+            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/"
                 f"squads/{squadId}/player-kpis",
             method="GET",
             headers=my_header
@@ -49,14 +49,14 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
 
     # get players
     players = rate_limited_api.make_api_request_limited(
-        url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/players",
+        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
         method="GET",
         headers=my_header
     ).process_response()
 
     # get kpis
     kpis = rate_limited_api.make_api_request_limited(
-        url=f"https://api.release.impect.com/v5/customerapi/kpis",
+        url=f"https://api.impect.com/v5/customerapi/kpis",
         method="GET",
         headers=my_header
     ).process_response()
@@ -181,21 +181,21 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
 
     # get squads
     squads = rate_limited_api.make_api_request_limited(
-        url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/squads",
+        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
         method="GET",
         headers=my_header
     ).process_response()
 
     # get squad iteration averages
     averages_raw = rate_limited_api.make_api_request_limited(
-            url=f"https://api.release.impect.com/v5/customerapi/iterations/{iteration}/squad-kpis",
+            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squad-kpis",
             method="GET",
             headers=my_header
         ).process_response().assign(iterationId=iteration)
 
     # get kpis
     kpis = rate_limited_api.make_api_request_limited(
-        url=f"https://api.release.impect.com/v5/customerapi/kpis",
+        url=f"https://api.impect.com/v5/customerapi/kpis",
         method="GET",
         headers=my_header
     ).process_response()

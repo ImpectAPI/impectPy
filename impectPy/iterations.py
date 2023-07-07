@@ -22,7 +22,7 @@ def getIterations(token: str, session: Optional[requests.Session] = None) -> pd.
 
     # request competition iteration information from API
     response = rate_limited_api.make_api_request_limited(
-        "https://api.release.impect.com/v5/customerapi/iterations/",
+        "https://api.impect.com/v5/customerapi/iterations/",
         method="GET",
         headers=my_header
     )
