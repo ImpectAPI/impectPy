@@ -190,13 +190,13 @@ xml_tree = ip.generateSportsCodeXML(
     p4Start=p4Start
 )
 
-# write to xml file 
-with open(f"match{match_id}_"
+# write to xml file
+with open(f"match{matches[0]}_"
           # add home team name
-          f"{events.squadHomeName.unique().tolist()[0].replace(' ', '_')}"
+          f"{events.homeSquadName.unique().tolist()[0].replace(' ', '_')}"
           f"_vs_"
           # add away team name
-          f"{events.squadAwayName.unique().tolist()[0].replace(' ', '_')}"
+          f"{events.awaySquadName.unique().tolist()[0].replace(' ', '_')}"
           f".xml",
           "wb") as file:
     xml_tree.write(file,
