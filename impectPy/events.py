@@ -23,7 +23,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not type(matches) == list:
-        print("Input vor matches argument must be a list of integers")
+        raise Exception("Argument 'matches' must be a list of integers.")
 
     # get match events
     events = pd.concat(
