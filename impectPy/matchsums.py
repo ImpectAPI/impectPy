@@ -22,7 +22,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not type(matches) == list:
-        print("Input vor matches argument must be a list of integers")
+        raise Exception("Argument 'matches' must be a list of integers.")
 
     # get player match sums
     matchsums_raw = pd.concat(
