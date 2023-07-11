@@ -1,16 +1,13 @@
-# impectPy 2.0.1
-
-## Minor changes
-* Fix error in readme sample code
-* raise exception for wrong `matches` argument input type
-* fix error in base urls for most functions
-
 # impectPy 2.0.0
 
 ## Major changes
 * Modify package to support the IMPECT API V5 instead of V4
 * Add `getPlayerIterationAverages()` function
 * Add `getSquadIterationAverages()` function
+
+## Minor changes
+* Fix error in readme sample code
+* raise exception for wrong `matches` argument input type in several functions
 * 
 * # impectPy 1.0.3
 
