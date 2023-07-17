@@ -125,6 +125,9 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
     # reorder matches
     matches = matches.sort_values(by=["matchDayIndex", "id"])
 
+    # sort matches
+    matches = matches.sort_values(by="id")
+
     # return matches
     return matches
 
