@@ -2,7 +2,11 @@
 
 A package provided by: Impect GmbH
 
-Updated: June 28th 2023
+Version: v2.0.1
+
+**Updated: July 17th 2023**
+
+---
 
 **Supported API Version: V5**<br>
 For older versions, please see list below:
@@ -16,13 +20,15 @@ information about competitions, competition iterations, and matches as
 well as event data and aggregated scorings per player and position on
 match and season level.
 
+---
+
 ## Installation
 
 You can install the latest version of impectPy from
 [GitHub](https://github.com/) with:
 
 ``` cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.0.1
 ```
 
 ## Getting started
@@ -62,7 +68,7 @@ snippet gets you a list of matches for this iteration:
 
 ``` python
 # get matches for iteration
-matchplan = ip.getMatches(iterationId=518, token=token)
+matchplan = ip.getMatches(iteration=518, token=token)
 
 # print matches to console
 matchplan
