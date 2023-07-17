@@ -1,3 +1,14 @@
+* # impectPy 2.0.1
+
+## Minor changes
+* fix bug in `getSquadIterationAverages()` function
+* fix bug in `getEvents()` function
+* fix bug in `generateSportsCodeXML()` function
+* fix bug in `getPlayerMatchsums()` function
+* add sorting by id to `getIterations()` function
+* add sorting by id to `getMatches()` function
+* fix function argument name in readMe
+
 # impectPy 2.0.0
 
 ## Major changes
