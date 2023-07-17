@@ -122,7 +122,7 @@ Leipzig vs FSV Mainz 05 game (matchId = 84350) from the same day:
 matches = [84344, 84350]
 
 # apply getEventData function to a set of matchIds
-events = ip.getEventData(matches=matches, token=token)
+events = ip.getEvents(matches=matches, token=token)
 
 # get matchsums for matches per player and position
 playerMatchsums = ip.getPlayerMatchsums(matches=matches, token=token)
