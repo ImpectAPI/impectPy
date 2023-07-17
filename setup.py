@@ -13,9 +13,9 @@ setup(
     # Needed to actually package something
     packages=["impectPy"],
     # Needed for dependencies
-    install_requires=["requests",
-                      "pandas",
-                      "numpy"],
+    install_requires=["requests>=2.24.0",
+                      "pandas>=2.0.0",
+                      "numpy>=1.24.2"],
     # *strongly* suggested for sharing
     version="2.0.1",
     # The license can be anything you like
