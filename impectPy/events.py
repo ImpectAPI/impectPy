@@ -101,6 +101,10 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
     # get iterations
     iterations = getIterations(token=token, session=rate_limited_api.session)
 
+    # fix potential typing issues
+    events.pressingPlayerId = events.pressingPlayerId.astype('Int64')
+    events.fouledPlayerId = events.fouledPlayerId.astype('Int64')
+
     # start merging dfs
 
     # merge events with squads
@@ -128,26 +132,26 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
     ).merge(
         players[["id", "commonname"]].rename(
             columns={"id": "pressingPlayerId", "commonname": "pressingPlayerName"}),
-        left_on="playerId",
+        left_on="pressingPlayerId",
         right_on="pressingPlayerId",
         how="left",
         suffixes=("", "_right")
     ).merge(
         players[["id", "commonname"]].rename(columns={"id": "fouledPlayerId", "commonname": "fouledPlayerName"}),
-        left_on="playerId",
+        left_on="fouledPlayerId",
         right_on="fouledPlayerId",
         how="left",
         suffixes=("", "_right")
     ).merge(
         players[["id", "commonname"]].rename(columns={"id": "duelPlayerId", "commonname": "duelPlayerName"}),
-        left_on="playerId",
+        left_on="duelPlayerId",
         right_on="duelPlayerId",
         how="left",
         suffixes=("", "_right")
     ).merge(
         players[["id", "commonname"]].rename(
             columns={"id": "passReceiverPlayerId", "commonname": "passReceiverPlayerName"}),
-        left_on="playerId",
+        left_on="passReceiverPlayerId",
         right_on="passReceiverPlayerId",
         how="left",
         suffixes=("", "_right")
