@@ -46,5 +46,8 @@ def getIterations(token: str, session: Optional[requests.Session] = None) -> pd.
     # fix column names using regex
     df = df.rename(columns=lambda x: re.sub("\.(.)", lambda y: y.group(1).upper(), x))
 
+    # sort iterations
+    df = df.sort_values(by="id")
+
     # return dataframe
     return df
