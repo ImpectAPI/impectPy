@@ -203,6 +203,9 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     # get iterations
     iterations = getIterations(token=token, session=rate_limited_api.session)
 
+    # get matches played
+    matches = averages_raw[["squadId", "matches"]].drop_duplicates()
+
     # unnest scorings
     averages = averages_raw.explode("kpis").reset_index(drop=True)
 
@@ -225,12 +228,22 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     averages = pd.pivot_table(
         averages,
         values="value",
-        index=["iterationId", "squadId", "matches"],
+        index=["iterationId", "squadId"],
         columns="name",
         aggfunc="sum",
         fill_value=0,
         dropna=False
     ).reset_index()
+
+    # inner join with matches played
+    averages = pd.merge(
+        averages,
+        matches,
+        left_on="squadId",
+        right_on="squadId",
+        how="inner",
+        suffixes=("", "_right")
+    )
 
     # merge with other data
     averages = averages.merge(
