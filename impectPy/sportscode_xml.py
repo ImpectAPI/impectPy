@@ -222,13 +222,14 @@ def generateSportsCodeXML(events: pd.DataFrame,
                       "b": "13001"}
 
     # combine pxT kpis into single score for players (incl. PXT_REC) and team (excl. PXT_REC)
-    events["PXT_PLAYER_DELTA"] = events.apply(
-        lambda x: x.PXT_BLOCK + x.PXT_DRIBBLE + x.PXT_FOUL + x.PXT_BALL_WIN +
-                  x.PXT_PASS + x.PXT_REC + x.PXT_SHOT + x.PXT_SETPIECE, axis=1
-    )
-    events["PXT_TEAM_DELTA"] = events.apply(
-        lambda x: x.PXT_BLOCK + x.PXT_DRIBBLE + x.PXT_FOUL + x.PXT_BALL_WIN +
-                  x.PXT_PASS + x.PXT_SHOT + x.PXT_SETPIECE, axis=1)
+    events["PXT_PLAYER_DELTA"] = events[["PXT_BLOCK", "PXT_DRIBBLE", "PXT_FOUL",
+                                         "PXT_BALL_WIN", "PXT_PASS", "PXT_REC",
+                                         "PXT_SHOT", "PXT_SETPIECE"]].sum(axis=1)
+
+    # events["PXT_TEAM_DELTA"] = events.apply(
+    events["PXT_TEAM_DELTA"] = events[["PXT_BLOCK", "PXT_DRIBBLE", "PXT_FOUL",
+                                       "PXT_BALL_WIN", "PXT_PASS", "PXT_SHOT",
+                                       "PXT_SETPIECE"]].sum(axis=1)
 
     # add grouping for packing zones
 
