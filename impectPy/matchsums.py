@@ -109,6 +109,9 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
                 squadId=matchsums_raw[side.replace("Players", "Id")].loc[i]
             )
 
+            # extract matchshares
+            matchshares = temp[["matchId", "id", "position", "matchShare"]].drop_duplicates()
+
             # explode kpis column
             temp = temp.explode("kpis")
 
@@ -125,19 +128,29 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
                 left_on="kpiId",
                 right_on="id",
                 how="outer",
-                suffixes=("", "right")
+                suffixes=("", "_right")
             )
 
             # pivot data
             temp = pd.pivot_table(
                 temp,
                 values="value",
-                index=["matchId", "squadId", "id", "position", "matchShare"],
+                index=["matchId", "squadId", "id", "position"],
                 columns="name",
                 aggfunc="sum",
                 fill_value=0,
                 dropna=False
             ).reset_index()
+
+            # inner join with matchshares
+            temp = pd.merge(
+                temp,
+                matchshares,
+                left_on=["id", "position"],
+                right_on=["id", "position"],
+                how="inner",
+                suffixes=("", "_right")
+            )
 
             # append to matchsums
             matchsums = pd.concat([matchsums, temp])
