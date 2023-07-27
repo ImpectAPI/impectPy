@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.0.1
+Version: v2.0.2
 
-**Updated: July 17th 2023**
+**Updated: July 27th 2023**
 
 ---
 
@@ -14,13 +14,15 @@ For older versions, please see list below:
 - API V4: https://github.com/ImpectAPI/impectPy/tree/v1.0.3
 - API V3: not supported by this package
 
+---
+
+## Introduction
+
 The goal of the impectPy package is to provide an easy way for Impect
 Customers to access data from the customer API. This API includes basic
 information about competitions, competition iterations, and matches as
 well as event data and aggregated scorings per player and position on
 match and season level.
-
----
 
 ## Installation
 
@@ -28,7 +30,7 @@ You can install the latest version of impectPy from
 [GitHub](https://github.com/) with:
 
 ``` cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.0.1
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.0.2
 ```
 
 ## Getting started
@@ -145,14 +147,14 @@ iteration = 518
 
 # get player averages for iteration
 playerIterationAverages = ip.getPlayerIterationAverages(
-    iteration = iteration,
-    token = token
+    iteration=iteration,
+    token=token
 )
 
 # get squad averages for iteration
 squadIterationAverages = ip.getSquadIterationAverages(
-    iteration = iteration,
-    token = token
+    iteration=iteration,
+    token=token
 )
 ```
 

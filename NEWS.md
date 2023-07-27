@@ -1,4 +1,11 @@
-* # impectPy 2.0.1
+# impectPy 2.0.2
+
+## Minor changes
+* fix bug in `getPlayerIterationAverages()` function caused by user access rights
+* fix bug in `getIterations()` function caused by addition of wyscoutIds
+* fix bug in `getMatches()` function caused by addition of wyscoutIds
+
+# impectPy 2.0.1
 
 ## Minor changes
 * fix bug in `getSquadIterationAverages()` function
@@ -19,8 +26,8 @@
 ## Minor changes
 * Fix error in readme sample code
 * raise exception for wrong `matches` argument input type in several functions
-* 
-* # impectPy 1.0.3
+
+# impectPy 1.0.3
 
 ## Minor changes
 * fix bug in `generateSportsCodeXML()` that did not filter out events of action type 'NO_VIDEO_AVAILABLE', 'FINAL_WHISTLE' or 'REFEREE_INTERCEPTION' correctly
