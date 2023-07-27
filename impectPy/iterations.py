@@ -3,7 +3,7 @@ import pandas as pd
 import re
 import requests
 from typing import Optional
-from impectPy.helpers import RateLimitedAPI
+from impectPy.helpers import RateLimitedAPI, unnest_mappings
 
 ######
 #
@@ -30,21 +30,22 @@ def getIterations(token: str, session: Optional[requests.Session] = None) -> pd.
     # get data from response
     data = response.json()["data"]
 
+    # unnest nested IdMapping column
+    data = unnest_mappings(data)
+
     # convert to pandas dataframe
     df = pd.json_normalize(data)
-
-    # unnest nested IdMapping column
-    df[["skillCornerId", "heimSpielId"]] = df["idMappings"].apply(pd.Series)
 
     # drop idMappings column
     df = df.drop("idMappings", axis = 1)
 
-    # keep first entry for skillcorner and heimspiel data
-    df.skillCornerId = df.skillCornerId.apply(lambda x: x["skill_corner"][0] if x["skill_corner"] else None)
-    df.heimSpielId = df.heimSpielId.apply(lambda x: x["heim_spiel"][0] if x["heim_spiel"] else None)
-
     # fix column names using regex
-    df = df.rename(columns=lambda x: re.sub("\.(.)", lambda y: y.group(1).upper(), x))
+    df = df.rename(columns=lambda x: re.sub("[\._](.)", lambda y: y.group(1).upper(), x))
+
+    # keep first entry for skillcorner, heimspiel and wyscout data
+    df.skillCornerId = df.skillCornerId.apply(lambda x: x[0] if x else None)
+    df.heimSpielId = df.heimSpielId.apply(lambda x: x[0] if x else None)
+    df.wyscoutId = df.wyscoutId.apply(lambda x: x[0] if x else None)
 
     # sort iterations
     df = df.sort_values(by="id")
