@@ -31,7 +31,7 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     ).process_response()
 
     # get squadIds
-    squad_ids = squads.id.to_list()
+    squad_ids = squads[squads.access].id.to_list()
 
     # get player iteration averages per squad
     averages_raw = pd.concat(
