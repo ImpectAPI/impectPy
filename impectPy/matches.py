@@ -9,7 +9,7 @@ import pandas as pd
 import re
 import requests
 from typing import Optional
-from impectPy.helpers import RateLimitedAPI
+from impectPy.helpers import RateLimitedAPI, unnest_mappings
 
 
 # define function
@@ -134,21 +134,20 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
 
 # define function to clean df
 def clean_df(data: dict) -> pd.DataFrame:
+    # unnest nested idMapping key
+    data = unnest_mappings(data)
+
     # convert to df
     df = pd.json_normalize(data)
 
     # fix column names using regex
-    df = df.rename(columns=lambda x: re.sub("_(.)", lambda y: y.group(1).upper(), x))
-    df = df.rename(columns=lambda x: re.sub("\.(.)", lambda y: y.group(1).upper(), x))
-
-    # unnest nested IdMapping column
-    df[["skillCornerId", "heimSpielId"]] = df["idMappings"].apply(pd.Series)
+    df = df.rename(columns=lambda x: re.sub("[\._](.)", lambda y: y.group(1).upper(), x))
 
     # drop idMappings column
     df = df.drop("idMappings", axis=1)
 
     # keep first entry for skillcorner and heimspiel data
-    df.skillCornerId = df.skillCornerId.apply(lambda x: x["skill_corner"][0] if x["skill_corner"] else None)
-    df.heimSpielId = df.heimSpielId.apply(lambda x: x["heim_spiel"][0] if x["heim_spiel"] else None)
+    df.skillCornerId = df.skillCornerId.apply(lambda x: x[0] if x else None)
+    df.heimSpielId = df.heimSpielId.apply(lambda x: x[0] if x else None)
 
     return df

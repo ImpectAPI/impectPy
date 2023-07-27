@@ -186,3 +186,25 @@ def process_response(self: requests.Response) -> pd.DataFrame:
 
 # attach method to requests module
 requests.Response.process_response = process_response
+
+
+######
+#
+# This function unnests the idMappings key from an API response
+#
+######
+
+
+def unnest_mappings(dict: dict) -> dict:
+    # iterate over iterations and unnest idMappings
+    for iteration in dict:
+        # iterate over mappings
+        for mapping in iteration["idMappings"]:
+            # get mapping data
+            for provider, id in mapping.items():
+                # add mapping as key on iteration level
+                iteration[provider + "Id"] = id
+
+    # return result
+    return dict
+
