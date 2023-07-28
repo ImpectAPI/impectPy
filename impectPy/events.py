@@ -36,7 +36,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             matchId=match
         ),
             matches),
-        ignore_index=True).drop_duplicates()
+        ignore_index=True)
 
     # get event scorings
     scorings = pd.concat(
@@ -46,7 +46,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             headers=my_header
         ).process_response(),
             matches),
-        ignore_index=True).drop_duplicates()
+        ignore_index=True)
 
     # get match info
     iterations = pd.concat(
