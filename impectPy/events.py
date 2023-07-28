@@ -36,7 +36,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             matchId=match
         ),
             matches),
-        ignore_index=True)
+        ignore_index=True).drop_duplicates()
 
     # get event scorings
     scorings = pd.concat(
@@ -46,7 +46,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             headers=my_header
         ).process_response(),
             matches),
-        ignore_index=True)
+        ignore_index=True).drop_duplicates()
 
     # get match info
     iterations = pd.concat(
@@ -69,7 +69,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             headers=my_header
         ).process_response(),
             iterations),
-        ignore_index=True)
+        ignore_index=True)[["id", "commonname"]].drop_duplicates()
 
     # get squads
     squads = pd.concat(
@@ -79,7 +79,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             headers=my_header
         ).process_response(),
             iterations),
-        ignore_index=True)
+        ignore_index=True)[["id", "name"]].drop_duplicates()
 
     # get kpis
     kpis = rate_limited_api.make_api_request_limited(
