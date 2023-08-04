@@ -64,6 +64,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
         "type": "homeSquadType",
         "skillCornerId_home": "homeSquadSkillCornerId",
         "heimSpielId_home": "homeSquadHeimSpielId",
+        "wyscoutId_home": "homeSquadWyscoutId",
         "countryId": "homeSquadCountryId"
     })
     matches = matches.merge(squads,
@@ -75,6 +76,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
         "type": "awaySquadType",
         "skillCornerId_away": "awaySquadSkillCornerId",
         "heimSpielId_away": "awaySquadHeimSpielId",
+        "wyscoutId_away": "awaySquadWyscoutId",
         "countryId": "awaySquadCountryId"
     })
 
@@ -100,6 +102,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
                                  'id',
                                  'skillCornerId',
                                  'heimSpielId',
+                                 'wyscoutId',
                                  'iterationId',
                                  'matchDayIndex',
                                  'matchDayName',
@@ -110,6 +113,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
                                  'homeSquadCountryName',
                                  'homeSquadSkillCornerId',
                                  'homeSquadHeimSpielId',
+                                 'homeSquadWyscoutId',
                                  'awaySquadId',
                                  'awaySquadName',
                                  'awaySquadType',
@@ -117,6 +121,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
                                  'awaySquadCountryName',
                                  'awaySquadSkillCornerId',
                                  'awaySquadHeimSpielId',
+                                 'awaySquadWyscoutId',
                                  'scheduledDate',
                                  'lastCalculationDate',
                                  'available'
@@ -149,5 +154,6 @@ def clean_df(data: dict) -> pd.DataFrame:
     # keep first entry for skillcorner and heimspiel data
     df.skillCornerId = df.skillCornerId.apply(lambda x: x[0] if x else None)
     df.heimSpielId = df.heimSpielId.apply(lambda x: x[0] if x else None)
+    df.wyscoutId = df.wyscoutId.apply(lambda x: x[0] if x else None)
 
     return df
