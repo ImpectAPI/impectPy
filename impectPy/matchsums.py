@@ -58,7 +58,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
             headers=my_header
         ).process_response(),
             iterations),
-        ignore_index=True)
+        ignore_index=True)[["id", "commonname"]].drop_duplicates()
 
     # get squads
     squads = pd.concat(
@@ -68,7 +68,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
             headers=my_header
         ).process_response(),
             iterations),
-        ignore_index=True)
+        ignore_index=True)[["id", "name"]].drop_duplicates()
 
     # get kpis
     kpis = rate_limited_api.make_api_request_limited(
@@ -274,7 +274,7 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
             headers=my_header
         ).process_response(),
             iterations),
-        ignore_index=True)
+        ignore_index=True)[["id", "name"]].drop_duplicates()
 
     # get kpis
     kpis = rate_limited_api.make_api_request_limited(
