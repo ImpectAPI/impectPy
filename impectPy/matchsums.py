@@ -132,7 +132,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
             )
 
             # extract matchshares
-            matchshares = temp[["matchId", "id", "position", "matchShare"]].drop_duplicates()
+            matchshares = temp[["matchId", "id", "position", "matchShare", "playDuration"]].drop_duplicates()
 
             # explode kpis column
             temp = temp.explode("kpis")
@@ -230,7 +230,8 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         "playerId",
         "playerName",
         "position",
-        "matchShare"
+        "matchShare",
+        "playDuration"
     ]
 
     # add kpiNames to order

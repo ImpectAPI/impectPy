@@ -155,7 +155,8 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         "playerName",
         "position",
         "playDuration",
-        "matchShare"
+        "matchShare",
+        "playDuration"
     ]
 
     # add kpiNames to order
