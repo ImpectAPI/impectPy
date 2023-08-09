@@ -3,7 +3,7 @@ import pandas as pd
 import re
 import requests
 from typing import Optional
-from impectPy.helpers import RateLimitedAPI, unnest_mappings
+from impectPy.helpers import RateLimitedAPI, unnest_mappings, validate_response
 
 ######
 #
@@ -28,7 +28,7 @@ def getIterations(token: str, session: Optional[requests.Session] = None) -> pd.
     )
 
     # get data from response
-    data = response.json()["data"]
+    data = validate_response(response, "Iterations")
 
     # unnest nested IdMapping column
     data = unnest_mappings(data)

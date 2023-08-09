@@ -31,7 +31,9 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             url=f"https://api.impect.com/v5/customerapi/matches/{match}",
             method="GET",
             headers=my_header
-        ).process_response(),
+        ).process_response(
+            endpoint="Iterations"
+        ),
             matches),
         ignore_index=True)
 
@@ -41,7 +43,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
     # drop matches that are unavailable from list of matches
     matches = [match for match in matches if match not in fail_matches]
 
-    # raise warnings
+    # raise exception if no matches remaining or report removed matches
     if len(fail_matches) > 0:
         if len(matches) == 0:
             raise Exception("All supplied matches are unavailable. Execution stopped.")
@@ -58,6 +60,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             method="GET",
             headers=my_header
         ).process_response(
+            endpoint="Events"
         ).assign(
             matchId=match
         ),
@@ -70,7 +73,9 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             url=f"https://api.impect.com/v5/customerapi/matches/{match}/event-kpis",
             method="GET",
             headers=my_header
-        ).process_response(),
+        ).process_response(
+            endpoint="Scorings"
+        ),
             matches),
         ignore_index=True)
 
@@ -80,7 +85,9 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
             method="GET",
             headers=my_header
-        ).process_response(),
+        ).process_response(
+            endpoint="Players"
+        ),
             iterations),
         ignore_index=True)[["id", "commonname"]].drop_duplicates()
 
@@ -90,7 +97,9 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
-        ).process_response(),
+        ).process_response(
+            endpoint="Squads"
+        ),
             iterations),
         ignore_index=True)[["id", "name"]].drop_duplicates()
 
@@ -99,7 +108,9 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         url=f"https://api.impect.com/v5/customerapi/kpis/event",
         method="GET",
         headers=my_header
-    ).process_response()
+    ).process_response(
+        endpoint="EventKPIs"
+    )
 
     # get matches
     matchplan = pd.concat(
