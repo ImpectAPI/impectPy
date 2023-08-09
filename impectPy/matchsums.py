@@ -24,6 +24,32 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
     if not type(matches) == list:
         raise Exception("Argument 'matches' must be a list of integers.")
 
+    # get match info
+    iterations = pd.concat(
+        map(lambda match: rate_limited_api.make_api_request_limited(
+            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            matches),
+        ignore_index=True)
+
+    # filter for matches that are unavailable
+    fail_matches = iterations[iterations.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+
+    # drop matches that are unavailable from list of matches
+    matches = [match for match in matches if match not in fail_matches]
+
+    # raise warnings
+    if len(fail_matches) > 0:
+        if len(matches) == 0:
+            raise Exception("All supplied matches are unavailable. Execution stopped.")
+        else:
+            print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
+
+    # extract iterationIds
+    iterations = list(iterations[iterations.lastCalculationDate.notnull()].iterationId.unique())
+
     # get player match sums
     matchsums_raw = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
@@ -36,19 +62,6 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         ),
             matches),
         ignore_index=True)
-
-    # get match info
-    iterations = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
-            method="GET",
-            headers=my_header
-        ).process_response(),
-            matches),
-        ignore_index=True)
-
-    # extract iterationIds
-    iterations = list(iterations.iterationId.unique())
 
     # get players
     players = pd.concat(
@@ -240,6 +253,32 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
     if not type(matches) == list:
         print("Input vor matches argument must be a list of integers")
 
+    # get match info
+    iterations = pd.concat(
+        map(lambda match: rate_limited_api.make_api_request_limited(
+            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
+            method="GET",
+            headers=my_header
+        ).process_response(),
+            matches),
+        ignore_index=True)
+
+    # filter for matches that are unavailable
+    fail_matches = iterations[iterations.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+
+    # drop matches that are unavailable from list of matches
+    matches = [match for match in matches if match not in fail_matches]
+
+    # raise warnings
+    if len(fail_matches) > 0:
+        if len(matches) == 0:
+            raise Exception("All supplied matches are unavailable. Execution stopped.")
+        else:
+            print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
+
+    # extract iterationIds
+    iterations = list(iterations[iterations.lastCalculationDate.notnull()].iterationId.unique())
+
     # get player match sums
     matchsums_raw = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
@@ -252,19 +291,6 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
         ),
             matches),
         ignore_index=True)
-
-    # get match info
-    iterations = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
-            method="GET",
-            headers=my_header
-        ).process_response(),
-            matches),
-        ignore_index=True)
-
-    # extract iterationIds
-    iterations = list(iterations.iterationId.unique())
 
     # get squads
     squads = pd.concat(
