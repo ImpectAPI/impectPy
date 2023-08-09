@@ -101,11 +101,20 @@ class RateLimitedAPI:
             if response.status_code == 200:
                 # return response
                 return response
-
-            # raise exception
-            else:
-                print(f"Received status code {response.status_code}, retrying in {retry_delay} seconds...")
+            # check status code and retry if 429
+            elif response.status_code == 429:
+                print(f"Received status code {response.status_code} "
+                      f"({response.json().get('message', 'Rate Limit Exceeded')})"
+                      f", retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
+            # check status code and terminate if 401 or 403
+            elif response.status_code in [401, 403]:
+                raise Exception(f"Received status code {response.status_code} "
+                                f"({response.json().get('message', 'Unauthorized')})")
+            # check status code and terminate if other error
+            else:
+                raise Exception(f"Received status code {response.status_code} "
+                                f"({response.json().get('message', 'Unknown error')})")
 
 
 ######
