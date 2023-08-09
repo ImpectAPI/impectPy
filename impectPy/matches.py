@@ -9,7 +9,7 @@ import pandas as pd
 import re
 import requests
 from typing import Optional
-from impectPy.helpers import RateLimitedAPI, unnest_mappings
+from impectPy.helpers import RateLimitedAPI, unnest_mappings, validate_response
 
 
 # define function
@@ -28,7 +28,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
         headers=my_header)
 
     # get data from response
-    matches = matches.json()["data"]
+    matches = validate_response(response=matches, endpoint="Matches")
 
     # get squads data
     squads = rate_limited_api.make_api_request_limited(
@@ -38,7 +38,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
         headers=my_header)
 
     # get data from response
-    squads = squads.json()["data"]
+    squads = validate_response(response=squads, endpoint="Squads")
 
     # get country data
     countries = rate_limited_api.make_api_request_limited(
@@ -47,7 +47,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
         headers=my_header)
 
     # get data from response
-    countries = countries.json()["data"]
+    countries = validate_response(response=countries, endpoint="Countries")
 
     # convert to df and clean
     matches = clean_df(matches)
@@ -139,6 +139,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
 
 # define function to clean df
 def clean_df(data: dict) -> pd.DataFrame:
+
     # unnest nested idMapping key
     data = unnest_mappings(data)
 

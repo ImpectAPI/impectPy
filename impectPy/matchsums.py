@@ -30,7 +30,9 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
             url=f"https://api.impect.com/v5/customerapi/matches/{match}",
             method="GET",
             headers=my_header
-        ).process_response(),
+        ).process_response(
+            endpoint="Iterations"
+        ),
             matches),
         ignore_index=True)
 
@@ -57,6 +59,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
             method="GET",
             headers=my_header
         ).process_response(
+            endpoint="PlayerMatchsums"
         ).assign(
             matchId=match
         ),
@@ -69,7 +72,9 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
             url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
             method="GET",
             headers=my_header
-        ).process_response(),
+        ).process_response(
+            endpoint="Players"
+        ),
             iterations),
         ignore_index=True)[["id", "commonname"]].drop_duplicates()
 
@@ -79,7 +84,9 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
             url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
-        ).process_response(),
+        ).process_response(
+            endpoint="Squads"
+        ),
             iterations),
         ignore_index=True)[["id", "name"]].drop_duplicates()
 
@@ -88,7 +95,9 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         url=f"https://api.impect.com/v5/customerapi/kpis",
         method="GET",
         headers=my_header
-    ).process_response()
+    ).process_response(
+        endpoint="KPIs"
+    )
 
     # get matches
     matchplan = pd.concat(
@@ -259,7 +268,9 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
             url=f"https://api.impect.com/v5/customerapi/matches/{match}",
             method="GET",
             headers=my_header
-        ).process_response(),
+        ).process_response(
+            endpoint="Iterations"
+        ),
             matches),
         ignore_index=True)
 
@@ -279,13 +290,14 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
     # extract iterationIds
     iterations = list(iterations[iterations.lastCalculationDate.notnull()].iterationId.unique())
 
-    # get player match sums
+    # get squad match sums
     matchsums_raw = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
             url=f"https://api.impect.com/v5/customerapi/matches/{match}/squad-kpis",
             method="GET",
             headers=my_header
         ).process_response(
+            endpoint="SquadMatchsums"
         ).assign(
             matchId=match
         ),
@@ -298,7 +310,9 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
             url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
-        ).process_response(),
+        ).process_response(
+            endpoint="Squads"
+        ),
             iterations),
         ignore_index=True)[["id", "name"]].drop_duplicates()
 
@@ -307,7 +321,9 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
         url=f"https://api.impect.com/v5/customerapi/kpis",
         method="GET",
         headers=my_header
-    ).process_response()
+    ).process_response(
+        endpoint="KPIs"
+    )
 
     # get matches
     matchplan = pd.concat(
