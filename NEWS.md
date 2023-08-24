@@ -1,3 +1,14 @@
+# impectPy 2.0.4
+
+## Minor changes
+* fix bug in `getSquadMatchsums()` and `getPlayerMatchsums()` caused by duplicates
+* fix bug in `getMatches()` function caused by addition of wyscoutIds
+* 
+* improve error handling for functions that use match ids as input
+* improve error handling for `getMatches()` function
+* add `playDuration` on player level to `getSquadMatchsums()`, `getPlayerMatchsums()`, `getPlayerIterationAverages()` and `getSquadIterationAverages()`
+* fix bug in `getEvents()`, `getSquadMatchsums()`, `getPlayerMatchsums()`, `getPlayerIterationAverages()` and `getSquadIterationAverages()` that was caused by the addition of several new keys to the KPI endpoint
+
 # impectPy 2.0.3
 
 ## Minor changes
