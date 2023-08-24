@@ -97,7 +97,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         headers=my_header
     ).process_response(
         endpoint="KPIs"
-    )
+    )[["id", "name"]]
 
     # get matches
     matchplan = pd.concat(
@@ -324,7 +324,7 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
         headers=my_header
     ).process_response(
         endpoint="KPIs"
-    )
+    )[["id", "name"]]
 
     # get matches
     matchplan = pd.concat(
