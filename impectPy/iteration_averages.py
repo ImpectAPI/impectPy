@@ -67,7 +67,7 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         headers=my_header
     ).process_response(
         endpoint="KPIs"
-    )
+    )[["id", "name"]]
 
     # get iterations
     iterations = getIterations(token=token, session=rate_limited_api.session)
@@ -213,7 +213,7 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         headers=my_header
     ).process_response(
         endpoint="KPIs"
-    )
+    )[["id", "name"]]
 
     # get iterations
     iterations = getIterations(token=token, session=rate_limited_api.session)

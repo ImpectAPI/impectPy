@@ -110,7 +110,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         headers=my_header
     ).process_response(
         endpoint="EventKPIs"
-    )
+    )[["id", "name"]]
 
     # get matches
     matchplan = pd.concat(
