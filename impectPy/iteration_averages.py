@@ -154,7 +154,6 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         "playerId",
         "playerName",
         "position",
-        "playDuration",
         "matchShare",
         "playDuration"
     ]
