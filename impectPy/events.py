@@ -209,10 +209,10 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         .reset_index() \
         .loc[lambda df: df["eventId"].notna()]
 
-    # Replace empty strings with NaN in the eventId and playerId column
-    scorings["eventId"].replace('', np.nan, inplace=True)
-    scorings["playerId"].replace('', np.nan, inplace=True)
-    events["playerId"].replace('', np.nan, inplace=True)
+    # Replace empty strings with None in the eventId and playerId column
+    scorings["eventId"] = scorings["eventId"].mask(scorings["eventId"] == '', None)
+    scorings["playerId"] = scorings["playerId"].mask(scorings["playerId"] == '', None)
+    events["playerId"] = events["playerId"].mask(events["playerId"] == '', None)
 
     # Convert column eventId from float to int
     scorings["eventId"] = scorings["eventId"].astype(pd.Int64Dtype())
