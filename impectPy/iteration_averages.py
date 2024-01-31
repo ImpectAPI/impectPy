@@ -94,8 +94,9 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     match_shares = averages[
         ["iterationId", "squadId", "playerId", "position", "playDuration", "matchShare"]].drop_duplicates()
 
-    # fill missing values in the "name" column with a default value ton ensure players without scorings don't get lost
-    averages["name"].fillna("-1", inplace=True)
+    # fill missing values in the "name" column with a default value to ensure players without scorings don't get lost
+    if len(averages["name"][averages["name"].isnull()]) > 0:
+        averages["name"] = averages["name"].fillna("-1")
 
     # pivot kpi values
     averages = pd.pivot_table(
@@ -109,7 +110,8 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     ).reset_index()
 
     # drop "-1" column
-    averages.drop(["-1"], inplace=True, axis=1)
+    if "-1" in averages.columns:
+        averages.drop(["-1"], inplace=True, axis=1)
 
     # merge with playDuration and matchShare
     averages = averages.merge(
@@ -144,6 +146,9 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         how="left",
         suffixes=("", "_right")
     )
+    
+    # remove NA rows
+    averages = averages[averages.iterationId.notnull()]
 
     # fix column types
     averages["squadId"] = averages["squadId"].astype(int)
@@ -281,6 +286,9 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         how="left",
         suffixes=("", "_right")
     )
+    
+    # remove NA rows
+    averages = averages[averages.iterationId.notnull()]
 
     # fix column types
     averages["squadId"] = averages["squadId"].astype(int)
