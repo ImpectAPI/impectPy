@@ -132,7 +132,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
             )
 
             # extract matchshares
-            matchshares = temp[["matchId", "id", "position", "matchShare", "playDuration"]].drop_duplicates()
+            matchshares = temp[["matchId", "squadId", "id", "position", "matchShare", "playDuration"]].drop_duplicates()
 
             # explode kpis column
             temp = temp.explode("kpis")
@@ -168,8 +168,8 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
             temp = pd.merge(
                 temp,
                 matchshares,
-                left_on=["id", "position"],
-                right_on=["id", "position"],
+                left_on=["matchId", "squadId", "id", "position"],
+                right_on=["matchId", "squadId", "id", "position"],
                 how="inner",
                 suffixes=("", "_right")
             )
@@ -427,7 +427,16 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
     # add kpiNames to order
     order += kpis['name'].to_list()
 
-    # select columns
+    # filter for non-NA columns only
+    matchsums = matchsums[
+        (matchsums.matchId.notnull()) &
+        (matchsums.squadId.notnull())
+    ]
+
+    # reset index
+    matchsums = matchsums.reset_index()
+
+    # select & order columns
     matchsums = matchsums[order]
 
     # return data
