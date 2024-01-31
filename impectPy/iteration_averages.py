@@ -121,7 +121,6 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         how="inner",
         suffixes=("", "_right")
     )
-
     # merge with other data
     averages = averages.merge(
         iterations[["id", "competitionName", "season"]],
@@ -138,9 +137,7 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         how="left",
         suffixes=("", "_right")
     ).merge(
-        players[["id", "commonname"]].rename(
-            columns={"commonname": "playerName"}
-        ),
+        players[["id", "firstname", "lastname", "birthdate", "birthplace", "leg"]],
         left_on="playerId",
         right_on="id",
         how="left",
@@ -163,7 +160,11 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         "squadId",
         "squadName",
         "playerId",
-        "playerName",
+        "firstname",
+        "lastname",
+        "birthdate",
+        "birthplace",
+        "leg",
         "position",
         "matchShare",
         "playDuration"

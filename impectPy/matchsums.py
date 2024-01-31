@@ -68,15 +68,16 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
 
     # get players
     players = pd.concat(
-        map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
-            method="GET",
-            headers=my_header
-        ).process_response(
-            endpoint="Players"
-        ),
+        map(
+            lambda iteration: rate_limited_api.make_api_request_limited(
+                url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
+                method="GET",
+                headers=my_header
+            ).process_response(
+                endpoint="Players"
+            ),
             iterations),
-        ignore_index=True)[["id", "commonname"]].drop_duplicates()
+        ignore_index=True)[["id", "firstname", "lastname", "birthdate", "birthplace", "leg"]].drop_duplicates()
 
     # get squads
     squads = pd.concat(
@@ -176,7 +177,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
 
             # append to matchsums
             matchsums = pd.concat([matchsums, temp])
-
+    
     # merge with other data
     matchsums = matchsums.merge(
         matchplan,
@@ -199,9 +200,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         how="left",
         suffixes=("", "_right")
     ).merge(
-        players[["id", "commonname"]].rename(
-            columns={"commonname": "playerName"}
-        ),
+        players[["id", "firstname", "lastname", "birthdate", "birthplace", "leg"]],
         left_on="id",
         right_on="id",
         how="left",
@@ -228,7 +227,11 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         "squadId",
         "squadName",
         "playerId",
-        "playerName",
+        "firstname",
+        "lastname",
+        "birthdate",
+        "birthplace",
+        "leg",
         "position",
         "matchShare",
         "playDuration"
