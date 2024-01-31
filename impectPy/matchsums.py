@@ -77,7 +77,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
                 endpoint="Players"
             ),
             iterations),
-        ignore_index=True)[["id", "firstname", "lastname", "birthdate", "birthplace", "leg"]].drop_duplicates()
+        ignore_index=True)[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]].drop_duplicates()
 
     # get squads
     squads = pd.concat(
@@ -200,7 +200,9 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         how="left",
         suffixes=("", "_right")
     ).merge(
-        players[["id", "firstname", "lastname", "birthdate", "birthplace", "leg"]],
+        players[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]].rename(
+            columns={"commonname": "playerName"}
+        ),
         left_on="id",
         right_on="id",
         how="left",
@@ -227,6 +229,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         "squadId",
         "squadName",
         "playerId",
+        "playerName",
         "firstname",
         "lastname",
         "birthdate",
