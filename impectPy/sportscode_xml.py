@@ -561,10 +561,6 @@ def generateSportsCodeXML(events: pd.DataFrame,
 
     # add kickoff events to start each period
 
-    # define labels
-    labels = [{"order": "02 | ",
-               "name": "periodId"}]
-
     # add to xml structure
     for row in range(0, len(kickoffs)):
         # add instance
@@ -582,18 +578,20 @@ def generateSportsCodeXML(events: pd.DataFrame,
         end.text = str(round(kickoffs.iat[row, kickoffs.columns.get_loc("end")], 2))
         # add "Start" as code
         code = ET.SubElement(instance, "code")
-        code.text = "Start"
-        # add labels
-        for label in labels:
-            # check for nan and None (those values should be omitted and not added as label)
-            if (value := str(kickoffs.iat[row, kickoffs.columns.get_loc(label["name"])])) not in ["None", "nan"]:
-                wrapper = ET.SubElement(instance, "label")
-                group = ET.SubElement(wrapper, "group")
-                group.text = label["order"] + label["name"]
-                text = ET.SubElement(wrapper, "text")
-                text.text = value
-            else:
-                pass
+        if kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 1:
+            code.text = f"Kickoff"
+        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 2:
+            code.text = f"2nd Half Kickoff"
+        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 3:
+            code.text = f"ET Kickoff"
+        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 4:
+            code.text = f"ET 2nd Half Kickoff"
+        # add period label
+        wrapper = ET.SubElement(instance, "label")
+        group = ET.SubElement(wrapper, "group")
+        group.text = "02 | periodId"
+        text = ET.SubElement(wrapper, "text")
+        text.text = str(kickoffs.iat[row, kickoffs.columns.get_loc("periodId")])
 
     # add player data to XML structure
 
@@ -841,7 +839,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
                 for player in phases.iat[row, phases.columns.get_loc(label["name"])]:
                     wrapper = ET.SubElement(instance, "label")
                     group = ET.SubElement(wrapper, "group")
-                    group.text = "27 | playerInvolved"
+                    group.text = f"{label['order']} | playerInvolved"
                     text = ET.SubElement(wrapper, "text")
                     text.text = player
             else:
