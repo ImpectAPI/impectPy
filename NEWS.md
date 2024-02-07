@@ -1,3 +1,11 @@
+# impectPy 2.0.5
+
+## Minor changes
+* add more player master data to `getPlayerMatchsums()` and `getPlayerIterationAverages()`
+* fix issue with several functions that occurred with pandas version 2.1 or newer
+* fix minor consistency issue in code for `generateSportsCodeXML()`
+* edit naming of kickoff events in `generateSportsCodeXML()` to properly support SBG MatchTracker
+
 # impectPy 2.0.4
 
 ## Minor changes
