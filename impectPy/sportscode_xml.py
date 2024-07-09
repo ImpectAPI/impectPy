@@ -2,6 +2,7 @@
 from xml.etree import ElementTree as ET
 import pandas as pd
 
+
 ######
 #
 # This function returns an XML file from a given match event dataframe
@@ -16,7 +17,8 @@ def generateSportsCodeXML(events: pd.DataFrame,
                           p1Start: int,
                           p2Start: int,
                           p3Start: int,
-                          p4Start: int) -> ET.ElementTree:
+                          p4Start: int,
+                          sequencing: bool = True) -> ET.ElementTree:
     # define parameters
 
     # compile periods start times into dict
@@ -328,30 +330,29 @@ def generateSportsCodeXML(events: pd.DataFrame,
     # as the event data often has multiple consecutive events of the same player (e.g. reception + dribble + pass),
     # those would be 3 separate video sequences. Because auf lead and lag times, those consecutive events would overlap
     # significantly. TTherefore, these events are combined into one clip.
-
     # copy data
     players = events.copy()
 
     # filter for rows where playerId is given
     players = players[players.playerId.notnull()]
+    if sequencing:
+        # create lag column for player
+        players["playerId_lag"] = players.playerId.shift(1, fill_value=0)
 
-    # create lag column for player
-    players["playerId_lag"] = players.playerId.shift(1, fill_value=0)
+        # detect changes in playerId compared to previous event using lag column
+        players["player_change_flag"] = players.apply(
+            lambda x: 0 if x.playerId == x.playerId_lag else 1, axis=1)
 
-    # detect changes in playerId compared to previous event using lag column
-    players["player_change_flag"] = players.apply(
-        lambda x: 0 if x.playerId == x.playerId_lag else 1, axis=1)
+        # apply cumulative sum function to phase_change_flag to create ID column
+        players["sequence_id"] = players.player_change_flag.cumsum()
 
-    # apply cumulative sum function to phase_change_flag to create ID column
-    players["sequence_id"] = players.player_change_flag.cumsum()
+        # create separate df to aggregate sequence timing
+        sequence_timing = players.copy().groupby("sequence_id").agg(
+            {"start": "min",
+             "end": "max"}
+        ).reset_index()
 
-    # create separate df to aggregate sequence timing
-    sequence_timing = players.copy().groupby("sequence_id").agg(
-        {"start": "min",
-         "end": "max"}
-    ).reset_index()
-
-    # calculate game state
+        # calculate game state
 
     # detect goals scored
     players["goal_home"] = players.apply(
@@ -661,6 +662,8 @@ def generateSportsCodeXML(events: pd.DataFrame,
                "name": "leadsToShot"},
               {"order": "28 | ",
                "name": "leadsToGoal"},
+              {"order": "29 | ",
+               "name": "squadName"},
               {"order": "KPI: ",
                "name": "PXT_DELTA"},
               {"order": "KPI: ",
@@ -697,164 +700,204 @@ def generateSportsCodeXML(events: pd.DataFrame,
     # add data to xml structure
     # the idea is to still iterate over each event separately but chose between
     # creating a new instance and appending to the existing instance
-    for row in range(0, len(players)):
+    if not sequencing:
+        # set current_id to 0
+        current_id = 0
+        # Initialize free_text
+        free_text = None
+        for row in range(0, len(players)):
 
-        # skip row if no player (e.g. no video, referee interception, etc)
-        if pd.notnull(players.iat[row, players.columns.get_loc("playerName")]):
+            # skip row if no player (e.g. no video, referee interception, etc)
+            if pd.notnull(players.iat[row, players.columns.get_loc("playerName")]):
 
-            # if first iteration set seq_id_current to 1
-            if row == 0:
-                seq_id_current = 0
-            else:
-                pass
-
-            # get new sequence_id
-            seq_id_new = players.iat[row, players.columns.get_loc("sequence_id")]
-
-            # check if new sequence_id or first iteration
-            if seq_id_new != seq_id_current or row == 0:
-                # add instance
+                # create new instance for every action
                 instance = ET.SubElement(instances, "instance")
-                # add event id
+
+                # add event ID
                 event_id = ET.SubElement(instance, "ID")
-                event_id.text = str(players.iat[row, players.columns.get_loc("sequence_id")] + max_id)
-                # add start time
-                start = ET.SubElement(instance, "start")
-                start.text = str(round(sequence_timing.at[seq_id_new - 1, "start"], 2))
-                # add end time
-                end = ET.SubElement(instance, "end")
-                end.text = str(round(sequence_timing.at[seq_id_new - 1, "end"], 2))
-                # add player as code
+                event_id.text = str(current_id)  # Zuweisen einer eindeutigen ID
+
+                # ad ID-counter
+                current_id += 1
+
+                # add Player-name as code
                 code = ET.SubElement(instance, "code")
                 code.text = players.iat[row, players.columns.get_loc("playerName")]
+
                 # add description
                 free_text = ET.SubElement(instance, "free_text")
                 free_text.text = f"({players.iat[row, players.columns.get_loc('gameTime')]}) " \
                                  f"{players.iat[row, players.columns.get_loc('playerName')]}: " \
                                  f"{players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
-            else:
-                # append current action to existing description
-                free_text.text += f" | {players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
 
-            # add labels
-            for label in labels:
-                # check for nan and None (those values should be omitted and not added as label)
-                if (value := str(players.iat[row, players.columns.get_loc(label["name"])])) not in ["None", "nan"]:
-                    # get value from previous event to compare if the value remains the same (and can be omitted
-                    # or if the value changed and therefore has to be added)
-                    try:
-                        prev_value = players.at[row - 1, label["name"]]
-                    # if the key doesn't exist (previous to first row), assign current value
-                    except KeyError:
-                        prev_value = players.at[row, label["name"]]
-                    # check if first event of a sequence or the value is unequal to previous row
-                    if seq_id_new != seq_id_current or players.at[row, label["name"]] != prev_value:
+                # add labels
+                for label in labels:
+                    # check for nan and None (those values should be omitted and not added as label)
+                    if (value := str(players.iat[row, players.columns.get_loc(label["name"])])) not in ["None", "nan"]:
                         # add label
                         wrapper = ET.SubElement(instance, "label")
                         group = ET.SubElement(wrapper, "group")
                         group.text = label["order"] + label["name"]
                         text = ET.SubElement(wrapper, "text")
                         text.text = value
+    if sequencing:
+        for row in range(0, len(players)):
+
+            # skip row if no player (e.g. no video, referee interception, etc.)
+            if pd.notnull(players.iat[row, players.columns.get_loc("playerName")]):
+
+                # if first iteration set seq_id_current to 1
+                if row == 0:
+                    seq_id_current = 0
                 else:
-                    # don't add label
                     pass
 
-            # update current sequence_id
-            seq_id_current = seq_id_new
+                # get new sequence_id
+                seq_id_new = players.iat[row, players.columns.get_loc("sequence_id")]
 
-    # add team level data
+                # check if new sequence_id or first iteration
+                if seq_id_new != seq_id_current or row == 0:
+                    # add instance
+                    instance = ET.SubElement(instances, "instance")
+                    # add event id
+                    event_id = ET.SubElement(instance, "ID")
+                    event_id.text = str(players.iat[row, players.columns.get_loc("sequence_id")] + max_id)
+                    # add start time
+                    start = ET.SubElement(instance, "start")
+                    start.text = str(round(sequence_timing.at[seq_id_new - 1, "start"], 2))
+                    # add end time
+                    end = ET.SubElement(instance, "end")
+                    end.text = str(round(sequence_timing.at[seq_id_new - 1, "end"], 2))
+                    # add player as code
+                    code = ET.SubElement(instance, "code")
+                    code.text = players.iat[row, players.columns.get_loc("playerName")]
+                    # add description
+                    free_text = ET.SubElement(instance, "free_text")
+                    free_text.text = f"({players.iat[row, players.columns.get_loc('gameTime')]}) " \
+                                     f"{players.iat[row, players.columns.get_loc('playerName')]}: " \
+                                     f"{players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
+                else:
+                    # append current action to existing description
+                    free_text.text += f" | {players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
 
-    # define labels
-    labels = [{"order": "01 | ",
-               "name": "matchId"},
-              {"order": "02 | ",
-               "name": "periodId"},
-              {"order": "04 | ",
-               "name": "gameState"},
-              {"order": "29 | ",
-               "name": "playerName"},
-              {"order": "30 | ",
-               "name": "pxTTeamStart"},
-              {"order": "31 | ",
-               "name": "pxTTeamEnd"},
-              {"order": "27 | ",
-               "name": "leadsToShot"},
-              {"order": "28 | ",
-               "name": "leadsToGoal"},
-              {"order": "KPI: ",
-               "name": "PXT_DELTA"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_DEFENDERS"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS_RECEIVING"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_DEFENDERS_RECEIVING"},
-              {"order": "KPI: ",
-               "name": "BALL_LOSS_ADDED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "BALL_LOSS_REMOVED_TEAMMATES"},
-              {"order": "KPI: ",
-               "name": "BALL_WIN_ADDED_TEAMMATES"},
-              {"order": "KPI: ",
-               "name": "BALL_WIN_REMOVED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "REVERSE_PLAY_ADDED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS_RAW"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS_DEFENDERS_RAW"},
-              {"order": "KPI: ",
-               "name": "SHOT_XG"},
-              {"order": "KPI: ",
-               "name": "POSTSHOT_XG"},
-              {"order": "KPI: ",
-               "name": "PACKING_XG"}]
+                # add labels
+                for label in labels:
+                    # check for nan and None (those values should be omitted and not added as label)
+                    if (value := str(players.iat[row, players.columns.get_loc(label["name"])])) not in ["None", "nan"]:
+                        # get value from previous event to compare if the value remains the same (and can be omitted
+                        # or if the value changed and therefore has to be added)
+                        try:
+                            prev_value = players.at[row - 1, label["name"]]
+                        # if the key doesn't exist (previous to first row), assign current value
+                        except KeyError:
+                            prev_value = players.at[row, label["name"]]
+                        # check if first event of a sequence or the value is unequal to previous row
+                        if seq_id_new != seq_id_current or players.at[row, label["name"]] != prev_value:
+                            # add label
+                            wrapper = ET.SubElement(instance, "label")
+                            group = ET.SubElement(wrapper, "group")
+                            group.text = label["order"] + label["name"]
+                            text = ET.SubElement(wrapper, "text")
+                            text.text = value
+                    else:
+                        # don't add label
+                        pass
 
-    # update max id after adding players
-    max_id += players.sequence_id.max() + 1
+                # update current sequence_id
+                seq_id_current = seq_id_new
+
+        # add team level data
+
+        # define labels
+        labels = [{"order": "01 | ",
+                   "name": "matchId"},
+                  {"order": "02 | ",
+                   "name": "periodId"},
+                  {"order": "04 | ",
+                   "name": "gameState"},
+                  {"order": "29 | ",
+                   "name": "playerName"},
+                  {"order": "30 | ",
+                   "name": "pxTTeamStart"},
+                  {"order": "31 | ",
+                   "name": "pxTTeamEnd"},
+                  {"order": "27 | ",
+                   "name": "leadsToShot"},
+                  {"order": "28 | ",
+                   "name": "leadsToGoal"},
+                  {"order": "KPI: ",
+                   "name": "PXT_DELTA"},
+                  {"order": "KPI: ",
+                   "name": "BYPASSED_OPPONENTS"},
+                  {"order": "KPI: ",
+                   "name": "BYPASSED_DEFENDERS"},
+                  {"order": "KPI: ",
+                   "name": "BYPASSED_OPPONENTS_RECEIVING"},
+                  {"order": "KPI: ",
+                   "name": "BYPASSED_DEFENDERS_RECEIVING"},
+                  {"order": "KPI: ",
+                   "name": "BALL_LOSS_ADDED_OPPONENTS"},
+                  {"order": "KPI: ",
+                   "name": "BALL_LOSS_REMOVED_TEAMMATES"},
+                  {"order": "KPI: ",
+                   "name": "BALL_WIN_ADDED_TEAMMATES"},
+                  {"order": "KPI: ",
+                   "name": "BALL_WIN_REMOVED_OPPONENTS"},
+                  {"order": "KPI: ",
+                   "name": "REVERSE_PLAY_ADDED_OPPONENTS"},
+                  {"order": "KPI: ",
+                   "name": "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS"},
+                  {"order": "KPI: ",
+                   "name": "BYPASSED_OPPONENTS_RAW"},
+                  {"order": "KPI: ",
+                   "name": "BYPASSED_OPPONENTS_DEFENDERS_RAW"},
+                  {"order": "KPI: ",
+                   "name": "SHOT_XG"},
+                  {"order": "KPI: ",
+                   "name": "POSTSHOT_XG"},
+                  {"order": "KPI: ",
+                   "name": "PACKING_XG"}]
+
+        # update max id after adding players
+        max_id += players.sequence_id.max() + 1
 
     # add to xml structure
-    for row in range(0, len(phases)):
-        # add instance
-        instance = ET.SubElement(instances, "instance")
-        # add event id
-        event_id = ET.SubElement(instance, "ID")
-        event_id.text = str(phases.iat[row, phases.columns.get_loc("phase_id")] + max_id)
-        # add start time
-        start = ET.SubElement(instance, "start")
-        start.text = str(round(phases.iat[row, phases.columns.get_loc("start")], 2))
-        # add end time
-        end = ET.SubElement(instance, "end")
-        end.text = str(round(phases.iat[row, phases.columns.get_loc("end")], 2))
-        # add teamPhase as code
-        code = ET.SubElement(instance, "code")
-        code.text = phases.iat[row, phases.columns.get_loc("teamPhase")]
-        # add labels
-        for label in labels:
-            # check for label
-            if label["name"] == "playerName":
-                # for label "playerName" the list of players involved need to be unpacked
-                for player in phases.iat[row, phases.columns.get_loc(label["name"])]:
-                    wrapper = ET.SubElement(instance, "label")
-                    group = ET.SubElement(wrapper, "group")
-                    group.text = "27 | playerInvolved"
-                    text = ET.SubElement(wrapper, "text")
-                    text.text = player
-            else:
-                # check for nan or None (those values should be omitted and not added as label)
-                if (value := str(phases.iat[row, phases.columns.get_loc(label["name"])])) not in ["None", "nan"]:
-                    wrapper = ET.SubElement(instance, "label")
-                    group = ET.SubElement(wrapper, "group")
-                    group.text = label["order"] + label["name"]
-                    text = ET.SubElement(wrapper, "text")
-                    text.text = value
+        for row in range(0, len(phases)):
+            # add instance
+            instance = ET.SubElement(instances, "instance")
+            # add event id
+            event_id = ET.SubElement(instance, "ID")
+            event_id.text = str(phases.iat[row, phases.columns.get_loc("phase_id")] + max_id)
+            # add start time
+            start = ET.SubElement(instance, "start")
+            start.text = str(round(phases.iat[row, phases.columns.get_loc("start")], 2))
+            # add end time
+            end = ET.SubElement(instance, "end")
+            end.text = str(round(phases.iat[row, phases.columns.get_loc("end")], 2))
+            # add teamPhase as code
+            code = ET.SubElement(instance, "code")
+            code.text = phases.iat[row, phases.columns.get_loc("teamPhase")]
+            # add labels
+            for label in labels:
+                # check for label
+                if label["name"] == "playerName":
+                    # for label "playerName" the list of players involved need to be unpacked
+                    for player in phases.iat[row, phases.columns.get_loc(label["name"])]:
+                        wrapper = ET.SubElement(instance, "label")
+                        group = ET.SubElement(wrapper, "group")
+                        group.text = "27 | playerInvolved"
+                        text = ET.SubElement(wrapper, "text")
+                        text.text = player
                 else:
-                    pass
-
+                    # check for nan or None (those values should be omitted and not added as label)
+                    if (value := str(phases.iat[row, phases.columns.get_loc(label["name"])])) not in ["None", "nan"]:
+                        wrapper = ET.SubElement(instance, "label")
+                        group = ET.SubElement(wrapper, "group")
+                        group.text = label["order"] + label["name"]
+                        text = ET.SubElement(wrapper, "text")
+                        text.text = value
+                    else:
+                        pass
     # create row order
 
     # get home and away team
@@ -866,11 +909,12 @@ def generateSportsCodeXML(events: pd.DataFrame,
         players[players.squadName == home_team].playerName.unique(), reverse=True)
     away_players = sorted(
         players[players.squadName == away_team].playerName.unique(), reverse=True)
-    # get home and away team phases
-    home_phases = sorted(
-        phases[phases.squadName == home_team].teamPhase.unique(), reverse=True)
-    away_phases = sorted(
-        phases[phases.squadName == away_team].teamPhase.unique(), reverse=True)
+    if sequencing == True:
+        # get home and away team phases
+        home_phases = sorted(
+            phases[phases.squadName == home_team].teamPhase.unique(), reverse=True)
+        away_phases = sorted(
+            phases[phases.squadName == away_team].teamPhase.unique(), reverse=True)
 
     # define function to add row entries
     def row(value, colors):
@@ -900,16 +944,16 @@ def generateSportsCodeXML(events: pd.DataFrame,
     for player in home_players:
         # call function
         row(player, home_colors)
+    if sequencing == True:
+        # add entries for away team phases
+        for phase in away_phases:
+            # call function
+            row(phase, away_colors)
 
-    # add entries for away team phases
-    for phase in away_phases:
-        # call function
-        row(phase, away_colors)
-
-    # add entries for home team phases
-    for phase in home_phases:
-        # call function
-        row(phase, home_colors)
+        # add entries for home team phases
+        for phase in home_phases:
+            # call function
+            row(phase, home_colors)
 
     # wrap into ElementTree and save as XML
     tree = ET.ElementTree(root)
