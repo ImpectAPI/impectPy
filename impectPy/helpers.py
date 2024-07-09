@@ -73,7 +73,7 @@ class RateLimitedAPI:
                 math.ceil(
                     self.bucket.refill_after * 100 - (
                             time.time() - self.bucket.last_refill_time
-                    ) *100
+                    ) * 100
                 ) / 100
             )
 
@@ -207,18 +207,18 @@ requests.Response.process_response = process_response
 ######
 
 
-def unnest_mappings(dict: dict) -> dict:
+def unnest_mappings(mapping_dict: dict) -> dict:
     # iterate over iterations and unnest idMappings
-    for iteration in dict:
+    for iteration in mapping_dict:
         # iterate over mappings
         for mapping in iteration["idMappings"]:
             # get mapping data
-            for provider, id in mapping.items():
+            for provider, mapping_id in mapping.items():
                 # add mapping as key on iteration level
-                iteration[provider + "Id"] = id
+                iteration[provider + "Id"] = mapping_id
 
     # return result
-    return dict
+    return mapping_dict
 
 
 # define function to validate JSON response and return data

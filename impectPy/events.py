@@ -1,6 +1,5 @@
 # load packages
 import pandas as pd
-import numpy as np
 from impectPy.helpers import RateLimitedAPI
 from .matches import getMatches
 from .iterations import getIterations
@@ -22,7 +21,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
     my_header = {"Authorization": f"Bearer {token}"}
 
     # check input for matches argument
-    if not type(matches) == list:
+    if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
 
     # get match info

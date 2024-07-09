@@ -21,7 +21,7 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
     my_header = {"Authorization": f"Bearer {token}"}
 
     # check input for matches argument
-    if not type(matches) == list:
+    if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
 
     # get match info
@@ -77,7 +77,9 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
                 endpoint="Players"
             ),
             iterations),
-        ignore_index=True)[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]].drop_duplicates()
+        ignore_index=True)[
+        ["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]
+    ].drop_duplicates()
 
     # get squads
     squads = pd.concat(
@@ -266,7 +268,7 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
     my_header = {"Authorization": f"Bearer {token}"}
 
     # check input for matches argument
-    if not type(matches) == list:
+    if not isinstance(matches, list):
         print("Input vor matches argument must be a list of integers")
 
     # get match info

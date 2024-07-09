@@ -1,3 +1,10 @@
+# impectPy 2.0.6
+
+## Minor changes
+* add new label to player phase of xml export: team
+
+# impectPy 2.0.4
+
 # impectPy 2.0.5
 
 ## Minor changes

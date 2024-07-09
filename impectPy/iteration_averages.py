@@ -20,7 +20,7 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     my_header = {"Authorization": f"Bearer {token}"}
 
     # check input for matches argument
-    if not type(iteration) == int:
+    if not isinstance(iteration, int):
         print("Input vor iteration argument must be an integer")
 
     # get squads
@@ -199,7 +199,7 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     my_header = {"Authorization": f"Bearer {token}"}
 
     # check input for matches argument
-    if not type(iteration) == int:
+    if not isinstance(iteration, int):
         print("Input vor iteration argument must be an integer")
 
     # get squads
