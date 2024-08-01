@@ -2,7 +2,6 @@
 from xml.etree import ElementTree as ET
 import pandas as pd
 
-
 ######
 #
 # This function returns an XML file from a given match event dataframe
@@ -561,11 +560,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
     rows = ET.SubElement(root, "ROWS")
     
     # add kickoff events to start each period
-    
-    # define labels
-    labels = [{"order": "02 | ",
-               "name": "periodId"}]
-    
+
     # add to xml structure
     for row in range(0, len(kickoffs)):
         # add instance
@@ -583,19 +578,21 @@ def generateSportsCodeXML(events: pd.DataFrame,
         end.text = str(round(kickoffs.iat[row, kickoffs.columns.get_loc("end")], 2))
         # add "Start" as code
         code = ET.SubElement(instance, "code")
-        code.text = "Start"
-        # add labels
-        for label in labels:
-            # check for nan and None (those values should be omitted and not added as label)
-            if (value := str(kickoffs.iat[row, kickoffs.columns.get_loc(label["name"])])) not in ["None", "nan"]:
-                wrapper = ET.SubElement(instance, "label")
-                group = ET.SubElement(wrapper, "group")
-                group.text = label["order"] + label["name"]
-                text = ET.SubElement(wrapper, "text")
-                text.text = value
-            else:
-                pass
-    
+        if kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 1:
+            code.text = f"Kickoff"
+        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 2:
+            code.text = f"2nd Half Kickoff"
+        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 3:
+            code.text = f"ET Kickoff"
+        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 4:
+            code.text = f"ET 2nd Half Kickoff"
+        # add period label
+        wrapper = ET.SubElement(instance, "label")
+        group = ET.SubElement(wrapper, "group")
+        group.text = "02 | periodId"
+        text = ET.SubElement(wrapper, "text")
+        text.text = str(kickoffs.iat[row, kickoffs.columns.get_loc("periodId")])
+
     # add player data to XML structure
     
     # get max id from kickoffs to ensure continuous numbering
@@ -816,10 +813,10 @@ def generateSportsCodeXML(events: pd.DataFrame,
                "name": "POSTSHOT_XG"},
               {"order": "KPI: ",
                "name": "PACKING_XG"}]
-    
+
     # update max id after adding players
     max_id += players.sequence_id.max() + 1
-    
+
     # add to xml structure
     for row in range(0, len(phases)):
         # add instance
@@ -857,13 +854,13 @@ def generateSportsCodeXML(events: pd.DataFrame,
                     text.text = value
                 else:
                     pass
-    
+
     # create row order
-    
+
     # get home and away team
     home_team = players.homeSquadName.unique().tolist()[0]
     away_team = players.awaySquadName.unique().tolist()[0]
-    
+
     # get home and away team players
     home_players = sorted(
         players[players.squadName == home_team].playerName.unique(), reverse=True)
@@ -874,7 +871,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
         phases[phases.squadName == home_team].teamPhase.unique(), reverse=True)
     away_phases = sorted(
         phases[phases.squadName == away_team].teamPhase.unique(), reverse=True)
-    
+
     # define function to add row entries
     def row(value, colors):
         # add row
@@ -889,33 +886,33 @@ def generateSportsCodeXML(events: pd.DataFrame,
         g.text = colors["g"]
         b = ET.SubElement(row, "B")
         b.text = colors["b"]
-    
+
     # apply function
     # add entries for kickoffs for each period
     row("Start", neutral_colors)
-    
+
     # add entries for away team players
     for player in away_players:
         # call function
         row(player, away_colors)
-    
+
     # add entries for home team players
     for player in home_players:
         # call function
         row(player, home_colors)
-    
+
     # add entries for away team phases
     for phase in away_phases:
         # call function
         row(phase, away_colors)
-    
+
     # add entries for home team phases
     for phase in home_phases:
         # call function
         row(phase, home_colors)
-    
+
     # wrap into ElementTree and save as XML
     tree = ET.ElementTree(root)
-    
+
     # return xml tree
     return tree
