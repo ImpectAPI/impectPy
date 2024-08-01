@@ -1,3 +1,12 @@
+# impectPy 2.1.0
+
+## Major changes
+* add new attributes from dataVersion V4 to `getEvents()`
+
+## Minor changes
+* add some of the new dataVersion V4 attributes to `generateSportsCodeXML()`
+* fix labels of periods in `generateSportsCodeXML()` to better support MatchTracker integration
+
 # impectPy 2.0.6
 
 ## Minor changes

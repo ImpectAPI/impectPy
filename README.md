@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.0.6
+Version: v2.1.0
 
-**Updated: February 7th 2024**
+**Updated: August 1st 2024**
 
 ---
 
@@ -30,7 +30,7 @@ You can install the latest version of impectPy from
 [GitHub](https://github.com/) with:
 
 ``` cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.0.6
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.1.0
 ```
 
 ## Getting started
