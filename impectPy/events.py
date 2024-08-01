@@ -1,4 +1,5 @@
 # load packages
+import numpy as np
 import pandas as pd
 from impectPy.helpers import RateLimitedAPI
 from .matches import getMatches
@@ -276,6 +277,8 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         "actionType",
         "action",
         "bodyPart",
+        "bodyPartExtended",
+        "previousPassHeight",
         "result",
         "startCoordinatesX",
         "startCoordinatesY",
@@ -299,6 +302,10 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         "pressingPlayerId",
         "pressingPlayerName",
         "distanceToOpponent",
+        "opponentCoordinatesX",
+        "opponentCoordinatesY",
+        "opponentAdjCoordinatesX",
+        "opponentAdjCoordinatesY",
         "passReceiverType",
         "passReceiverPlayerId",
         "passReceiverPlayerName",
@@ -308,12 +315,26 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         "shotAngle",
         "shotTargetPointY",
         "shotTargetPointZ",
+        "shotWoodwork",
+        "shotGkCoordinatesX",
+        "shotGkCoordinatesY",
+        "shotGkAdjCoordinatesX",
+        "shotGkAdjCoordinatesY",
+        "shotGkDivePointY",
+        "shotGkDivePointZ",
         "duelType",
         "duelPlayerId",
         "duelPlayerName",
         "fouledPlayerId",
-        "fouledPlayerName"
+        "fouledPlayerName",
+        "formationTeam",
+        "formationOpponent"
     ]
+    
+    # add columns that might not exist in previous data versions
+    for col in attribute_cols:
+        if col not in events.columns:
+            events[col] = np.nan
 
     # get list of kpi columns
     kpi_cols = kpis['name'].tolist()
