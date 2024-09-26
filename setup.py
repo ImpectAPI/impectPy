@@ -15,7 +15,7 @@ setup(
     # Needed for dependencies
     install_requires=["requests>=2.24.0",
                       "pandas>=2.0.0",
-                      "numpy>=1.24.2"],
+                      "numpy>=1.24.2,<2.0"],
     # *strongly* suggested for sharing
     version="2.1.0",
     # The license can be anything you like
