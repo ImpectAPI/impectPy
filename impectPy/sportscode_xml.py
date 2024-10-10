@@ -16,14 +16,16 @@ def generateSportsCodeXML(events: pd.DataFrame,
                           p1Start: int,
                           p2Start: int,
                           p3Start: int,
-                          p4Start: int) -> ET.ElementTree:
+                          p4Start: int,
+                          p5Start: int) -> ET.ElementTree:
     # define parameters
     
     # compile periods start times into dict
     offsets = {"p1": p1Start,
                "p2": p2Start,
                "p3": p3Start,
-               "p4": p4Start}
+               "p4": p4Start,
+               "p5": p5Start}
     
     # define list of kpis to be included
     kpis = ["BYPASSED_OPPONENTS",
@@ -492,7 +494,17 @@ def generateSportsCodeXML(events: pd.DataFrame,
     
     # filter for kick off events of each period
     kickoffs = events.copy()[
-        (events.actionType == "KICK_OFF") & ((events.gameTimeInSec - (events.periodId - 1) * 10000) < 10)].reset_index()
+        (events.actionType == "KICK_OFF") & ((events.gameTimeInSec - (events.periodId - 1) * 10000) < 10)
+    ].reset_index()
+    
+    # check for penalty shootout
+    penalty_shootout = events.copy()[
+        events.periodId == 5
+    ]
+    
+    # add row for start of penalty shootout
+    if len(penalty_shootout) > 0:
+        kickoffs = pd.concat([kickoffs, penalty_shootout.iloc[[0]]])
     
     # apply bucket logic
     
@@ -560,16 +572,15 @@ def generateSportsCodeXML(events: pd.DataFrame,
     rows = ET.SubElement(root, "ROWS")
     
     # add kickoff events to start each period
-
+    [print(col) for col in kickoffs.columns if col in ["index", "periodId", "start", "end"]]
+    print(kickoffs[["index", "periodId", "start", "end"]])
     # add to xml structure
     for row in range(0, len(kickoffs)):
         # add instance
         instance = ET.SubElement(instances, "instance")
         # add event id
         event_id = ET.SubElement(instance, "ID")
-        event_id.text = str(
-            kickoffs.index[kickoffs.eventNumber == kickoffs.iat[row, kickoffs.columns.get_loc("eventNumber")]].tolist()[
-                0])
+        event_id.text = str(kickoffs.iloc[row].periodId - 1)
         # add start time
         start = ET.SubElement(instance, "start")
         start.text = str(round(kickoffs.iat[row, kickoffs.columns.get_loc("start")], 2))
@@ -586,6 +597,8 @@ def generateSportsCodeXML(events: pd.DataFrame,
             code.text = f"ET Kickoff"
         elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 4:
             code.text = f"ET 2nd Half Kickoff"
+        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 5:
+            code.text = f"Penalty Shootout"
         # add period label
         wrapper = ET.SubElement(instance, "label")
         group = ET.SubElement(wrapper, "group")
@@ -596,7 +609,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
     # add player data to XML structure
     
     # get max id from kickoffs to ensure continuous numbering
-    max_id = max(kickoffs.index.tolist())
+    max_id = max(kickoffs.periodId.tolist()) - 1
     
     # concatenate actionType and result into one column if result exists
     players["actionTypeResult"] = players.apply(lambda x: x.actionType + "_" + x.result if x.result else None, axis=1)
@@ -919,4 +932,4 @@ def generateSportsCodeXML(events: pd.DataFrame,
     tree = ET.ElementTree(root)
 
     # return xml tree
-    return tree
+    return tree, kickoffs
