@@ -16,14 +16,16 @@ def generateSportsCodeXML(events: pd.DataFrame,
                           p1Start: int,
                           p2Start: int,
                           p3Start: int,
-                          p4Start: int) -> ET.ElementTree:
+                          p4Start: int,
+                          p5Start: int) -> ET.ElementTree:
     # define parameters
     
     # compile periods start times into dict
     offsets = {"p1": p1Start,
                "p2": p2Start,
                "p3": p3Start,
-               "p4": p4Start}
+               "p4": p4Start,
+               "p5": p5Start}
     
     # define list of kpis to be included
     kpis = ["BYPASSED_OPPONENTS",
@@ -407,7 +409,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
     possession_results = players.copy().groupby("possession_id").agg(
         {"is_shot": "sum",
          "is_goal": "sum"}
-    ).reset_index()
+    )
     
     # convert sum of goals/shots to boolean type
     possession_results["leadsToShot"] = possession_results.apply(lambda x: True if x.is_shot > 0 else False, axis=1)
@@ -492,7 +494,17 @@ def generateSportsCodeXML(events: pd.DataFrame,
     
     # filter for kick off events of each period
     kickoffs = events.copy()[
-        (events.actionType == "KICK_OFF") & ((events.gameTimeInSec - (events.periodId - 1) * 10000) < 10)].reset_index()
+        (events.actionType == "KICK_OFF") & ((events.gameTimeInSec - (events.periodId - 1) * 10000) < 10)
+    ].reset_index()
+    
+    # check for penalty shootout
+    penalty_shootout = events.copy()[
+        events.periodId == 5
+    ]
+    
+    # add row for start of penalty shootout
+    if len(penalty_shootout) > 0:
+        kickoffs = pd.concat([kickoffs, penalty_shootout.iloc[[0]]])
     
     # apply bucket logic
     
@@ -560,49 +572,48 @@ def generateSportsCodeXML(events: pd.DataFrame,
     rows = ET.SubElement(root, "ROWS")
     
     # add kickoff events to start each period
-
+    
     # add to xml structure
-    for row in range(0, len(kickoffs)):
+    for index, event in kickoffs.iterrows():
         # add instance
         instance = ET.SubElement(instances, "instance")
         # add event id
         event_id = ET.SubElement(instance, "ID")
-        event_id.text = str(
-            kickoffs.index[kickoffs.eventNumber == kickoffs.iat[row, kickoffs.columns.get_loc("eventNumber")]].tolist()[
-                0])
+        event_id.text = str(event.periodId - 1)
         # add start time
         start = ET.SubElement(instance, "start")
-        start.text = str(round(kickoffs.iat[row, kickoffs.columns.get_loc("start")], 2))
+        start.text = str(round(event.start, 2))
         # add end time
         end = ET.SubElement(instance, "end")
-        end.text = str(round(kickoffs.iat[row, kickoffs.columns.get_loc("end")], 2))
+        end.text = str(round(event.end, 2))
         # add "Start" as code
         code = ET.SubElement(instance, "code")
-        if kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 1:
+        if event.periodId == 1:
             code.text = f"Kickoff"
-        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 2:
+        elif event.periodId == 2:
             code.text = f"2nd Half Kickoff"
-        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 3:
+        elif event.periodId == 3:
             code.text = f"ET Kickoff"
-        elif kickoffs.iat[row, kickoffs.columns.get_loc("periodId")] == 4:
+        elif event.periodId == 4:
             code.text = f"ET 2nd Half Kickoff"
+        elif event.periodId == 5:
+            code.text = f"Penalty Shootout"
         # add period label
         wrapper = ET.SubElement(instance, "label")
         group = ET.SubElement(wrapper, "group")
         group.text = "02 | periodId"
         text = ET.SubElement(wrapper, "text")
-        text.text = str(kickoffs.iat[row, kickoffs.columns.get_loc("periodId")])
+        text.text = str(event.periodId)
 
     # add player data to XML structure
     
     # get max id from kickoffs to ensure continuous numbering
-    max_id = max(kickoffs.index.tolist())
+    max_id = max(kickoffs.periodId.tolist()) - 1
     
     # concatenate actionType and result into one column if result exists
     players["actionTypeResult"] = players.apply(lambda x: x.actionType + "_" + x.result if x.result else None, axis=1)
     
     # define labels to be added
-    
     labels = [{"order": "01 | ",
                "name": "matchId"},
               {"order": "02 | ",
@@ -701,27 +712,27 @@ def generateSportsCodeXML(events: pd.DataFrame,
     # add data to xml structure
     # the idea is to still iterate over each event separately but chose between
     # creating a new instance and appending to the existing instance
-    for row in range(0, len(players)):
+    for index, event in players.iterrows():
         
         # skip row if no player (e.g. no video, referee interception, etc.)
-        if pd.notnull(players.iat[row, players.columns.get_loc("playerName")]):
+        if pd.notnull(event.playerName):
             
             # if first iteration set seq_id_current to 1
-            if row == 0:
+            if index == 0:
                 seq_id_current = 0
             else:
                 pass
             
             # get new sequence_id
-            seq_id_new = players.iat[row, players.columns.get_loc("sequence_id")]
+            seq_id_new = event.sequence_id
             
             # check if new sequence_id or first iteration
-            if seq_id_new != seq_id_current or row == 0:
+            if seq_id_new != seq_id_current or index == 0:
                 # add instance
                 instance = ET.SubElement(instances, "instance")
                 # add event id
                 event_id = ET.SubElement(instance, "ID")
-                event_id.text = str(players.iat[row, players.columns.get_loc("sequence_id")] + max_id)
+                event_id.text = str(event.sequence_id + max_id)
                 # add start time
                 start = ET.SubElement(instance, "start")
                 start.text = str(round(sequence_timing.at[seq_id_new - 1, "start"], 2))
@@ -730,29 +741,27 @@ def generateSportsCodeXML(events: pd.DataFrame,
                 end.text = str(round(sequence_timing.at[seq_id_new - 1, "end"], 2))
                 # add player as code
                 code = ET.SubElement(instance, "code")
-                code.text = players.iat[row, players.columns.get_loc("playerName")]
+                code.text = event.playerName
                 # add description
                 free_text = ET.SubElement(instance, "free_text")
-                free_text.text = f"({players.iat[row, players.columns.get_loc('gameTime')]}) " \
-                                 f"{players.iat[row, players.columns.get_loc('playerName')]}: " \
-                                 f"{players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
+                free_text.text = f"({event.gameTime}) {event.playerName}: {event.action.lower().replace('_', ' ')}"
             else:
                 # append current action to existing description
-                free_text.text += f" | {players.iat[row, players.columns.get_loc('action')].lower().replace('_', ' ')}"
+                free_text.text += f" | {event.action.lower().replace('_', ' ')}"
             
             # add labels
             for label in labels:
                 # check for nan and None (those values should be omitted and not added as label)
-                if (value := str(players.iat[row, players.columns.get_loc(label["name"])])) not in ["None", "nan"]:
+                if (value := str(event[label["name"]])) not in ["None", "nan"]:
                     # get value from previous event to compare if the value remains the same (and can be omitted
                     # or if the value changed and therefore has to be added)
                     try:
-                        prev_value = players.at[row - 1, label["name"]]
+                        prev_value = str(players.at[index - 1, label["name"]])
                     # if the key doesn't exist (previous to first row), assign current value
                     except KeyError:
-                        prev_value = players.at[row, label["name"]]
+                        prev_value = event[label["name"]]
                     # check if first event of a sequence or the value is unequal to previous row
-                    if seq_id_new != seq_id_current or players.at[row, label["name"]] != prev_value:
+                    if seq_id_new != seq_id_current or value != prev_value:
                         # add label
                         wrapper = ET.SubElement(instance, "label")
                         group = ET.SubElement(wrapper, "group")
@@ -822,27 +831,27 @@ def generateSportsCodeXML(events: pd.DataFrame,
     max_id += players.sequence_id.max() + 1
 
     # add to xml structure
-    for row in range(0, len(phases)):
+    for index, phase in phases.iterrows():
         # add instance
         instance = ET.SubElement(instances, "instance")
         # add event id
         event_id = ET.SubElement(instance, "ID")
-        event_id.text = str(phases.iat[row, phases.columns.get_loc("phase_id")] + max_id)
+        event_id.text = str(phase.phase_id + max_id)
         # add start time
         start = ET.SubElement(instance, "start")
-        start.text = str(round(phases.iat[row, phases.columns.get_loc("start")], 2))
+        start.text = str(round(phase.start, 2))
         # add end time
         end = ET.SubElement(instance, "end")
-        end.text = str(round(phases.iat[row, phases.columns.get_loc("end")], 2))
+        end.text = str(round(phase.end, 2))
         # add teamPhase as code
         code = ET.SubElement(instance, "code")
-        code.text = phases.iat[row, phases.columns.get_loc("teamPhase")]
+        code.text = phase.teamPhase
         # add labels
         for label in labels:
             # check for label
             if label["name"] == "playerName":
                 # for label "playerName" the list of players involved need to be unpacked
-                for player in phases.iat[row, phases.columns.get_loc(label["name"])]:
+                for player in phase[label["name"]]:
                     wrapper = ET.SubElement(instance, "label")
                     group = ET.SubElement(wrapper, "group")
                     group.text = "27 | playerInvolved"
@@ -850,7 +859,7 @@ def generateSportsCodeXML(events: pd.DataFrame,
                     text.text = player
             else:
                 # check for nan or None (those values should be omitted and not added as label)
-                if (value := str(phases.iat[row, phases.columns.get_loc(label["name"])])) not in ["None", "nan"]:
+                if (value := str(phase[label["name"]])) not in ["None", "nan"]:
                     wrapper = ET.SubElement(instance, "label")
                     group = ET.SubElement(wrapper, "group")
                     group.text = label["order"] + label["name"]
