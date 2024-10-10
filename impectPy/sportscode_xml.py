@@ -932,4 +932,4 @@ def generateSportsCodeXML(events: pd.DataFrame,
     tree = ET.ElementTree(root)
 
     # return xml tree
-    return tree, kickoffs
+    return tree
