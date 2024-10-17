@@ -269,7 +269,7 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(matches, list):
-        print("Input vor matches argument must be a list of integers")
+        raise Exception("Input vor matches argument must be a list of integers")
 
     # get match info
     iterations = pd.concat(

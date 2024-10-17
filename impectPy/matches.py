@@ -87,7 +87,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
         right_on="id",
         suffixes=("", "_right")
     )
-    matches = matches.rename(columns={"name": "homeSquadCountryName"})
+    matches = matches.rename(columns={"fifaName": "homeSquadCountryName"})
 
     matches = matches.merge(
         countries,
@@ -95,7 +95,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
         right_on="id",
         suffixes=("", "_right")
     )
-    matches = matches.rename(columns={"name": "awaySquadCountryName"})
+    matches = matches.rename(columns={"fifaName": "awaySquadCountryName"})
 
     # reorder columns
     matches = matches.loc[:, [
