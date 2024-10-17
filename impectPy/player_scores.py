@@ -4,6 +4,20 @@ from impectPy.helpers import RateLimitedAPI
 from .matches import getMatches
 from .iterations import getIterations
 
+# define the allowed positions
+allowed_positions = [
+  "GOALKEEPER",
+  "LEFT_WINGBACK_DEFENDER",
+  "RIGHT_WINGBACK_DEFENDER",
+  "CENTRAL_DEFENDER",
+  "DEFENSE_MIDFIELD",
+  "CENTRAL_MIDFIELD",
+  "ATTACKING_MIDFIELD",
+  "LEFT_WINGER",
+  "RIGHT_WINGER",
+  "CENTER_FORWARD"
+]
+
 
 ######
 #
@@ -24,6 +38,18 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
     # check input for matches argument
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
+        
+    # check input for positions argument
+    if not isinstance(positions, list):
+        raise Exception("Input for positions argument must be a list")
+    
+    # check if the input positions are valid
+    invalid_positions = [position for position in positions if position not in allowed_positions]
+    if len(invalid_positions) > 0:
+        raise Exception(
+            f"Invalid position(s): {', '.join(invalid_positions)}."
+            f"\nChoose one or more of: {', '.join(allowed_positions)}"
+        )
 
     # get match info
     iterations = pd.concat(
@@ -277,9 +303,21 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
     # construct header with access token
     my_header = {"Authorization": f"Bearer {token}"}
     
-    # check input for matches argument
+    # check input for iteration argument
     if not isinstance(iteration, int):
-        print("Input for iteration argument must be an integer")
+        raise Exception("Input for iteration argument must be an integer")
+        
+    # check input for positions argument
+    if not isinstance(positions, list):
+        raise Exception("Input for positions argument must be a list")
+    
+    # check if the input positions are valid
+    invalid_positions = [position for position in positions if position not in allowed_positions]
+    if len(invalid_positions) > 0:
+        raise Exception(
+            f"Invalid position(s): {', '.join(invalid_positions)}."
+            f"\nChoose one or more of: {', '.join(allowed_positions)}"
+        )
     
     # get squads
     squads = rate_limited_api.make_api_request_limited(
