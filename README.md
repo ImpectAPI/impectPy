@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.1.0
+Version: v2.2.0
 
-**Updated: August 1st 2024**
+**Updated: October 17th 2024**
 
 ---
 
@@ -30,10 +30,12 @@ You can install the latest version of impectPy from
 [GitHub](https://github.com/) with:
 
 ``` cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.1.0
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.2.0
 ```
 
-## Getting started
+## Usage
+
+### Getting started
 
 Before accessing any data via our API, you will need to request a bearer
 token for authorization. You can get this authorization token using the
@@ -54,6 +56,8 @@ token = ip.getAccessToken(username=username, password=password)
 This access token is a requirement to use any of the functions that
 requests data from the API. We recommend to first get a list of
 competition iterations that are enabled for your account.
+
+### Retrieve Basic Information
 
 ``` python
 # get list of iterations
@@ -77,7 +81,11 @@ matchplan
 ```
 
 The column `available` denotes whether a given match has been tagged by Impect
-and the data is available to you. Let's assume you are interested in the FC
+and the data is available to you.
+
+### Retrieve Match Level Data
+
+Let's assume you are interested in the FC
 Bayern München vs Borussia Dortmund game from April 1st 2023 (matchId = 84344).
 As the function allow for multiple games to be requested at once, we need to wrap
 the matchId into a list. Hence, to request the event data for this game, run the
@@ -95,23 +103,34 @@ events.head()
 ```
 
 You can access the aggregated scores per player and position or per
-squad for this match in a similar way:
+squad for this match in a similar way.
+Also, we provide you with IMPECT scores and ratios that you might know from our 
+Scouting and Analysis portals. On player level, these are calculated across 
+positions which is why you have to supply the function with a list of positions 
+your want to retrieve data for:
 
 ``` python
 # define matches to get matchsums for
 matches = [84344]
 
-# get matchsums for match per player and position
+# get kpi matchsums for match per player and position
 playerMatchsums = ip.getPlayerMatchsums(matches=matches, token=token)
 
-# get matchsums for match per squad
+# get kpi matchsums for match per squad
 squadMatchsums = ip.getSquadMatchsums(matches=matches, token=token)
 
-# print first few rows from playerMatchsums dataframe to console
-playerMatchsums.head()
+# define positions to get scores aggregated by
+positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
 
-# print first few rows from squadMatchsums dataframe to console
-squadMatchsums.head()
+# get player scores and ratios for match and positions per player
+playerMatchScores = ip.getPlayerMatchScores(
+    matches=matches,
+    positions=positions,
+    token=token
+)
+
+# get squad scores and ratios for match per squad
+squadMatchScores = ip.getSquadMatchScores(matches=matches, token=token)
 ```
 
 In case you wish to retrieve data for multiple matches, we suggest using
@@ -131,31 +150,83 @@ playerMatchsums = ip.getPlayerMatchsums(matches=matches, token=token)
 
 # get matchsums for matches per squad
 squadMatchsums = ip.getSquadMatchsums(matches=matches, token=token)
+
+# define positions to get scores aggregated by
+positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
+
+# get player scores and ratios for match and positions per player
+playerMatchScores = ip.getPlayerMatchScores(
+    matches=matches,
+    positions=positions,
+    token=token
+)
+
+# get squad scores and ratios for match per squad
+squadMatchScores = ip.getSquadMatchScores(matches=matches, token=token)
 ```
+
+### Retrieve Iteration Level Data
 
 Starting from API version V5, we also offer an endpoint to get KPI average values
 per iteration on player as well as squad level. These averages are calculated by
 dividing the kpi sum of all individual matches by the sum of matchShares the player
 accumulated at a given position. On a team level we divide the score by the
 amount of matches played by the team.
-Let's assume you were interested in the 2022/2023 Bundesliga season, then you
-could use this code snippet:
+Also, we provide you with IMPECT scores and ratios that you might know from our 
+Scouting and Analysis portals. On player level, these are calculated across 
+positions which is why you have to supply the function with a list of positions 
+your want to retrieve data for.
+Let's assume you were interested in wingbacks in the 2022/2023 Bundesliga season, 
+then you could use this code snippet:
 
 ``` python
 # define iteration ID
 iteration = 518
 
-# get player averages for iteration
+# define positions to get scores aggregated by
+positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
+
+# get player kpi averages for iteration
 playerIterationAverages = ip.getPlayerIterationAverages(
     iteration=iteration,
     token=token
 )
 
-# get squad averages for iteration
+# get squad kpi averages for iteration
 squadIterationAverages = ip.getSquadIterationAverages(
     iteration=iteration,
     token=token
 )
+
+# get player scores and ratios for iteration and positions
+playerIterationScores = ip.getPlayerIterationScores(
+    iteration=iteration,
+    positions=positions,
+    token=token
+)
+
+# get squad scores and ratios for iteration
+squadIterationScores = ip.getSquadIterationScores(
+    iteration=iteration,
+    token=token
+)
+```
+
+You can now also retrieve the positional profile scores for players via our API. This 
+includes profiles that you created through the scouting portal. The function requires a 
+positional input that determines which matchShares to consider when computing the scores. 
+In the below example, all matchShares that a player played as either a left back or a right 
+back are included for profile score calculation.
+
+``` python
+# define iteration ID
+iteration = 518
+
+# define positions to get scores aggregated by
+positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
+
+# get player profile scores
+playerProfileScores = getPlayerProfileScores(iteration, positions, token)
 ```
 
 Please keep in mind that Impect enforces a rate limit of 10 requests per second
@@ -164,7 +235,7 @@ calls made on the client side already. The rate limit is read from the first lim
 policy sent back by the API, so if this limit increases over time, this package will
 act accordingly.
 
-## SportsCodeXML
+### SportsCodeXML
 
 It is also possible to convert a dataframe containing event data into an XML file,
 that can be imported into Sportscode. Please make sure to only retrieve event data for
