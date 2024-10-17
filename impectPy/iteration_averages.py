@@ -21,7 +21,7 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(iteration, int):
-        print("Input vor iteration argument must be an integer")
+        raise Exception("Input vor iteration argument must be an integer")
 
     # get squads
     squads = rate_limited_api.make_api_request_limited(
@@ -200,7 +200,7 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(iteration, int):
-        print("Input vor iteration argument must be an integer")
+        raise Exception("Input vor iteration argument must be an integer")
 
     # get squads
     squads = rate_limited_api.make_api_request_limited(

@@ -215,7 +215,7 @@ def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
     
     # check input for matches argument
     if not isinstance(iteration, int):
-        print("Input for iteration argument must be an integer")
+        raise Exception("Input for iteration argument must be an integer")
     
     # get squads
     squads = rate_limited_api.make_api_request_limited(
