@@ -67,6 +67,17 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             matches),
         ignore_index=True)
 
+    # account for matches without duels or opponents tagged
+    if "duel" in events.columns:
+        events["duelType"] = np.nan
+        events["duelPlayerId"] = np.nan
+        events["duelPlayerName"] = np.nan
+    if "opponent" in events.columns:
+        events["opponentCoordinatesX"] = np.nan
+        events["opponentCoordinatesY"] = np.nan
+        events["opponentAdjCoordinatesX"] = np.nan
+        events["opponentAdjCoordinatesY"] = np.nan
+
     # get event scorings
     scorings = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
