@@ -1,4 +1,5 @@
 # load packages
+import numpy
 import numpy as np
 import pandas as pd
 from impectPy.helpers import RateLimitedAPI
@@ -66,6 +67,17 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         ),
             matches),
         ignore_index=True)
+
+    # account for matches without duels or opponents tagged
+    if "duel" in events.columns:
+        events["duelType"] = numpy.nan
+        events["duelPlayerId"] = numpy.nan
+        events["duelPlayerName"] = numpy.nan
+    if "opponent" in events.columns:
+        events["opponentCoordinatesX"] = numpy.nan
+        events["opponentCoordinatesY"] = numpy.nan
+        events["opponentAdjCoordinatesX"] = numpy.nan
+        events["opponentAdjCoordinatesY"] = numpy.nan
 
     # get event scorings
     scorings = pd.concat(
@@ -330,7 +342,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         "formationTeam",
         "formationOpponent"
     ]
-    
+
     # add columns that might not exist in previous data versions
     for col in attribute_cols:
         if col not in events.columns:
