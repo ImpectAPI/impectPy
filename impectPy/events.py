@@ -68,13 +68,22 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
             matches),
         ignore_index=True)
 
-    # account for matches without dribbles tagged
+    # account for matches without dribbles, duels or opponents tagged
     if "dribble" in events.columns:
         events["duelType"] = np.nan
         events["dribbleDistance"] = np.nan
         events["dribbleType"] = np.nan
         events["dribbleResult"] = np.nan
         events["dribblePlayerId"] = np.nan
+    if "duel" in events.columns:
+        events["duelType"] = np.nan
+        events["duelPlayerId"] = np.nan
+        events["duelPlayerName"] = np.nan
+    if "opponent" in events.columns:
+        events["opponentCoordinatesX"] = np.nan
+        events["opponentCoordinatesY"] = np.nan
+        events["opponentAdjCoordinatesX"] = np.nan
+        events["opponentAdjCoordinatesY"] = np.nan
 
     # get players
     players = pd.concat(

@@ -614,7 +614,9 @@ def generateSportsCodeXML(events: pd.DataFrame,
     players["actionTypeResult"] = players.apply(lambda x: x.actionType + "_" + x.result if x.result else None, axis=1)
     
     # define labels to be added
-    labels = [{"order": "01 | ",
+    labels = [{"order": "00 | ",
+               "name": "eventId"},
+              {"order": "01 | ",
                "name": "matchId"},
               {"order": "02 | ",
                "name": "periodId"},
