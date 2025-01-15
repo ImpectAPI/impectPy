@@ -179,9 +179,9 @@ class TokenBucket:
 ######
 
 
-def process_response(self: requests.Response, endpoint: str) -> pd.DataFrame:
+def process_response(self: requests.Response, endpoint: str, raise_exception: bool = True) -> pd.DataFrame:
     # validate and get data from response
-    result = validate_response(response=self, endpoint=endpoint)
+    result = validate_response(response=self, endpoint=endpoint, raise_exception=raise_exception)
 
     # get data from response
     # result = self.json()["data"]
@@ -222,12 +222,12 @@ def unnest_mappings(mapping_dict: dict) -> dict:
 
 
 # define function to validate JSON response and return data
-def validate_response(response: requests.Response, endpoint: str) -> dict:
+def validate_response(response: requests.Response, endpoint: str, raise_exception: bool = True) -> dict:
     # get data from response
     data = response.json()["data"]
 
     # check if response contains data
-    if len(data) == 0:
+    if len(data) == 0 and raise_exception:
         # raise exception
         raise Exception(f"The {endpoint} endpoint returned no data/ an empty list.")
     else:

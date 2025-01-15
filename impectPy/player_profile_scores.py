@@ -71,7 +71,8 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
             method="GET",
             headers=my_header
         ).process_response(
-            endpoint="PlayerIterationScores"
+            endpoint="PlayerIterationScores",
+            raise_exception=False
         ).assign(
             iterationId=iteration,
             squadId=squadId,
@@ -79,6 +80,15 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
         ),
             squad_ids),
         ignore_index=True)
+
+    # raise exception if no player played at given positions in entire iteration
+    if len(profile_scores_raw) == 0:
+        raise Exception(f"No players played at given position in iteration {iteration}.")
+
+    # print squads without players at given position
+    error_list = [str(squadId) for squadId in squad_ids if squadId not in profile_scores_raw.squadId.to_list()]
+    if len(error_list) > 0:
+        print(f"No players played at positions {positions} for iteration {iteration} for following squads:\n\t{', '.join(error_list)}")
     
     # get players
     players = rate_limited_api.make_api_request_limited(
