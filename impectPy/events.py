@@ -4,6 +4,7 @@ import pandas as pd
 from impectPy.helpers import RateLimitedAPI
 from .matches import getMatches
 from .iterations import getIterations
+import re
 
 ######
 #
@@ -14,7 +15,7 @@ from .iterations import getIterations
 
 
 # define function
-def getEvents(matches: list, token: str) -> pd.DataFrame:
+def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_pieces: bool = True) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
 
@@ -67,17 +68,13 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             matches),
         ignore_index=True)
 
-    # get event scorings
-    scorings = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}/event-kpis",
-            method="GET",
-            headers=my_header
-        ).process_response(
-            endpoint="Scorings"
-        ),
-            matches),
-        ignore_index=True)
+    # account for matches without dribbles tagged
+    if "dribble" in events.columns:
+        events["duelType"] = np.nan
+        events["dribbleDistance"] = np.nan
+        events["dribbleType"] = np.nan
+        events["dribbleResult"] = np.nan
+        events["dribblePlayerId"] = np.nan
 
     # get players
     players = pd.concat(
@@ -103,15 +100,6 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
             iterations),
         ignore_index=True)[["id", "name"]].drop_duplicates()
 
-    # get kpis
-    kpis = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/kpis/event",
-        method="GET",
-        headers=my_header
-    ).process_response(
-        endpoint="EventKPIs"
-    )[["id", "name"]]
-
     # get matches
     matchplan = pd.concat(
         map(lambda iteration: getMatches(
@@ -125,9 +113,63 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
     # get iterations
     iterations = getIterations(token=token, session=rate_limited_api.session)
 
+    if include_kpis:
+        # get event scorings
+        scorings = pd.concat(
+            map(lambda match: rate_limited_api.make_api_request_limited(
+                url=f"https://api.impect.com/v5/customerapi/matches/{match}/event-kpis",
+                method="GET",
+                headers=my_header
+            ).process_response(
+                endpoint="Scorings"
+            ),
+                matches),
+            ignore_index=True)
+
+        # get kpis
+        kpis = rate_limited_api.make_api_request_limited(
+            url=f"https://api.impect.com/v5/customerapi/kpis/event",
+            method="GET",
+            headers=my_header
+        ).process_response(
+            endpoint="EventKPIs"
+        )[["id", "name"]]
+
+    if include_set_pieces:
+        # get set piece data
+        set_pieces = pd.concat(
+            map(lambda match: rate_limited_api.make_api_request_limited(
+                url=f"https://api.impect.com/v5/customerapi/matches/{match}/set-pieces",
+                method="GET",
+                headers=my_header
+            ).process_response(
+                endpoint="Set-Pieces"
+            ),
+                matches),
+            ignore_index=True
+        ).rename(
+            columns={"id": "setPieceId"}
+        ).explode("setPieceSubPhase", ignore_index=True)
+
+        # unpack setPieceSubPhase column
+        set_pieces = pd.concat(
+            [
+                set_pieces.drop(columns=["setPieceSubPhase"]),
+                pd.json_normalize(set_pieces["setPieceSubPhase"]).add_prefix("setPieceSubPhase.")
+            ],
+            axis=1
+        ).rename(columns=lambda x: re.sub(r"\.(.)", lambda y: y.group(1).upper(), x))
+
     # fix potential typing issues
-    events.pressingPlayerId = events.pressingPlayerId.astype('Int64')
-    events.fouledPlayerId = events.fouledPlayerId.astype('Int64')
+    events.pressingPlayerId = events.pressingPlayerId.astype("Int64")
+    events.fouledPlayerId = events.fouledPlayerId.astype("Int64")
+    events.passReceiverPlayerId = events.passReceiverPlayerId.astype("Int64")
+    events.duelPlayerId = events.duelPlayerId.astype("Int64")
+    events.fouledPlayerId = events.fouledPlayerId.astype("Int64")
+    if include_set_pieces:
+        set_pieces.setPieceSubPhaseMainEventPlayerId = set_pieces.setPieceSubPhaseMainEventPlayerId.astype("Int64")
+        set_pieces.setPieceSubPhaseFirstTouchPlayerId = set_pieces.setPieceSubPhaseFirstTouchPlayerId.astype("Int64")
+        set_pieces.setPieceSubPhaseSecondTouchPlayerId = set_pieces.setPieceSubPhaseSecondTouchPlayerId.astype("Int64")
 
     # start merging dfs
 
@@ -179,6 +221,13 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         right_on="passReceiverPlayerId",
         how="left",
         suffixes=("", "_right")
+    ).merge(
+        players[["id", "commonname"]].rename(
+            columns={"id": "dribble1vs1LoserId", "commonname": "dribble1vs1LoserName"}),
+        left_on="dribblePlayerId",
+        right_on="dribble1vs1LoserId",
+        how="left",
+        suffixes=("", "_right")
     )
 
     # merge with matches info
@@ -199,32 +248,86 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         suffixes=("", "_right")
     )
 
-    # unnest scorings and full join with kpi list to ensure all kpis are present
-    scorings = scorings.merge(kpis, left_on="kpiId", right_on="id", how="outer") \
-        .sort_values("kpiId") \
-        .drop("kpiId", axis=1) \
-        .fillna({"eventId": "", "position": "", "playerId": ""}) \
-        .pivot_table(index=["eventId", "position", "playerId"], columns="name", values="value", aggfunc="sum",
-                     fill_value=None) \
-        .reset_index() \
-        .loc[lambda df: df["eventId"].notna()]
+    if include_kpis:
+        # unnest scorings and full join with kpi list to ensure all kpis are present
+        scorings = scorings.merge(kpis, left_on="kpiId", right_on="id", how="outer") \
+            .sort_values("kpiId") \
+            .drop("kpiId", axis=1) \
+            .fillna({"eventId": "", "position": "", "playerId": ""}) \
+            .pivot_table(index=["eventId", "position", "playerId"], columns="name", values="value", aggfunc="sum",
+                         fill_value=None) \
+            .reset_index() \
+            .loc[lambda df: df["eventId"].notna()]
 
-    # Replace empty strings with None in the eventId and playerId column
-    scorings["eventId"] = scorings["eventId"].mask(scorings["eventId"] == '', None)
-    scorings["playerId"] = scorings["playerId"].mask(scorings["playerId"] == '', None)
-    events["playerId"] = events["playerId"].mask(events["playerId"] == '', None)
+        # Replace empty strings with None in the eventId and playerId column
+        scorings["eventId"] = scorings["eventId"].mask(scorings["eventId"] == "", None)
+        scorings["playerId"] = scorings["playerId"].mask(scorings["playerId"] == "", None)
+        events["playerId"] = events["playerId"].mask(events["playerId"] == "", None)
 
-    # Convert column eventId from float to int
-    scorings["eventId"] = scorings["eventId"].astype(pd.Int64Dtype())
-    scorings["playerId"] = scorings["playerId"].astype(pd.Int64Dtype())
-    events["playerId"] = events["playerId"].astype(pd.Int64Dtype())
+        # Convert column eventId from float to int
+        scorings["eventId"] = scorings["eventId"].astype(pd.Int64Dtype())
+        scorings["playerId"] = scorings["playerId"].astype(pd.Int64Dtype())
+        events["playerId"] = events["playerId"].astype(pd.Int64Dtype())
 
-    # merge events and scorings
-    events = events.merge(scorings,
-                          left_on=["playerPosition", "playerId", "id"],
-                          right_on=["position", "playerId", "eventId"],
-                          how="left",
-                          suffixes=("", "_scorings"))
+        # merge events and scorings
+        events = events.merge(scorings,
+                              left_on=["playerPosition", "playerId", "id"],
+                              right_on=["position", "playerId", "eventId"],
+                              how="left",
+                              suffixes=("", "_scorings"))
+
+    if include_set_pieces:
+        events = events.merge(
+            set_pieces,
+            left_on=["setPieceId", "setPieceSubPhaseId", "matchId", "squadId"],
+            right_on=["setPieceId", "setPieceSubPhaseId", "matchId", "squadId"],
+            how="left",
+            suffixes=("", "_right")
+        ).merge(
+            players[["id", "commonname"]].rename(
+                columns={
+                    "id": "setPieceSubPhaseMainEventPlayerId",
+                    "commonname": "setPieceSubPhaseMainEventPlayerName"
+                }
+            ),
+            left_on="setPieceSubPhaseMainEventPlayerId",
+            right_on="setPieceSubPhaseMainEventPlayerId",
+            how="left",
+            suffixes=("", "_right")
+        ).merge(
+            players[["id", "commonname"]].rename(
+                columns={
+                    "id": "setPieceSubPhasePassReceiverId",
+                    "commonname": "setPieceSubPhasePassReceiverName"
+                }
+            ),
+            left_on="setPieceSubPhasePassReceiverId",
+            right_on="setPieceSubPhasePassReceiverId",
+            how="left",
+            suffixes=("", "_right")
+        ).merge(
+            players[["id", "commonname"]].rename(
+                columns={
+                    "id": "setPieceSubPhaseFirstTouchPlayerId",
+                    "commonname": "setPieceSubPhaseFirstTouchPlayerName"
+                }
+            ),
+            left_on="setPieceSubPhaseFirstTouchPlayerId",
+            right_on="setPieceSubPhaseFirstTouchPlayerId",
+            how="left",
+            suffixes=("", "_right")
+        ).merge(
+            players[["id", "commonname"]].rename(
+                columns={
+                    "id": "setPieceSubPhaseSecondTouchPlayerId",
+                    "commonname": "setPieceSubPhaseSecondTouchPlayerName"
+                }
+            ),
+            left_on="setPieceSubPhaseSecondTouchPlayerId",
+            right_on="setPieceSubPhaseSecondTouchPlayerId",
+            how="left",
+            suffixes=("", "_right")
+        )
 
     # rename some columns
     events = events.rename(columns={
@@ -236,11 +339,13 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         "gameTimeGameTimeInSec": "gameTimeInSec",
         "eventId": "eventId_scorings",
         "id": "eventId",
-        "index": "eventNumber"
+        "index": "eventNumber",
+        "dribblePlayerId": "dribble1vs1LoserId",
+        "setPieceMainEvent": "setPieceSubPhaseMainEvent",
     })
 
     # define desired column order
-    attribute_cols = [
+    event_cols = [
         "matchId",
         "dateTime",
         "competitionId",
@@ -262,6 +367,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         "awaySquadType",
         "eventId",
         "eventNumber",
+        "sequenceIndex",
         "periodId",
         "gameTime",
         "gameTimeInSec",
@@ -274,6 +380,7 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         "playerId",
         "playerName",
         "playerPosition",
+        "playerPositionSide",
         "actionType",
         "action",
         "bodyPart",
@@ -311,6 +418,11 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         "passReceiverPlayerName",
         "passDistance",
         "passAngle",
+        "dribbleDistance",
+        "dribbleType",
+        "dribbleResult",
+        "dribble1vs1LoserId",
+        "dribble1vs1LoserName",
         "shotDistance",
         "shotAngle",
         "shotTargetPointY",
@@ -328,19 +440,55 @@ def getEvents(matches: list, token: str) -> pd.DataFrame:
         "fouledPlayerId",
         "fouledPlayerName",
         "formationTeam",
-        "formationOpponent"
+        "formationOpponent",
+    ]
+
+    set_piece_cols = [
+        "setPieceId",
+        "phaseIndex",
+        "setPieceCategory",
+        "adjSetPieceCategory",
+        "setPieceExecutionType",
+        "setPieceSubPhaseId",
+        "setPieceSubPhaseIndex",
+        "setPieceSubPhaseStartZone",
+        "setPieceSubPhaseCornerEndZone",
+        "setPieceSubPhaseCornerType",
+        "setPieceSubPhaseFreeKickEndZone",
+        "setPieceSubPhaseFreeKickType",
+        "setPieceSubPhaseMainEvent",
+        "setPieceSubPhaseMainEventPlayerId",
+        "setPieceSubPhaseMainEventPlayerName",
+        "setPieceSubPhaseMainEventOutcome",
+        "setPieceSubPhasePassReceiverId",
+        "setPieceSubPhasePassReceiverName",
+        "setPieceSubPhaseFirstTouchPlayerId",
+        "setPieceSubPhaseFirstTouchPlayerName",
+        "setPieceSubPhaseFirstTouchWon",
+        "setPieceSubPhaseIndirectHeader",
+        "setPieceSubPhaseSecondTouchPlayerId",
+        "setPieceSubPhaseSecondTouchPlayerName",
+        "setPieceSubPhaseSecondTouchWon",
     ]
     
     # add columns that might not exist in previous data versions
-    for col in attribute_cols:
+    for col in event_cols:
         if col not in events.columns:
             events[col] = np.nan
 
-    # get list of kpi columns
-    kpi_cols = kpis['name'].tolist()
-
     # create order
-    order = attribute_cols + kpi_cols
+    order = event_cols
+
+    if include_set_pieces:
+        # add kpis
+        order = order + set_piece_cols
+
+    if include_kpis:
+        # get list of kpi columns
+        kpi_cols = kpis["name"].tolist()
+
+        # add kpis
+        order = order + kpi_cols
 
     # reorder data
     events = events[order]
