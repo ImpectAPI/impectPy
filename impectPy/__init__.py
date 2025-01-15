@@ -9,3 +9,4 @@ from .player_scores import getPlayerMatchScores, getPlayerIterationScores
 from .squad_scores import getSquadMatchScores, getSquadIterationScores
 from .player_profile_scores import getPlayerProfileScores
 from .sportscode_xml import generateSportsCodeXML
+from .set_pieces import getSetPieces
