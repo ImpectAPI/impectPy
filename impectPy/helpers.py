@@ -190,7 +190,7 @@ def process_response(self: requests.Response, endpoint: str, raise_exception: bo
     result = pd.json_normalize(result)
 
     # fix column names using regex
-    result = result.rename(columns=lambda x: re.sub("\.(.)", lambda y: y.group(1).upper(), x))
+    result = result.rename(columns=lambda x: re.sub(r"\.(.)", lambda y: y.group(1).upper(), x))
 
     # return result
     return result
