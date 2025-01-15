@@ -232,9 +232,9 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
         suffixes=("", "_right")
     ).merge(
         players[["id", "commonname"]].rename(
-            columns={"id": "dribble1vs1LoserId", "commonname": "dribble1vs1LoserName"}),
+            columns={"id": "dribbleOpponentPlayerId", "commonname": "dribbleOpponentPlayerName"}),
         left_on="dribblePlayerId",
-        right_on="dribble1vs1LoserId",
+        right_on="dribbleOpponentPlayerId",
         how="left",
         suffixes=("", "_right")
     )
@@ -349,7 +349,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
         "eventId": "eventId_scorings",
         "id": "eventId",
         "index": "eventNumber",
-        "dribblePlayerId": "dribble1vs1LoserId",
+        "dribblePlayerId": "dribbleOpponentPlayerId",
         "setPieceMainEvent": "setPieceSubPhaseMainEvent",
     })
 
@@ -430,8 +430,8 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
         "dribbleDistance",
         "dribbleType",
         "dribbleResult",
-        "dribble1vs1LoserId",
-        "dribble1vs1LoserName",
+        "dribbleOpponentPlayerId",
+        "dribbleOpponentPlayerName",
         "shotDistance",
         "shotAngle",
         "shotTargetPointY",
