@@ -120,7 +120,7 @@ your want to retrieve data for:
 matches = [84344]
 
 # get set piece data including KPI aggregates
-setPieces = ip.getSetPieces(matches, token)
+setPieces = ip.getSetPieces(matches=matches, token=token)
 
 # get kpi matchsums for match per player and position
 playerMatchsums = ip.getPlayerMatchsums(matches=matches, token=token)
@@ -160,7 +160,7 @@ events = ip.getEvents(
 )
 
 # get set piece data including KPI aggregates
-setPieces = ip.getSetPieces(ip.getSetPieces(matches, token)
+setPieces = ip.getSetPieces(matches=matches, token=token)
 
 # get matchsums for matches per player and position
 playerMatchsums = ip.getPlayerMatchsums(matches=matches, token=token)
