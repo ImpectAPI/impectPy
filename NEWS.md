@@ -10,7 +10,6 @@
 * Use raw string notation when using regex to clean column names
 * Add EventId to XML generation
 * Fix error in `getPlayerIterationScores()`, `getPlayerIterationScores()` & `getPlayerProfileScores()` when no records are returned for given combination of match/iteration and position
-* 
 
 # impectPy 2.2.0
 
