@@ -69,21 +69,24 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
         ignore_index=True)
 
     # account for matches without dribbles, duels or opponents tagged
-    if "dribble" in events.columns:
-        events["duelType"] = np.nan
-        events["dribbleDistance"] = np.nan
-        events["dribbleType"] = np.nan
-        events["dribbleResult"] = np.nan
-        events["dribblePlayerId"] = np.nan
-    if "duel" in events.columns:
-        events["duelType"] = np.nan
-        events["duelPlayerId"] = np.nan
-        events["duelPlayerName"] = np.nan
-    if "opponent" in events.columns:
-        events["opponentCoordinatesX"] = np.nan
-        events["opponentCoordinatesY"] = np.nan
-        events["opponentAdjCoordinatesX"] = np.nan
-        events["opponentAdjCoordinatesY"] = np.nan
+    attributes = [
+        "dribbleDistance",
+        "dribbleType",
+        "dribbleResult",
+        "dribblePlayerId",
+        "duelDuelType",
+        "duelPlayerId",
+        "duelPlayerName",
+        "opponentCoordinatesX",
+        "opponentCoordinatesY",
+        "opponentAdjCoordinatesX",
+        "opponentAdjCoordinatesY"
+    ]
+
+    # add attribute if it doesn't exist in df
+    for attribute in attributes:
+        if attribute not in events.columns:
+            events[attribute] = np.nan
 
     # get players
     players = pd.concat(
@@ -349,7 +352,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
         "eventId": "eventId_scorings",
         "id": "eventId",
         "index": "eventNumber",
-        "dribblePlayerId": "dribbleOpponentPlayerId",
+        "phaseIndex": "setPiecePhaseIndex",
         "setPieceMainEvent": "setPieceSubPhaseMainEvent",
     })
 
@@ -454,7 +457,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
 
     set_piece_cols = [
         "setPieceId",
-        "phaseIndex",
+        "setPiecePhaseIndex",
         "setPieceCategory",
         "adjSetPieceCategory",
         "setPieceExecutionType",
