@@ -1,3 +1,16 @@
+# impectPy 2.3.0
+
+## Major changes
+* Add new `getSetPieces()` function
+* Add set piece data to `getEvents()`
+* Add arguments to `getEvents()` function that control the addition of KPIs and set piece data to the events dataframe
+
+## Minor changes
+* Fix error in `getEvents()` for matches without any tagged duels
+* Use raw string notation when using regex to clean column names
+* Add EventId to XML generation
+* Fix error in `getPlayerIterationScores()`, `getPlayerIterationScores()` & `getPlayerProfileScores()` when no records are returned for given combination of match/iteration and position
+
 # impectPy 2.2.0
 
 ## Major changes

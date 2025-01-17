@@ -154,11 +154,18 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
     # iterate over matches
     for i in range(len(scores_raw)):
 
+        # create empty df to store per match scores
+        match_player_scores = pd.DataFrame()
+
         # iterate over sides
         for side in ["squadHomePlayers", "squadAwayPlayers"]:
 
             # get data for index
             temp = scores_raw[side].loc[i]
+
+            # check if any records for side at given position
+            if len(temp) == 0:
+                break
 
             # convert to pandas df
             temp = pd.DataFrame(temp).assign(
@@ -212,8 +219,19 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
                 suffixes=("", "_right")
             )
 
-            # append to player_scores
-            player_scores = pd.concat([player_scores, temp])
+            # append to match_player_scores
+            match_player_scores = pd.concat([match_player_scores, temp])
+
+        # check if any records for match at given position
+        if len(match_player_scores) == 0:
+            print(f"No players played at given position in match {scores_raw.loc[i].matchId}")
+
+        # append to player_scores
+        player_scores = pd.concat([player_scores, match_player_scores])
+
+    # check if any records for any match at given position
+    if len(player_scores) == 0:
+            raise Exception("No players played at given positions for any given match. Execution stopped.")
 
     # merge with other data
     player_scores = player_scores.merge(
@@ -342,7 +360,8 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
             method="GET",
             headers=my_header
         ).process_response(
-            endpoint="PlayerIterationScores"
+            endpoint="PlayerIterationScores",
+            raise_exception=False
         ).assign(
             iterationId=iteration,
             squadId=squadId,
@@ -350,6 +369,15 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
         ),
             squad_ids),
         ignore_index=True)
+
+    # raise exception if no player played at given positions in entire iteration
+    if len(scores_raw) == 0:
+        raise Exception(f"No players played at given position in iteration {iteration}.")
+
+    # print squads without players at given position
+    error_list = [str(squadId) for squadId in squad_ids if squadId not in scores_raw.squadId.to_list()]
+    if len(error_list) > 0:
+        print(f"No players played at positions {positions} for iteration {iteration} for following squads:\n\t{', '.join(error_list)}")
     
     # get players
     players = rate_limited_api.make_api_request_limited(

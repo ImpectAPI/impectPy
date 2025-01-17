@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.2.0
+Version: v2.3.0
 
-**Updated: October 17th 2024**
+**Updated: January 17th 2025**
 
 ---
 
@@ -30,7 +30,7 @@ You can install the latest version of impectPy from
 [GitHub](https://github.com/) with:
 
 ``` cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.2.0
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.3.0
 ```
 
 ## Usage
@@ -96,22 +96,31 @@ following code snippet:
 matches = [84344]
 
 # get event data for matches
-events = ip.getEvents(matches=matches, token=token)
+events = ip.getEvents(
+    matches=matches, 
+    token=token,
+    include_kpis=True,
+    include_set_pieces=True
+)
 
 # print first few rows from events dataframe to console
 events.head()
 ```
 
 You can access the aggregated scores per player and position or per
-squad for this match in a similar way.
+squad for this match in a similar way. You can also find more detailed data
+around set piece situations within our API.
 Also, we provide you with IMPECT scores and ratios that you might know from our 
 Scouting and Analysis portals. On player level, these are calculated across 
 positions which is why you have to supply the function with a list of positions 
 your want to retrieve data for:
 
 ``` python
-# define matches to get matchsums for
+# define matches to get further data for
 matches = [84344]
+
+# get set piece data including KPI aggregates
+setPieces = ip.getSetPieces(matches=matches, token=token)
 
 # get kpi matchsums for match per player and position
 playerMatchsums = ip.getPlayerMatchsums(matches=matches, token=token)
@@ -142,8 +151,16 @@ Leipzig vs FSV Mainz 05 game (matchId = 84350) from the same day:
 # define list of matches
 matches = [84344, 84350]
 
-# apply getEventData function to a set of matchIds
-events = ip.getEvents(matches=matches, token=token)
+# apply getEvents function to a set of matchIds
+events = ip.getEvents(
+    matches=matches, 
+    token=token,
+    include_kpis=True,
+    include_set_pieces=True
+)
+
+# get set piece data including KPI aggregates
+setPieces = ip.getSetPieces(matches=matches, token=token)
 
 # get matchsums for matches per player and position
 playerMatchsums = ip.getPlayerMatchsums(matches=matches, token=token)
@@ -255,9 +272,10 @@ lag = 3
 # define period start offsets from video start in seconds
 p1Start = 16 # first half kickoff happens after 16 seconds in your video file
 p2Start = 48 * 60 + 53 # first half kickoff happens after 48 minutes and 53 seconds in your video file
-p3Start = 0 # set to 0 if there was no extra time
-p4Start = 0 # set to 0 if there was no extra time
-
+p3Start = 0 # set to timestamp of the kickoff of the first half of extra time
+p4Start = 0 # set to timestamp of the kickoff of the second half of extra time
+p5Start = 0 # set to timestamp of the  of the penalty shootout
+kickoff
 # generate xml
 xml_tree = ip.generateSportsCodeXML(
     events=events,
@@ -266,7 +284,8 @@ xml_tree = ip.generateSportsCodeXML(
     p1Start=p1Start,
     p2Start=p2Start,
     p3Start=p3Start,
-    p4Start=p4Start
+    p4Start=p4Start,
+    p5Start=p5Start
 )
 
 # write to xml file
