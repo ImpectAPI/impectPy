@@ -208,9 +208,9 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
 
     # rename some columns
     set_pieces = set_pieces.rename(columns={
-        "id": "setPieceId",
         "scheduledDate": "dateTime",
         "squadId": "attackingSquadId",
+        "phaseIndex": "setPiecePhaseIndex",
         "setPieceSubPhaseAggregatesSHOT_XG": "setPieceSubPhase_SHOT_XG",
         "setPieceSubPhaseAggregatesPACKING_XG": "setPieceSubPhase_PACKING_XG",
         "setPieceSubPhaseAggregatesPOSTSHOT_XG": "setPieceSubPhase_POSTSHOT_XG",
@@ -235,7 +235,7 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
         "defendingSquadId",
         "defendingSquadName",
         "setPieceId",
-        "phaseIndex",
+        "setPiecePhaseIndex",
         "setPieceCategory",
         "adjSetPieceCategory",
         "setPieceExecutionType",
@@ -272,7 +272,7 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
     set_pieces = set_pieces[order]
 
     # reorder rows
-    set_pieces = set_pieces.sort_values(["matchId", "phaseIndex"])
+    set_pieces = set_pieces.sort_values(["matchId", "setPiecePhaseIndex"])
 
     # return events
     return set_pieces
