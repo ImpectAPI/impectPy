@@ -37,7 +37,10 @@ def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
             headers=my_header
         ).process_response(
             endpoint="Squads"
-        )
+        )[["id", "name", "idMappings"]]
+
+    # unnest mappings
+    squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get squad ratings
     ratings_raw = rate_limited_api.make_api_request_limited(
@@ -70,7 +73,7 @@ def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
 
     # merge with competition info
     ratings = ratings.merge(
-        iterations,
+        iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
@@ -79,19 +82,26 @@ def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
 
     # merge events with squads
     ratings = ratings.merge(
-        squads[["id", "name"]].rename(columns={"id": "squadId", "name": "squadName"}),
+        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
+            columns={"id": "squadId", "name": "squadName"}
+        ),
         left_on="squadId",
         right_on="squadId",
         how="left",
         suffixes=("", "_home")
     )
 
+    # fix some column types
+    ratings["iterationId"] = ratings["iterationId"].astype("Int64")
+    ratings["competitionId"] = ratings["competitionId"].astype("Int64")
+    ratings["squadId"] = ratings["squadId"].astype("Int64")
+    ratings["wyscoutId"] = ratings["wyscoutId"].astype("Int64")
+    ratings["heimSpielId"] = ratings["heimSpielId"].astype("Int64")
+    ratings["skillCornerId"] = ratings["skillCornerId"].astype("Int64")
+
     # define desired column order
     order = [
         "iterationId",
-        "wyscoutId",
-        "heimSpielId",
-        "skillCornerId",
         "competitionId",
         "competitionName",
         "competitionType",
@@ -100,6 +110,9 @@ def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
         "competitionGender",
         "date",
         "squadId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "squadName",
         "value"
     ]
