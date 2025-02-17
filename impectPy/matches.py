@@ -9,7 +9,7 @@ import pandas as pd
 import re
 import requests
 from typing import Optional
-from impectPy.helpers import RateLimitedAPI, unnest_mappings, validate_response
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_dict, validate_response
 
 
 # define function
@@ -141,7 +141,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
 def clean_df(data: dict) -> pd.DataFrame:
 
     # unnest nested idMapping key
-    data = unnest_mappings(data)
+    data = unnest_mappings_dict(data)
 
     # convert to df
     df = pd.json_normalize(data)

@@ -1,6 +1,6 @@
 # load packages
 import pandas as pd
-from impectPy.helpers import RateLimitedAPI
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .iterations import getIterations
 
 
@@ -58,7 +58,10 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         headers=my_header
     ).process_response(
         endpoint="Players"
-    )
+    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
+
+    # unnest mappings
+    players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get kpis
     kpis = rate_limited_api.make_api_request_limited(
@@ -137,7 +140,10 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         how="left",
         suffixes=("", "_right")
     ).merge(
-        players[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]].rename(
+        players[[
+            "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
+            "firstname", "lastname", "birthdate", "birthplace", "leg"
+        ]].rename(
             columns={"commonname": "playerName"}
         ),
         left_on="playerId",
@@ -150,9 +156,12 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     averages = averages[averages.iterationId.notnull()]
 
     # fix column types
-    averages["squadId"] = averages["squadId"].astype(int)
-    averages["playerId"] = averages["playerId"].astype(int)
-    averages["iterationId"] = averages["iterationId"].astype(int)
+    averages["iterationId"] = averages["iterationId"].astype("Int64")
+    averages["squadId"] = averages["squadId"].astype("Int64")
+    averages["playerId"] = averages["playerId"].astype("Int64")
+    averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
+    averages["heimSpielId"] = averages["heimSpielId"].astype("Int64")
+    averages["skillCornerId"] = averages["skillCornerId"].astype("Int64")
 
     # define column order
     order = [
@@ -162,6 +171,9 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         "squadId",
         "squadName",
         "playerId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "playerName",
         "firstname",
         "lastname",
@@ -209,7 +221,10 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         headers=my_header
     ).process_response(
         endpoint="Squads"
-    )
+    )[["id", "name", "idMappings"]]
+
+    # unnest mappings
+    squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get squad iteration averages
     averages_raw = rate_limited_api.make_api_request_limited(
@@ -282,7 +297,7 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         how="left",
         suffixes=("", "_right")
     ).merge(
-        squads[["id", "name"]].rename(
+        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
         ),
         left_on="squadId",
@@ -295,9 +310,12 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     averages = averages[averages.iterationId.notnull()]
 
     # fix column types
-    averages["squadId"] = averages["squadId"].astype(int)
-    averages["matches"] = averages["matches"].astype(int)
-    averages["iterationId"] = averages["iterationId"].astype(int)
+    averages["squadId"] = averages["squadId"].astype("Int64")
+    averages["matches"] = averages["matches"].astype("Int64")
+    averages["iterationId"] = averages["iterationId"].astype("Int64")
+    averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
+    averages["heimSpielId"] = averages["heimSpielId"].astype("Int64")
+    averages["skillCornerId"] = averages["skillCornerId"].astype("Int64")
 
     # define column order
     order = [
@@ -305,6 +323,9 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         "competitionName",
         "season",
         "squadId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "squadName",
         "matches"
     ]

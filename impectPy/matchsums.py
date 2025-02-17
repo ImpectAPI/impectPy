@@ -1,6 +1,6 @@
 # load packages
 import pandas as pd
-from impectPy.helpers import RateLimitedAPI
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .matches import getMatches
 from .iterations import getIterations
 
@@ -77,9 +77,11 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
                 endpoint="Players"
             ),
             iterations),
-        ignore_index=True)[
-        ["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]
-    ].drop_duplicates()
+        ignore_index=True
+    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
+
+    # unnest mappings
+    players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get squads
     squads = pd.concat(
@@ -182,13 +184,13 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
     
     # merge with other data
     matchsums = matchsums.merge(
-        matchplan,
+        matchplan[["id", "scheduledDate", "matchDayIndex", "matchDayName", "iterationId"]],
         left_on="matchId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     ).merge(
-        iterations,
+        iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
@@ -202,7 +204,10 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         how="left",
         suffixes=("", "_right")
     ).merge(
-        players[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]].rename(
+        players[[
+            "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
+            "firstname", "lastname", "birthdate", "birthplace", "leg"
+        ]].rename(
             columns={"commonname": "playerName"}
         ),
         left_on="id",
@@ -231,6 +236,9 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
         "squadId",
         "squadName",
         "playerId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "playerName",
         "firstname",
         "lastname",
@@ -247,6 +255,14 @@ def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
 
     # select columns
     matchsums = matchsums[order]
+
+    # fix some column types
+    matchsums["matchId"] = matchsums["matchId"].astype("Int64")
+    matchsums["squadId"] = matchsums["squadId"].astype("Int64")
+    matchsums["playerId"] = matchsums["playerId"].astype("Int64")
+    matchsums["wyscoutId"] = matchsums["wyscoutId"].astype("Int64")
+    matchsums["heimSpielId"] = matchsums["heimSpielId"].astype("Int64")
+    matchsums["skillCornerId"] = matchsums["skillCornerId"].astype("Int64")
 
     # return data
     return matchsums
@@ -323,7 +339,10 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
             endpoint="Squads"
         ),
             iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+        ignore_index=True)[["id", "name", "idMappings"]]
+
+    # unnest mappings
+    squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get kpis
     kpis = rate_limited_api.make_api_request_limited(
@@ -391,19 +410,19 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
 
     # merge with other data
     matchsums = matchsums.merge(
-        matchplan,
+        matchplan[["id", "scheduledDate", "matchDayIndex", "matchDayName", "iterationId"]],
         left_on="matchId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     ).merge(
-        iterations,
+        iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     ).merge(
-        squads[["id", "name"]].rename(
+        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
         ),
         left_on="squadId",
@@ -429,6 +448,9 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
         "matchDayIndex",
         "matchDayName",
         "squadId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "squadName"
     ]
 
@@ -446,6 +468,16 @@ def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
 
     # select & order columns
     matchsums = matchsums[order]
+
+    # fix some column types
+    matchsums["matchId"] = matchsums["matchId"].astype("Int64")
+    matchsums["competitionId"] = matchsums["competitionId"].astype("Int64")
+    matchsums["iterationId"] = matchsums["iterationId"].astype("Int64")
+    matchsums["matchDayIndex"] = matchsums["matchDayIndex"].astype("Int64")
+    matchsums["squadId"] = matchsums["squadId"].astype("Int64")
+    matchsums["wyscoutId"] = matchsums["wyscoutId"].astype("Int64")
+    matchsums["heimSpielId"] = matchsums["heimSpielId"].astype("Int64")
+    matchsums["skillCornerId"] = matchsums["skillCornerId"].astype("Int64")
 
     # return data
     return matchsums
