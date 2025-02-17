@@ -1,6 +1,6 @@
 # load packages
 import pandas as pd
-from impectPy.helpers import RateLimitedAPI
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .matches import getMatches
 from .iterations import getIterations
 
@@ -77,7 +77,10 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
             endpoint="Squads"
         ),
             iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+        ignore_index=True)[["id", "name", "idMappings"]]
+
+    # unnest mappings
+    squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get squad scores
     scores = rate_limited_api.make_api_request_limited(
@@ -146,19 +149,19 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
 
     # merge with other data
     squad_scores = squad_scores.merge(
-        matchplan,
+        matchplan[["id", "scheduledDate", "matchDayIndex", "matchDayName", "iterationId"]],
         left_on="matchId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     ).merge(
-        iterations,
+        iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     ).merge(
-        squads[["id", "name"]].rename(
+        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
         ),
         left_on="squadId",
@@ -184,6 +187,9 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
         "matchDayIndex",
         "matchDayName",
         "squadId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "squadName"
     ]
 
@@ -192,6 +198,16 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
 
     # select columns
     squad_scores = squad_scores[order]
+
+    # fix some column types
+    squad_scores["matchId"] = squad_scores["matchId"].astype("Int64")
+    squad_scores["competitionId"] = squad_scores["competitionId"].astype("Int64")
+    squad_scores["iterationId"] = squad_scores["iterationId"].astype("Int64")
+    squad_scores["matchDayIndex"] = squad_scores["matchDayIndex"].astype("Int64")
+    squad_scores["squadId"] = squad_scores["squadId"].astype("Int64")
+    squad_scores["wyscoutId"] = squad_scores["wyscoutId"].astype("Int64")
+    squad_scores["heimSpielId"] = squad_scores["heimSpielId"].astype("Int64")
+    squad_scores["skillCornerId"] = squad_scores["skillCornerId"].astype("Int64")
     
     # return data
     return squad_scores
@@ -224,7 +240,10 @@ def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
         headers=my_header
     ).process_response(
         endpoint="Squads"
-    )
+    )[["id", "name", "idMappings"]]
+
+    # unnest mappings
+    squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
     
     # get squad iteration averages
     scores_raw = rate_limited_api.make_api_request_limited(
@@ -291,13 +310,13 @@ def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
     
     # merge with other data
     scores = scores.merge(
-        iterations[["id", "competitionName", "season"]],
+        iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     ).merge(
-        squads[["id", "name"]].rename(
+        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
         ),
         left_on="squadId",
@@ -310,9 +329,12 @@ def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
     averages = scores[scores.iterationId.notnull()]
     
     # fix column types
-    averages["squadId"] = averages["squadId"].astype(int)
-    averages["matches"] = averages["matches"].astype(int)
-    averages["iterationId"] = averages["iterationId"].astype(int)
+    averages["matches"] = averages["matches"].astype("Int64")
+    averages["iterationId"] = averages["iterationId"].astype("Int64")
+    averages["squadId"] = averages["squadId"].astype("Int64")
+    averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
+    averages["heimSpielId"] = averages["heimSpielId"].astype("Int64")
+    averages["skillCornerId"] = averages["skillCornerId"].astype("Int64")
     
     # define column order
     order = [
@@ -320,6 +342,9 @@ def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
         "competitionName",
         "season",
         "squadId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "squadName",
         "matches"
     ]
