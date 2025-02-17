@@ -1,6 +1,6 @@
 # load packages
 import pandas as pd
-from impectPy.helpers import RateLimitedAPI
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .iterations import getIterations
 import json
 
@@ -73,7 +73,7 @@ def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
 
     # merge with competition info
     ratings = ratings.merge(
-        iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
+        iterations[["id", "competitionId", "competitionName", "competitionType", "season", "competitionGender"]],
         left_on="iterationId",
         right_on="id",
         how="left",
@@ -106,7 +106,6 @@ def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
         "competitionName",
         "competitionType",
         "season",
-        "competitionCountryId",
         "competitionGender",
         "date",
         "squadId",
