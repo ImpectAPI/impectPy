@@ -453,6 +453,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
         "fouledPlayerName",
         "formationTeam",
         "formationOpponent",
+        "inferredSetPiece",
     ]
 
     set_piece_cols = [
