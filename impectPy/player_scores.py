@@ -167,7 +167,7 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
 
             # check if any records for side at given position
             if len(temp) == 0:
-                break
+                continue
 
             # convert to pandas df
             temp = pd.DataFrame(temp).assign(
