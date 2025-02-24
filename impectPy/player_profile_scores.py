@@ -1,6 +1,6 @@
 # load packages
 import pandas as pd
-from impectPy.helpers import RateLimitedAPI
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .iterations import getIterations
 
 # define the allowed positions
@@ -97,7 +97,10 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
         headers=my_header
     ).process_response(
         endpoint="Players"
-    )
+    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
+
+    # unnest mappings
+    players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
     
     # get scores
     scores = rate_limited_api.make_api_request_limited(
@@ -176,7 +179,10 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
         how="left",
         suffixes=("", "_right")
     ).merge(
-        players[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]].rename(
+        players[[
+            "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
+            "firstname", "lastname", "birthdate", "birthplace", "leg"
+        ]].rename(
             columns={"commonname": "playerName"}
         ),
         left_on="playerId",
@@ -189,9 +195,12 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
     profile_scores = profile_scores[profile_scores.iterationId.notnull()]
     
     # fix column types
-    profile_scores["squadId"] = profile_scores["squadId"].astype(int)
-    profile_scores["playerId"] = profile_scores["playerId"].astype(int)
-    profile_scores["iterationId"] = profile_scores["iterationId"].astype(int)
+    profile_scores["squadId"] = profile_scores["squadId"].astype("Int64")
+    profile_scores["playerId"] = profile_scores["playerId"].astype("Int64")
+    profile_scores["iterationId"] = profile_scores["iterationId"].astype("Int64")
+    profile_scores["wyscoutId"] = profile_scores["wyscoutId"].astype("Int64")
+    profile_scores["heimSpielId"] = profile_scores["heimSpielId"].astype("Int64")
+    profile_scores["skillCornerId"] = profile_scores["skillCornerId"].astype("Int64")
     
     # define column order
     order = [
@@ -201,6 +210,9 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
         "squadId",
         "squadName",
         "playerId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "playerName",
         "firstname",
         "lastname",

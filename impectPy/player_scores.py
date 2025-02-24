@@ -1,6 +1,6 @@
 # load packages
 import pandas as pd
-from impectPy.helpers import RateLimitedAPI
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .matches import getMatches
 from .iterations import getIterations
 
@@ -108,9 +108,11 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
                 endpoint="Players"
             ),
             iterations),
-        ignore_index=True)[
-        ["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]
-    ].drop_duplicates()
+        ignore_index=True
+    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
+
+    # unnest mappings
+    players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get squads
     squads = pd.concat(
@@ -165,7 +167,7 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
 
             # check if any records for side at given position
             if len(temp) == 0:
-                break
+                continue
 
             # convert to pandas df
             temp = pd.DataFrame(temp).assign(
@@ -235,13 +237,13 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
 
     # merge with other data
     player_scores = player_scores.merge(
-        matchplan,
+        matchplan[["id", "scheduledDate", "matchDayIndex", "matchDayName", "iterationId"]],
         left_on="matchId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     ).merge(
-        iterations,
+        iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
@@ -255,7 +257,10 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
         how="left",
         suffixes=("", "_right")
     ).merge(
-        players[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]].rename(
+        players[[
+            "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
+            "firstname", "lastname", "birthdate", "birthplace", "leg"
+        ]].rename(
             columns={"commonname": "playerName"}
         ),
         left_on="id",
@@ -284,6 +289,9 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
         "squadId",
         "squadName",
         "playerId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "playerName",
         "firstname",
         "lastname",
@@ -300,6 +308,14 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
 
     # select columns
     player_scores = player_scores[order]
+
+    # fix some column types
+    player_scores["matchId"] = player_scores["matchId"].astype("Int64")
+    player_scores["squadId"] = player_scores["squadId"].astype("Int64")
+    player_scores["playerId"] = player_scores["playerId"].astype("Int64")
+    player_scores["wyscoutId"] = player_scores["wyscoutId"].astype("Int64")
+    player_scores["heimSpielId"] = player_scores["heimSpielId"].astype("Int64")
+    player_scores["skillCornerId"] = player_scores["skillCornerId"].astype("Int64")
     
     # return data
     return player_scores
@@ -386,7 +402,10 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
         headers=my_header
     ).process_response(
         endpoint="Players"
-    )
+    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
+
+    # unnest mappings
+    players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
     
     # get scores
     scores = rate_limited_api.make_api_request_limited(
@@ -465,7 +484,10 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
         how="left",
         suffixes=("", "_right")
     ).merge(
-        players[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg"]].rename(
+        players[[
+            "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
+            "firstname", "lastname", "birthdate", "birthplace", "leg"
+        ]].rename(
             columns={"commonname": "playerName"}
         ),
         left_on="playerId",
@@ -490,6 +512,9 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
         "squadId",
         "squadName",
         "playerId",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
         "playerName",
         "firstname",
         "lastname",
@@ -506,6 +531,13 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
     
     # select columns
     averages = averages[order]
+
+    # fix some column types
+    averages["squadId"] = averages["squadId"].astype("Int64")
+    averages["playerId"] = averages["playerId"].astype("Int64")
+    averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
+    averages["heimSpielId"] = averages["heimSpielId"].astype("Int64")
+    averages["skillCornerId"] = averages["skillCornerId"].astype("Int64")
     
     # return result
     return averages

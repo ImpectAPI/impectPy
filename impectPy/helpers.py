@@ -1,4 +1,5 @@
 # load packages
+import numpy as np
 import requests
 import time
 import pandas as pd
@@ -207,18 +208,60 @@ requests.Response.process_response = process_response
 ######
 
 
-def unnest_mappings(mapping_dict: dict) -> dict:
-    # iterate over iterations and unnest idMappings
-    for iteration in mapping_dict:
+def unnest_mappings_dict(mapping_dict: dict) -> dict:
+    # iterate over entry and unnest idMappings
+    for entry in mapping_dict:
         # iterate over mappings
-        for mapping in iteration["idMappings"]:
+        for mapping in entry["idMappings"]:
             # get mapping data
             for provider, mapping_id in mapping.items():
                 # add mapping as key on iteration level
-                iteration[provider + "Id"] = mapping_id
+                entry[provider + "Id"] = mapping_id
 
     # return result
     return mapping_dict
+
+
+######
+#
+# This function unnests the idMappings key from a dataframe
+#
+######
+
+
+def unnest_mappings_df(df: pd.DataFrame, mapping_col: str) -> pd.DataFrame:
+    # create empty df to store mappings
+    df_mappings = pd.DataFrame(columns=["wyscoutId", "heimSpielId", "skillCornerId"])
+
+    # iterate over entry and unnest idMappings
+    for index, entry in df.iterrows():
+        # iterate over mappings
+        for mapping in entry[mapping_col]:
+            # get mapping data
+            for provider, mapping_ids in mapping.items():
+                # fix provider name
+                if provider == "heim_spiel":
+                    provider = "heimSpiel"
+                elif provider == "skill_corner":
+                    provider = "skillCorner"
+                elif provider == "wyscout":
+                    pass
+                else:
+                    raise Exception(f"Unknown provider: {provider}")
+
+                # check if mapping is a dict with at least one entry
+                if isinstance(mapping_ids, list):
+                    if len(mapping_ids) > 0:
+                        # add first mapping as key on iteration level
+                        df_mappings.loc[index, provider + "Id"] = mapping_ids[0]
+                else:
+                    df_mappings.loc[index, provider + "Id"] = np.nan
+
+    # merge with original df
+    df = pd.concat([df, df_mappings], axis=1, ignore_index=False)
+
+    # return result
+    return df
 
 
 # define function to validate JSON response and return data
