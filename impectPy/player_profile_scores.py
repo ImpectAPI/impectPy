@@ -1,7 +1,7 @@
 # load packages
 import pandas as pd
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
-from .iterations import getIterations
+from .iterations import getIterationsFromHost
 
 # define the allowed positions
 allowed_positions = [
@@ -24,8 +24,11 @@ allowed_positions = [
 # for a given iteration and a given set of positions per player
 #
 ######
-
+@DeprecationWarning("This function is deprecated. Please use this method on the Impect instance.")
 def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.DataFrame:
+    return getPlayerProfileScoresFromHost(iteration, positions, token, "https://api.impect.com")
+
+def getPlayerProfileScoresFromHost(iteration: int, positions: list, token: str, host: str) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
     
@@ -50,7 +53,7 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
     
     # get squads
     squads = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
+        url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
         method="GET",
         headers=my_header
     ).process_response(
@@ -66,7 +69,7 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
     # get player profile scores per squad
     profile_scores_raw = pd.concat(
         map(lambda squadId: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/"
+            url=f"{host}/v5/customerapi/iterations/{iteration}/"
                 f"squads/{squadId}/positions/{position_string}/player-profile-scores",
             method="GET",
             headers=my_header
@@ -92,7 +95,7 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
     
     # get players
     players = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
+        url=f"{host}/v5/customerapi/iterations/{iteration}/players",
         method="GET",
         headers=my_header
     ).process_response(
@@ -104,7 +107,7 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
     
     # get scores
     scores = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/player-profiles",
+        url=f"{host}/v5/customerapi/player-profiles",
         method="GET",
         headers=my_header
     ).process_response(
@@ -112,7 +115,7 @@ def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.Da
     )[["name"]]
     
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
     
     # unnest scorings
     profile_scores = profile_scores_raw.explode("profileScores").reset_index(drop=True)

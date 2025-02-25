@@ -1,7 +1,7 @@
 # load packages
 import pandas as pd
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
-from .iterations import getIterations
+from .iterations import getIterationsFromHost
 import json
 
 ######
@@ -12,7 +12,11 @@ import json
 
 
 # define function
+@DeprecationWarning("This function is deprecated. Please use this method on the Impect instance.")
 def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
+    return getSquadRatingsFromHost(iteration, token, "https://api.impect.com")
+
+def getSquadRatingsFromHost(iteration: int, token: str, host: str) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
 
@@ -24,7 +28,7 @@ def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
         raise Exception("Argument 'iteration' must be an integer.")
 
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
 
     # raise exception if provided iteration id doesn't exist
     if iteration not in list(iterations.id):
@@ -32,7 +36,7 @@ def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
 
     # get squads
     squads = rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
         ).process_response(
@@ -44,7 +48,7 @@ def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
 
     # get squad ratings
     ratings_raw = rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads/ratings",
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squads/ratings",
             method="GET",
             headers=my_header
         ).process_response(

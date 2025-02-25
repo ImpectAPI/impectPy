@@ -8,14 +8,14 @@ from impectPy.helpers import RateLimitedAPI
 #
 ######
 
-
+@DeprecationWarning("This function is deprecated. Please use this method on the Impect instance.")
 # define function
 def getAccessToken(username: str, password: str) -> str:
+    return getAccessTokenFromUrl(username, password, "https://login.impect.com/auth/realms/production/protocol/openid-connect/token")
+
+def getAccessTokenFromUrl(username: str, password: str, token_url: str) -> str:
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
-
-    # create tokenURL
-    token_url = "https://login.impect.com/auth/realms/production/protocol/openid-connect/token"
 
     # define request parameters
     login = 'client_id=api&grant_type=password&username=' + urllib.parse.quote(
