@@ -2,8 +2,8 @@
 import numpy as np
 import pandas as pd
 from impectPy.helpers import RateLimitedAPI
-from .matches import getMatches
-from .iterations import getIterations
+from .matches import getMatchesFromHost
+from .iterations import getIterationsFromHost
 import re
 
 ######
@@ -12,10 +12,12 @@ import re
 # given match
 #
 ######
-
+@DeprecationWarning("This function is deprecated. Please use this method on the Impect instance.")
+def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_pieces: bool = True) -> pd.DataFrame:
+    return getEventsFromHost(matches, token, include_kpis, include_set_pieces, "https://api.impect.com")
 
 # define function
-def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_pieces: bool = True) -> pd.DataFrame:
+def getEventsFromHost(matches: list, token: str, include_kpis: bool, include_set_pieces: bool, host: str) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
 
@@ -29,7 +31,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
     # get match info
     iterations = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
+            url=f"{host}/v5/customerapi/matches/{match}",
             method="GET",
             headers=my_header
         ).process_response(
@@ -57,7 +59,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
     # get match events
     events = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}/events",
+            url=f"{host}/v5/customerapi/matches/{match}/events",
             method="GET",
             headers=my_header
         ).process_response(
@@ -91,7 +93,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
     # get players
     players = pd.concat(
         map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
+            url=f"{host}/v5/customerapi/iterations/{iteration}/players",
             method="GET",
             headers=my_header
         ).process_response(
@@ -103,7 +105,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
     # get squads
     squads = pd.concat(
         map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
         ).process_response(
@@ -114,22 +116,23 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
 
     # get matches
     matchplan = pd.concat(
-        map(lambda iteration: getMatches(
+        map(lambda iteration: getMatchesFromHost(
             iteration=iteration,
             token=token,
-            session=rate_limited_api.session
+            session=rate_limited_api.session,
+            host=host
         ),
             iterations),
         ignore_index=True)
 
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
 
     if include_kpis:
         # get event scorings
         scorings = pd.concat(
             map(lambda match: rate_limited_api.make_api_request_limited(
-                url=f"https://api.impect.com/v5/customerapi/matches/{match}/event-kpis",
+                url=f"{host}/v5/customerapi/matches/{match}/event-kpis",
                 method="GET",
                 headers=my_header
             ).process_response(
@@ -140,7 +143,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
 
         # get kpis
         kpis = rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/kpis/event",
+            url=f"{host}/v5/customerapi/kpis/event",
             method="GET",
             headers=my_header
         ).process_response(
@@ -151,7 +154,7 @@ def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_
         # get set piece data
         set_pieces = pd.concat(
             map(lambda match: rate_limited_api.make_api_request_limited(
-                url=f"https://api.impect.com/v5/customerapi/matches/{match}/set-pieces",
+                url=f"{host}/v5/customerapi/matches/{match}/set-pieces",
                 method="GET",
                 headers=my_header
             ).process_response(

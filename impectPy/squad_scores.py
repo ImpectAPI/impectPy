@@ -1,8 +1,8 @@
 # load packages
 import pandas as pd
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
-from .matches import getMatches
-from .iterations import getIterations
+from .matches import getMatchesFromHost
+from .iterations import getIterationsFromHost
 
 
 ######
@@ -11,9 +11,11 @@ from .iterations import getIterations
 # given match aggregated per squad
 #
 ######
-
-
+@DeprecationWarning("This function is deprecated. Please use this method on the Impect instance.")
 def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
+    return getSquadMatchScoresFromHost(matches, token, "https://api.impect.com")
+
+def getSquadMatchScoresFromHost(matches: list, token: str, host: str) -> pd.DataFrame:
     
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
@@ -28,7 +30,7 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
     # get match info
     iterations = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
+            url=f"{host}/v5/customerapi/matches/{match}",
             method="GET",
             headers=my_header
         ).process_response(
@@ -56,7 +58,7 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
     # get squad scores
     scores_raw = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}/squad-scores",
+            url=f"{host}/v5/customerapi/matches/{match}/squad-scores",
             method="GET",
             headers=my_header
         ).process_response(
@@ -70,7 +72,7 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
     # get squads
     squads = pd.concat(
         map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
         ).process_response(
@@ -84,7 +86,7 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
 
     # get squad scores
     scores = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/squad-scores",
+        url=f"{host}/v5/customerapi/squad-scores",
         method="GET",
         headers=my_header
     ).process_response(
@@ -93,16 +95,17 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
 
     # get matches
     matchplan = pd.concat(
-        map(lambda iteration: getMatches(
+        map(lambda iteration: getMatchesFromHost(
             iteration=iteration,
             token=token,
-            session=rate_limited_api.session
+            session=rate_limited_api.session,
+            host=host
         ),
             iterations),
         ignore_index=True)
 
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
 
     # create empty df to store squad scores
     squad_scores = pd.DataFrame()
@@ -219,9 +222,11 @@ def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
 # given iteration aggregated per squad
 #
 ######
-
-
+@DeprecationWarning("This function is deprecated. Please use this method on the Impect instance.")
 def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
+    return getSquadIterationScoresFromHost(iteration, token, "https://api.impect.com")
+
+def getSquadIterationScoresFromHost(iteration: int, token: str, host: str) -> pd.DataFrame:
     
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
@@ -235,7 +240,7 @@ def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
     
     # get squads
     squads = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
+        url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
         method="GET",
         headers=my_header
     ).process_response(
@@ -247,7 +252,7 @@ def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
     
     # get squad iteration averages
     scores_raw = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squad-scores",
+        url=f"{host}/v5/customerapi/iterations/{iteration}/squad-scores",
         method="GET",
         headers=my_header
     ).process_response(
@@ -256,7 +261,7 @@ def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
     
     # get scores
     scores_definitions = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/squad-scores",
+        url=f"{host}/v5/customerapi/squad-scores",
         method="GET",
         headers=my_header
     ).process_response(
@@ -264,7 +269,7 @@ def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
     )[["id", "name"]]
     
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
     
     # get matches played
     matches = scores_raw[["squadId", "matches"]].drop_duplicates()

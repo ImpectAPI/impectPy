@@ -37,31 +37,30 @@ pip install git+https://github.com/ImpectAPI/impectPy.git@v2.3.1
 
 ### Getting started
 
-Before accessing any data via our API, you will need to request a bearer
-token for authorization. You can get this authorization token using the
-following code snippet:
+Before accessing any data via our API, you will need to login
+You can do this with the following code snippet:
 
 ``` python
-import impectPy as ip
-import pandas as pd
+from impectPy import Impect
 
 # define login credentials
 username = "yourUsername"
 password = "yourPassword"
 
 # get access token
-token = ip.getAccessToken(username=username, password=password)
+api = Impect()
+api.login(username=username, password=password)
 ```
 
-This access token is a requirement to use any of the functions that
-requests data from the API. We recommend to first get a list of
-competition iterations that are enabled for your account.
+Now you able to call every method on the instance, without worry about the token/credentials.
+
+We recommend to first get a list of competition iterations that are enabled for your account.
 
 ### Retrieve Basic Information
 
 ``` python
 # get list of iterations
-iterations = ip.getIterations(token=token)
+iterations = api.getIterations()
 
 # print iterations to console
 iterations
@@ -74,7 +73,7 @@ snippet gets you a list of matches for this iteration:
 
 ``` python
 # get matches for iteration
-matchplan = ip.getMatches(iteration=518, token=token)
+matchplan = api.getMatches(iteration=518)
 
 # print matches to console
 matchplan
@@ -96,9 +95,8 @@ following code snippet:
 matches = [84344]
 
 # get event data for matches
-events = ip.getEvents(
-    matches=matches, 
-    token=token,
+events = api.getEvents(
+    matches=matches,
     include_kpis=True,
     include_set_pieces=True
 )
@@ -120,26 +118,25 @@ your want to retrieve data for:
 matches = [84344]
 
 # get set piece data including KPI aggregates
-setPieces = ip.getSetPieces(matches=matches, token=token)
+setPieces = api.getSetPieces(matches=matches)
 
 # get kpi matchsums for match per player and position
-playerMatchsums = ip.getPlayerMatchsums(matches=matches, token=token)
+playerMatchsums = api.getPlayerMatchsums(matches=matches)
 
 # get kpi matchsums for match per squad
-squadMatchsums = ip.getSquadMatchsums(matches=matches, token=token)
+squadMatchsums = api.getSquadMatchsums(matches=matches)
 
 # define positions to get scores aggregated by
 positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
 
 # get player scores and ratios for match and positions per player
-playerMatchScores = ip.getPlayerMatchScores(
+playerMatchScores = api.getPlayerMatchScores(
     matches=matches,
-    positions=positions,
-    token=token
+    positions=positions
 )
 
 # get squad scores and ratios for match per squad
-squadMatchScores = ip.getSquadMatchScores(matches=matches, token=token)
+squadMatchScores = api.getSquadMatchScores(matches=matches)
 ```
 
 In case you wish to retrieve data for multiple matches, we suggest using
@@ -152,34 +149,32 @@ Leipzig vs FSV Mainz 05 game (matchId = 84350) from the same day:
 matches = [84344, 84350]
 
 # apply getEvents function to a set of matchIds
-events = ip.getEvents(
-    matches=matches, 
-    token=token,
+events = api.getEvents(
+    matches=matches,
     include_kpis=True,
     include_set_pieces=True
 )
 
 # get set piece data including KPI aggregates
-setPieces = ip.getSetPieces(matches=matches, token=token)
+setPieces = api.getSetPieces(matches=matches)
 
 # get matchsums for matches per player and position
-playerMatchsums = ip.getPlayerMatchsums(matches=matches, token=token)
+playerMatchsums = api.getPlayerMatchsums(matches=matches)
 
 # get matchsums for matches per squad
-squadMatchsums = ip.getSquadMatchsums(matches=matches, token=token)
+squadMatchsums = api.getSquadMatchsums(matches=matches)
 
 # define positions to get scores aggregated by
 positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
 
 # get player scores and ratios for match and positions per player
-playerMatchScores = ip.getPlayerMatchScores(
+playerMatchScores = api.getPlayerMatchScores(
     matches=matches,
     positions=positions,
-    token=token
 )
 
 # get squad scores and ratios for match per squad
-squadMatchScores = ip.getSquadMatchScores(matches=matches, token=token)
+squadMatchScores = api.getSquadMatchScores(matches=matches)
 ```
 
 ### Retrieve Iteration Level Data
@@ -204,28 +199,24 @@ iteration = 518
 positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
 
 # get player kpi averages for iteration
-playerIterationAverages = ip.getPlayerIterationAverages(
-    iteration=iteration,
-    token=token
+playerIterationAverages = api.getPlayerIterationAverages(
+    iteration=iteration
 )
 
 # get squad kpi averages for iteration
-squadIterationAverages = ip.getSquadIterationAverages(
-    iteration=iteration,
-    token=token
+squadIterationAverages = api.getSquadIterationAverages(
+    iteration=iteration
 )
 
 # get player scores and ratios for iteration and positions
-playerIterationScores = ip.getPlayerIterationScores(
+playerIterationScores = api.getPlayerIterationScores(
     iteration=iteration,
-    positions=positions,
-    token=token
+    positions=positions
 )
 
 # get squad scores and ratios for iteration
 squadIterationScores = ip.getSquadIterationScores(
-    iteration=iteration,
-    token=token
+    iteration=iteration
 )
 ```
 
@@ -243,7 +234,7 @@ iteration = 518
 positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
 
 # get player profile scores
-playerProfileScores = getPlayerProfileScores(iteration, positions, token)
+playerProfileScores = api.getPlayerProfileScores(iteration, positions)
 ```
 
 Please keep in mind that Impect enforces a rate limit of 10 requests per second
@@ -263,7 +254,7 @@ one game at a time. Let's use the Bayern vs Dortmund game from earlier as an exa
 matches = [84344]
 
 # get event data for matchId
-events = ip.getEvents(matches=matches, token=token)
+events = api.getEvents(matches=matches)
 
 # define lead and lag time in seconds
 lead = 3
@@ -277,7 +268,7 @@ p4Start = 0 # set to timestamp of the kickoff of the second half of extra time
 p5Start = 0 # set to timestamp of the  of the penalty shootout
 kickoff
 # generate xml
-xml_tree = ip.generateSportsCodeXML(
+xml_tree = api.generateSportsCodeXML(
     events=events,
     lead=lead,
     lag=lag,
@@ -302,6 +293,22 @@ with open(f"match{matches[0]}_"
                    encoding='utf-8',
                    method="xml")
 ```
+
+### Configuration
+
+It is possible to configure the Impect instance for other environments. This is currently 
+only useful for internal development, but it is also a preparation for later development 
+against a sandbox environment.
+
+``` python
+from impectPy import Config
+from impectPy import Impect
+
+config = Config(host='THE-BASE-URL', oidc_token_endpoint='THE-TOKEN-URL')
+api = Impect(config=config)
+```
+
+That's the only thing you have to customize to access a different environment.
 
 ## Final Notes
 
