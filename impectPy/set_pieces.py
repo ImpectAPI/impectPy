@@ -1,8 +1,8 @@
 # load packages
 import pandas as pd
 from impectPy.helpers import RateLimitedAPI
-from .matches import getMatches
-from .iterations import getIterations
+from .matches import getMatchesFromHost
+from .iterations import getIterationsFromHost
 import re
 
 ######
@@ -15,6 +15,9 @@ import re
 
 # define function
 def getSetPieces(matches: list, token: str) -> pd.DataFrame:
+    return getSetPiecesFromHost(matches, token, "https://api.impect.com")
+
+def getSetPiecesFromHost(matches: list, token: str, host: str) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
 
@@ -28,7 +31,7 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
     # get match info
     iterations = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
+            url=f"{host}/v5/customerapi/matches/{match}",
             method="GET",
             headers=my_header
         ).process_response(
@@ -56,7 +59,7 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
     # get players
     players = pd.concat(
         map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
+            url=f"{host}/v5/customerapi/iterations/{iteration}/players",
             method="GET",
             headers=my_header
         ).process_response(
@@ -68,7 +71,7 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
     # get squads
     squads = pd.concat(
         map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
         ).process_response(
@@ -79,21 +82,22 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
 
     # get matches
     matchplan = pd.concat(
-        map(lambda iteration: getMatches(
+        map(lambda iteration: getMatchesFromHost(
             iteration=iteration,
             token=token,
-            session=rate_limited_api.session
+            session=rate_limited_api.session,
+            host=host
         ),
             iterations),
         ignore_index=True)
 
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
 
     # get set piece data
     set_pieces = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}/set-pieces",
+            url=f"{host}/v5/customerapi/matches/{match}/set-pieces",
             method="GET",
             headers=my_header
         ).process_response(

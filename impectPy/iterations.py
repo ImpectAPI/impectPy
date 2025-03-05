@@ -10,10 +10,11 @@ from impectPy.helpers import RateLimitedAPI, unnest_mappings_dict, validate_resp
 # This function returns a dataframe containing all competitionIterations available to the user
 #
 ######
-
+def getIterations(token: str, session: Optional[requests.Session] = None) -> pd.DataFrame:
+    return getIterationsFromHost(token, session, "https://api.impect.com")
 
 # define function
-def getIterations(token: str, session: Optional[requests.Session] = None) -> pd.DataFrame:
+def getIterationsFromHost(token: str, session: Optional[requests.Session], host: str) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI(session)
 
@@ -22,7 +23,7 @@ def getIterations(token: str, session: Optional[requests.Session] = None) -> pd.
 
     # request competition iteration information from API
     response = rate_limited_api.make_api_request_limited(
-        "https://api.impect.com/v5/customerapi/iterations/",
+        f"{host}/v5/customerapi/iterations/",
         method="GET",
         headers=my_header
     )

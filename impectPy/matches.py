@@ -12,8 +12,11 @@ from typing import Optional
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_dict, validate_response
 
 
-# define function
 def getMatches(iteration: int, token: str, session: Optional[requests.Session] = None) -> pd.DataFrame:
+    return getMatchesFromHost(iteration, token, session, "https://api.impect.com")
+
+# define function
+def getMatchesFromHost(iteration: int, token: str, session: Optional[requests.Session], host: str) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI(session)
 
@@ -22,7 +25,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
 
     # get match data
     matches = rate_limited_api.make_api_request_limited(
-        url="https://api.impect.com/v5/customerapi/iterations/"
+        url=f"{host}/v5/customerapi/iterations/"
             f"{iteration}/matches",
         method="GET",
         headers=my_header)
@@ -32,7 +35,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
 
     # get squads data
     squads = rate_limited_api.make_api_request_limited(
-        url="https://api.impect.com/v5/customerapi/iterations/"
+        url=f"{host}/v5/customerapi/iterations/"
             f"{iteration}/squads",
         method="GET",
         headers=my_header)
@@ -42,7 +45,7 @@ def getMatches(iteration: int, token: str, session: Optional[requests.Session] =
 
     # get country data
     countries = rate_limited_api.make_api_request_limited(
-        url="https://api.impect.com/v5/customerapi/countries",
+        url=f"{host}/v5/customerapi/countries",
         method="GET",
         headers=my_header)
 

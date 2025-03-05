@@ -1,8 +1,8 @@
 # load packages
 import pandas as pd
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
-from .matches import getMatches
-from .iterations import getIterations
+from .matches import getMatchesFromHost
+from .iterations import getIterationsFromHost
 
 # define the allowed positions
 allowed_positions = [
@@ -25,9 +25,10 @@ allowed_positions = [
 # given match and a given set of positions aggregated per player
 #
 ######
-
-
 def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataFrame:
+    return getPlayerMatchScoresFromHost(matches, positions, token, "https://api.impect.com")
+
+def getPlayerMatchScoresFromHost(matches: list, positions: list, token: str, host: str) -> pd.DataFrame:
     
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
@@ -54,7 +55,7 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
     # get match info
     iterations = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
+            url=f"{host}/v5/customerapi/matches/{match}",
             method="GET",
             headers=my_header
         ).process_response(
@@ -85,7 +86,7 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
     # get player scores
     scores_raw = pd.concat(
         map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}/positions/{position_string}/player-scores",
+            url=f"{host}/v5/customerapi/matches/{match}/positions/{position_string}/player-scores",
             method="GET",
             headers=my_header
         ).process_response(
@@ -101,7 +102,7 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
     players = pd.concat(
         map(
             lambda iteration: rate_limited_api.make_api_request_limited(
-                url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
+                url=f"{host}/v5/customerapi/iterations/{iteration}/players",
                 method="GET",
                 headers=my_header
             ).process_response(
@@ -117,7 +118,7 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
     # get squads
     squads = pd.concat(
         map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET",
             headers=my_header
         ).process_response(
@@ -128,7 +129,7 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
 
     # get player scores
     scores = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/player-scores",
+        url=f"{host}/v5/customerapi/player-scores",
         method="GET",
         headers=my_header
     ).process_response(
@@ -137,16 +138,17 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
 
     # get matches
     matchplan = pd.concat(
-        map(lambda iteration: getMatches(
+        map(lambda iteration: getMatchesFromHost(
             iteration=iteration,
             token=token,
-            session=rate_limited_api.session
+            session=rate_limited_api.session,
+            host=host
         ),
             iterations),
         ignore_index=True)
 
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
 
     # create empty df to store player scores
     player_scores = pd.DataFrame()
@@ -327,9 +329,10 @@ def getPlayerMatchScores(matches: list, positions: list, token: str) -> pd.DataF
 # given iteration and a given set of positions aggregated per player
 #
 ######
-
-
 def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.DataFrame:
+    return getPlayerIterationScoresFromHost(iteration, positions, token, "https://api.impect.com")
+
+def getPlayerIterationScoresFromHost(iteration: int, positions: list, token: str, host: str) -> pd.DataFrame:
     
     # create an instance of RateLimitedAPI
     rate_limited_api = RateLimitedAPI()
@@ -355,7 +358,7 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
     
     # get squads
     squads = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
+        url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
         method="GET",
         headers=my_header
     ).process_response(
@@ -371,7 +374,7 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
     # get player iteration averages per squad
     scores_raw = pd.concat(
         map(lambda squadId: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/"
+            url=f"{host}/v5/customerapi/iterations/{iteration}/"
                 f"squads/{squadId}/positions/{position_string}/player-scores",
             method="GET",
             headers=my_header
@@ -397,7 +400,7 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
     
     # get players
     players = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
+        url=f"{host}/v5/customerapi/iterations/{iteration}/players",
         method="GET",
         headers=my_header
     ).process_response(
@@ -409,7 +412,7 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
     
     # get scores
     scores = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/player-scores",
+        url=f"{host}/v5/customerapi/player-scores",
         method="GET",
         headers=my_header
     ).process_response(
@@ -417,7 +420,7 @@ def getPlayerIterationScores(iteration: int, positions: list, token: str) -> pd.
     )[["id", "name"]]
     
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
     
     # unnest scorings
     averages = scores_raw.explode("playerScores").reset_index(drop=True)
