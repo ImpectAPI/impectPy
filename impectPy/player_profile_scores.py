@@ -18,13 +18,14 @@ allowed_positions = [
   "CENTER_FORWARD"
 ]
 
-
 ######
 #
 # This function returns a pandas dataframe that contains all profile scores
 # for a given iteration and a given set of positions per player
 #
 ######
+
+
 def getPlayerProfileScores(
         iteration: int, positions: list, token: str, session: requests.Session = requests.Session()
 ) -> pd.DataFrame:

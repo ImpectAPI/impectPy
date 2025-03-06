@@ -4,13 +4,14 @@ import requests
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .iterations import getIterationsFromHost
 
-
 ######
 #
 # This function returns a pandas dataframe that contains all kpis for a
 # given iteration aggregated per player and position
 #
 ######
+
+
 def getPlayerIterationAverages(
         iteration: int, token: str, session: requests.Session = requests.Session()
 ) -> pd.DataFrame:

@@ -212,7 +212,6 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     # return data
     return squad_scores
 
-
 ######
 #
 # This function returns a pandas dataframe that contains all scores for a
