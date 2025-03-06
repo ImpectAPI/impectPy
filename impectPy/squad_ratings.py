@@ -1,8 +1,8 @@
 # load packages
 import pandas as pd
+import requests
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .iterations import getIterationsFromHost
-import json
 
 ######
 #
@@ -12,32 +12,33 @@ import json
 
 
 # define function
-def getSquadRatings(iteration: int, token: str) -> pd.DataFrame:
-    return getSquadRatingsFromHost(iteration, token, "https://api.impect.com")
+def getSquadRatings(iteration: int, token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
 
-def getSquadRatingsFromHost(iteration: int, token: str, host: str) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
+    connection = RateLimitedAPI(session)
 
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getSquadRatingsFromHost(iteration, connection, "https://api.impect.com")
+
+def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(iteration, int):
         raise Exception("Argument 'iteration' must be an integer.")
 
     # get iterations
-    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
+    iterations = getIterationsFromHost(connection=connection, host=host)
 
     # raise exception if provided iteration id doesn't exist
     if iteration not in list(iterations.id):
         raise Exception("The supplied iteration id does not exist. Execution stopped.")
 
     # get squads
-    squads = rate_limited_api.make_api_request_limited(
+    squads = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Squads"
         )[["id", "name", "idMappings"]]
@@ -46,10 +47,9 @@ def getSquadRatingsFromHost(iteration: int, token: str, host: str) -> pd.DataFra
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get squad ratings
-    ratings_raw = rate_limited_api.make_api_request_limited(
+    ratings_raw = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads/ratings",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Squad Ratings"
         )

@@ -1,9 +1,9 @@
 # load packages
 import pandas as pd
+import requests
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
-
 
 ######
 #
@@ -11,16 +11,19 @@ from .iterations import getIterationsFromHost
 # given match aggregated per squad
 #
 ######
-def getSquadMatchScores(matches: list, token: str) -> pd.DataFrame:
-    return getSquadMatchScoresFromHost(matches, token, "https://api.impect.com")
 
-def getSquadMatchScoresFromHost(matches: list, token: str, host: str) -> pd.DataFrame:
-    
+
+def getSquadMatchScores(matches: list, token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
+
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
-    
+    connection = RateLimitedAPI(session)
+
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getSquadMatchScoresFromHost(matches, connection, "https://api.impect.com")
+
+def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
     
     # check input for matches argument
     if not isinstance(matches, list):
@@ -28,10 +31,9 @@ def getSquadMatchScoresFromHost(matches: list, token: str, host: str) -> pd.Data
     
     # get match info
     iterations = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
+        map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Iterations"
         ),
@@ -56,10 +58,9 @@ def getSquadMatchScoresFromHost(matches: list, token: str, host: str) -> pd.Data
     
     # get squad scores
     scores_raw = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
+        map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}/squad-scores",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="SquadMatchScores"
         ).assign(
@@ -70,10 +71,9 @@ def getSquadMatchScoresFromHost(matches: list, token: str, host: str) -> pd.Data
     
     # get squads
     squads = pd.concat(
-        map(lambda iteration: rate_limited_api.make_api_request_limited(
+        map(lambda iteration: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Squads"
         ),
@@ -84,10 +84,9 @@ def getSquadMatchScoresFromHost(matches: list, token: str, host: str) -> pd.Data
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get squad scores
-    scores = rate_limited_api.make_api_request_limited(
+    scores = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/squad-scores",
-        method="GET",
-        headers=my_header
+        method="GET"
     ).process_response(
         endpoint="PlayerScores"
     )[["id", "name"]]
@@ -96,15 +95,14 @@ def getSquadMatchScoresFromHost(matches: list, token: str, host: str) -> pd.Data
     matchplan = pd.concat(
         map(lambda iteration: getMatchesFromHost(
             iteration=iteration,
-            token=token,
-            session=rate_limited_api.session,
+            connection=connection,
             host=host
         ),
             iterations),
         ignore_index=True)
 
     # get iterations
-    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
+    iterations = getIterationsFromHost(connection=connection, host=host)
 
     # create empty df to store squad scores
     squad_scores = pd.DataFrame()
@@ -221,26 +219,28 @@ def getSquadMatchScoresFromHost(matches: list, token: str, host: str) -> pd.Data
 # given iteration aggregated per squad
 #
 ######
-def getSquadIterationScores(iteration: int, token: str) -> pd.DataFrame:
-    return getSquadIterationScoresFromHost(iteration, token, "https://api.impect.com")
 
-def getSquadIterationScoresFromHost(iteration: int, token: str, host: str) -> pd.DataFrame:
-    
+
+def getSquadIterationScores(iteration: int, token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
+
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
-    
+    connection = RateLimitedAPI(session)
+
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getSquadIterationScoresFromHost(iteration, connection, "https://api.impect.com")
+
+def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
     
     # check input for matches argument
     if not isinstance(iteration, int):
         raise Exception("Input for iteration argument must be an integer")
     
     # get squads
-    squads = rate_limited_api.make_api_request_limited(
+    squads = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
-        method="GET",
-        headers=my_header
+        method="GET"
     ).process_response(
         endpoint="Squads"
     )[["id", "name", "idMappings"]]
@@ -249,25 +249,23 @@ def getSquadIterationScoresFromHost(iteration: int, token: str, host: str) -> pd
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
     
     # get squad iteration averages
-    scores_raw = rate_limited_api.make_api_request_limited(
+    scores_raw = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/squad-scores",
-        method="GET",
-        headers=my_header
+        method="GET"
     ).process_response(
         endpoint="SquadIterationScores"
     ).assign(iterationId=iteration)
     
     # get scores
-    scores_definitions = rate_limited_api.make_api_request_limited(
+    scores_definitions = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/squad-scores",
-        method="GET",
-        headers=my_header
+        method="GET"
     ).process_response(
         endpoint="scoreDefinitions"
     )[["id", "name"]]
     
     # get iterations
-    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
+    iterations = getIterationsFromHost(connection=connection, host=host)
     
     # get matches played
     matches = scores_raw[["squadId", "matches"]].drop_duplicates()

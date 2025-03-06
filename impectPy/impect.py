@@ -1,4 +1,5 @@
 from impectPy.config import Config
+from .helpers import RateLimitedAPI
 from .access_token import getAccessTokenFromUrl
 from .iterations import getIterationsFromHost
 from .matches import getMatchesFromHost
@@ -11,59 +12,95 @@ from .player_profile_scores import getPlayerProfileScoresFromHost
 from .sportscode_xml import generateSportsCodeXML
 from .set_pieces import getSetPiecesFromHost
 from .squad_ratings import getSquadRatingsFromHost
-import requests
-from typing import Optional
 import pandas as pd
 from xml.etree import ElementTree as ET
 
-class Impect:
-    def __init__(self,config: Config = Config()):
-        self.__config = config
 
-    # Login with username and password
+class Impect:
+    def __init__(self,config: Config = Config(), connection: RateLimitedAPI = RateLimitedAPI()):
+        self.__config = config
+        self.connection = connection
+
+    # login with username and password
     def login(self, username: str, password: str) -> str:
-        self.__token = getAccessTokenFromUrl(username, password, self.__config.OIDC_TOKEN_ENDPOINT)
+        self.__token = getAccessTokenFromUrl(username, password, self.connection, self.__config.OIDC_TOKEN_ENDPOINT)
+        self.connection.session.headers.update({"Authorization": f"Bearer {self.__token}"})
         return self.__token
 
-    # Use the given token for all calls of the instance
+    # use the given token for all calls of the instance
     def init(self, token: str):
         self.__token = token
+        self.connection.session.headers.update({"Authorization": f"Bearer {self.__token}"})
     
-    def getIterations(self, session: Optional[requests.Session] = None) -> pd.DataFrame:
-        return getIterationsFromHost(self.__token, session, self.__config.HOST)
+    def getIterations(self) -> pd.DataFrame:
+        return getIterationsFromHost(
+            self.connection, self.__config.HOST
+        )
 
-    def getMatches(self, iteration: int, session: Optional[requests.Session] = None) -> pd.DataFrame:
-        return getMatchesFromHost(iteration, self.__token, session, self.__config.HOST)
+    def getMatches(self, iteration: int) -> pd.DataFrame:
+        return getMatchesFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
     
     def getEvents(self, matches: list, include_kpis: bool = True, include_set_pieces: bool = True) -> pd.DataFrame:
-        return getEventsFromHost(matches, self.__token, include_kpis, include_set_pieces, self.__config.HOST)
+        return getEventsFromHost(
+            matches, include_kpis, include_set_pieces, self.connection, self.__config.HOST
+        )
     
     def getPlayerMatchsums(self, matches: list) -> pd.DataFrame:
-        return getPlayerMatchsumsFromHost(matches, self.__token, self.__config.HOST)
+        return getPlayerMatchsumsFromHost(
+            matches, self.connection, self.__config.HOST
+        )
 
     def getSquadMatchsums(self, matches: list, ) -> pd.DataFrame:
-        return getSquadMatchsumsFromHost(matches, self.__token, self.__config.HOST)
+        return getSquadMatchsumsFromHost(
+            matches, self.connection, self.__config.HOST
+        )
     
     def getPlayerIterationAverages(self, iteration: int) -> pd.DataFrame:
-        return getPlayerIterationAveragesFromHost(iteration, self.__token, self.__config.HOST)
+        return getPlayerIterationAveragesFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
     
     def getSquadIterationAverages(self, iteration: int) -> pd.DataFrame:
-        return getSquadIterationAveragesFromHost(iteration, self.__token, self.__config.HOST)
+        return getSquadIterationAveragesFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
 
     def getPlayerMatchScores(self, matches: list, positions: list) -> pd.DataFrame:
-        return getPlayerMatchScoresFromHost(matches, positions, self.__token, self.__config.HOST)
+        return getPlayerMatchScoresFromHost(
+            matches, positions, self.connection, self.__config.HOST
+        )
 
     def getPlayerIterationScores(self, iteration: int, positions: list) -> pd.DataFrame:
-        return getPlayerIterationScoresFromHost(iteration, positions, self.__token, self.__config.HOST)
+        return getPlayerIterationScoresFromHost(
+            iteration, positions, self.connection, self.__config.HOST
+        )
     
     def getSquadMatchScores(self, matches: list) -> pd.DataFrame:
-        return getSquadMatchScoresFromHost(matches, self.__token, self.__config.HOST)
+        return getSquadMatchScoresFromHost(
+            matches, self.connection, self.__config.HOST
+        )
 
     def getSquadIterationScores(self, iteration: int) -> pd.DataFrame:
-        return getSquadIterationScoresFromHost(iteration, self.__token, self.__config.HOST)
+        return getSquadIterationScoresFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
     
     def getPlayerProfileScores(self, iteration: int, positions: list) -> pd.DataFrame:
-        return getPlayerProfileScoresFromHost(iteration, positions, self.__token, self.__config.HOST)
+        return getPlayerProfileScoresFromHost(
+            iteration, positions, self.connection, self.__config.HOST
+        )
+
+    def getSetPieces(self, matches: list) -> pd.DataFrame:
+        return getSetPiecesFromHost(
+            matches, self.connection, self.__config.HOST
+        )
+
+    def getSquadRatings(self, iteration: int) -> pd.DataFrame:
+        return getSquadRatingsFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
     
     @staticmethod
     def generateSportsCodeXML(
@@ -77,9 +114,3 @@ class Impect:
             p5Start: int
     ) -> ET.ElementTree:
         return generateSportsCodeXML(events, lead, lag, p1Start, p2Start, p3Start, p4Start, p5Start)
-
-    def getSetPieces(self, matches: list) -> pd.DataFrame:
-        return getSetPiecesFromHost(matches, self.__token, self.__config.HOST)
-    
-    def getSquadRatings(self, iteration: int) -> pd.DataFrame:
-        return getSquadRatingsFromHost(iteration, self.__token, self.__config.HOST)

@@ -1,6 +1,7 @@
 # load packages
 import numpy as np
 import pandas as pd
+import requests
 from impectPy.helpers import RateLimitedAPI
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
@@ -12,16 +13,25 @@ import re
 # given match
 #
 ######
-def getEvents(matches: list, token: str, include_kpis: bool = True, include_set_pieces: bool = True) -> pd.DataFrame:
-    return getEventsFromHost(matches, token, include_kpis, include_set_pieces, "https://api.impect.com")
 
-# define function
-def getEventsFromHost(matches: list, token: str, include_kpis: bool, include_set_pieces: bool, host: str) -> pd.DataFrame:
+
+def getEvents(
+        matches: list, token: str, include_kpis: bool = True,
+        include_set_pieces: bool = True, session: requests.Session = requests.Session()
+) -> pd.DataFrame:
+
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
+    connection = RateLimitedAPI(session)
 
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getEventsFromHost(matches, include_kpis, include_set_pieces, connection, "https://api.impect.com")
+
+# define function
+def getEventsFromHost(
+        matches: list, include_kpis: bool, include_set_pieces: bool, connection: RateLimitedAPI, host: str
+) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(matches, list):
@@ -29,10 +39,9 @@ def getEventsFromHost(matches: list, token: str, include_kpis: bool, include_set
 
     # get match info
     iterations = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
+        map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Iterations"
         ),
@@ -57,10 +66,9 @@ def getEventsFromHost(matches: list, token: str, include_kpis: bool, include_set
 
     # get match events
     events = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
+        map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}/events",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Events"
         ).assign(
@@ -91,10 +99,9 @@ def getEventsFromHost(matches: list, token: str, include_kpis: bool, include_set
 
     # get players
     players = pd.concat(
-        map(lambda iteration: rate_limited_api.make_api_request_limited(
+        map(lambda iteration: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/players",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Players"
         ),
@@ -103,10 +110,9 @@ def getEventsFromHost(matches: list, token: str, include_kpis: bool, include_set
 
     # get squads
     squads = pd.concat(
-        map(lambda iteration: rate_limited_api.make_api_request_limited(
+        map(lambda iteration: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Squads"
         ),
@@ -117,23 +123,21 @@ def getEventsFromHost(matches: list, token: str, include_kpis: bool, include_set
     matchplan = pd.concat(
         map(lambda iteration: getMatchesFromHost(
             iteration=iteration,
-            token=token,
-            session=rate_limited_api.session,
+            connection=connection,
             host=host
         ),
             iterations),
         ignore_index=True)
 
     # get iterations
-    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
+    iterations = getIterationsFromHost(connection=connection, host=host)
 
     if include_kpis:
         # get event scorings
         scorings = pd.concat(
-            map(lambda match: rate_limited_api.make_api_request_limited(
+            map(lambda match: connection.make_api_request_limited(
                 url=f"{host}/v5/customerapi/matches/{match}/event-kpis",
-                method="GET",
-                headers=my_header
+                method="GET"
             ).process_response(
                 endpoint="Scorings"
             ),
@@ -141,10 +145,9 @@ def getEventsFromHost(matches: list, token: str, include_kpis: bool, include_set
             ignore_index=True)
 
         # get kpis
-        kpis = rate_limited_api.make_api_request_limited(
+        kpis = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/kpis/event",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="EventKPIs"
         )[["id", "name"]]
@@ -152,10 +155,9 @@ def getEventsFromHost(matches: list, token: str, include_kpis: bool, include_set
     if include_set_pieces:
         # get set piece data
         set_pieces = pd.concat(
-            map(lambda match: rate_limited_api.make_api_request_limited(
+            map(lambda match: connection.make_api_request_limited(
                 url=f"{host}/v5/customerapi/matches/{match}/set-pieces",
-                method="GET",
-                headers=my_header
+                method="GET"
             ).process_response(
                 endpoint="Set-Pieces"
             ),

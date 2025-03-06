@@ -2,7 +2,6 @@
 import pandas as pd
 import re
 import requests
-from typing import Optional
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_dict, validate_response
 
 ######
@@ -10,22 +9,25 @@ from impectPy.helpers import RateLimitedAPI, unnest_mappings_dict, validate_resp
 # This function returns a dataframe containing all competitionIterations available to the user
 #
 ######
-def getIterations(token: str, session: Optional[requests.Session] = None) -> pd.DataFrame:
-    return getIterationsFromHost(token, session, "https://api.impect.com")
 
-# define function
-def getIterationsFromHost(token: str, session: Optional[requests.Session], host: str) -> pd.DataFrame:
+
+def getIterations(token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
+
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI(session)
+    connection = RateLimitedAPI(session)
 
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getIterationsFromHost(connection, "https://api.impect.com")
+
+# define function
+def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame:
 
     # request competition iteration information from API
-    response = rate_limited_api.make_api_request_limited(
+    response = connection.make_api_request_limited(
         f"{host}/v5/customerapi/iterations/",
-        method="GET",
-        headers=my_header
+        method="GET"
     )
 
     # get data from response

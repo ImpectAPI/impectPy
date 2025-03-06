@@ -1,5 +1,6 @@
 # load packages
 import pandas as pd
+import requests
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .iterations import getIterationsFromHost
 
@@ -24,15 +25,21 @@ allowed_positions = [
 # for a given iteration and a given set of positions per player
 #
 ######
-def getPlayerProfileScores(iteration: int, positions: list, token: str) -> pd.DataFrame:
-    return getPlayerProfileScoresFromHost(iteration, positions, token, "https://api.impect.com")
+def getPlayerProfileScores(
+        iteration: int, positions: list, token: str, session: requests.Session = requests.Session()
+) -> pd.DataFrame:
 
-def getPlayerProfileScoresFromHost(iteration: int, positions: list, token: str, host: str) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
-    
+    connection = RateLimitedAPI(session)
+
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getPlayerProfileScoresFromHost(iteration, positions, connection, "https://api.impect.com")
+
+def getPlayerProfileScoresFromHost(
+        iteration: int, positions: list, connection: RateLimitedAPI, host: str
+) -> pd.DataFrame:
     
     # check input for iteration argument
     if not isinstance(iteration, int):
@@ -51,10 +58,9 @@ def getPlayerProfileScoresFromHost(iteration: int, positions: list, token: str, 
         )
     
     # get squads
-    squads = rate_limited_api.make_api_request_limited(
+    squads = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
-        method="GET",
-        headers=my_header
+        method="GET"
     ).process_response(
         endpoint="Squads"
     )
@@ -67,11 +73,10 @@ def getPlayerProfileScoresFromHost(iteration: int, positions: list, token: str, 
     
     # get player profile scores per squad
     profile_scores_raw = pd.concat(
-        map(lambda squadId: rate_limited_api.make_api_request_limited(
+        map(lambda squadId: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/"
                 f"squads/{squadId}/positions/{position_string}/player-profile-scores",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="PlayerIterationScores",
             raise_exception=False
@@ -93,10 +98,9 @@ def getPlayerProfileScoresFromHost(iteration: int, positions: list, token: str, 
         print(f"No players played at positions {positions} for iteration {iteration} for following squads:\n\t{', '.join(error_list)}")
     
     # get players
-    players = rate_limited_api.make_api_request_limited(
+    players = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/players",
-        method="GET",
-        headers=my_header
+        method="GET"
     ).process_response(
         endpoint="Players"
     )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
@@ -105,16 +109,15 @@ def getPlayerProfileScoresFromHost(iteration: int, positions: list, token: str, 
     players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
     
     # get scores
-    scores = rate_limited_api.make_api_request_limited(
+    scores = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/player-profiles",
-        method="GET",
-        headers=my_header
+        method="GET"
     ).process_response(
         endpoint="playerProfiles"
     )[["name"]]
     
     # get iterations
-    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
+    iterations = getIterationsFromHost(connection=connection, host=host)
     
     # unnest scorings
     profile_scores = profile_scores_raw.explode("profileScores").reset_index(drop=True)

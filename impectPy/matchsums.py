@@ -1,9 +1,9 @@
 # load packages
 import pandas as pd
+import requests
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
-
 
 ######
 #
@@ -12,15 +12,18 @@ from .iterations import getIterationsFromHost
 #
 ######
 
-def getPlayerMatchsums(matches: list, token: str) -> pd.DataFrame:
-    return getPlayerMatchsumsFromHost(matches, token, "https://api.impect.com")
 
-def getPlayerMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataFrame:
+def getPlayerMatchsums(matches: list, token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
+
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
+    connection = RateLimitedAPI(session)
 
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getPlayerMatchsumsFromHost(matches, connection, "https://api.impect.com")
+
+def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(matches, list):
@@ -28,10 +31,9 @@ def getPlayerMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataF
 
     # get match info
     iterations = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
+        map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Iterations"
         ),
@@ -56,10 +58,9 @@ def getPlayerMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataF
 
     # get player match sums
     matchsums_raw = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
+        map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}/player-kpis",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="PlayerMatchsums"
         ).assign(
@@ -71,10 +72,9 @@ def getPlayerMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataF
     # get players
     players = pd.concat(
         map(
-            lambda iteration: rate_limited_api.make_api_request_limited(
+            lambda iteration: connection.make_api_request_limited(
                 url=f"{host}/v5/customerapi/iterations/{iteration}/players",
-                method="GET",
-                headers=my_header
+                method="GET"
             ).process_response(
                 endpoint="Players"
             ),
@@ -87,10 +87,9 @@ def getPlayerMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataF
 
     # get squads
     squads = pd.concat(
-        map(lambda iteration: rate_limited_api.make_api_request_limited(
+        map(lambda iteration: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Squads"
         ),
@@ -98,10 +97,9 @@ def getPlayerMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataF
         ignore_index=True)[["id", "name"]].drop_duplicates()
 
     # get kpis
-    kpis = rate_limited_api.make_api_request_limited(
+    kpis = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/kpis",
-        method="GET",
-        headers=my_header
+        method="GET"
     ).process_response(
         endpoint="KPIs"
     )[["id", "name"]]
@@ -110,15 +108,14 @@ def getPlayerMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataF
     matchplan = pd.concat(
         map(lambda iteration: getMatchesFromHost(
             iteration=iteration,
-            token=token,
-            session=rate_limited_api.session,
+            connection=connection,
             host=host
         ),
             iterations),
         ignore_index=True)
 
     # get iterations
-    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
+    iterations = getIterationsFromHost(connection=connection, host=host)
 
     # create empty df to store matchsums
     matchsums = pd.DataFrame()
@@ -277,15 +274,19 @@ def getPlayerMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataF
 # given match aggregated per squad
 #
 ######
-def getSquadMatchsums(matches: list, token: str) -> pd.DataFrame:
-    return getSquadMatchsumsFromHost(matches, token, "https://api.impect.com")
 
-def getSquadMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataFrame:
+
+def getSquadMatchsums(matches: list, token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
+
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
+    connection = RateLimitedAPI(session)
 
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getSquadMatchsumsFromHost(matches, connection, "https://api.impect.com")
+
+def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(matches, list):
@@ -293,10 +294,9 @@ def getSquadMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataFr
 
     # get match info
     iterations = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
+        map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Iterations"
         ),
@@ -321,10 +321,9 @@ def getSquadMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataFr
 
     # get squad match sums
     matchsums_raw = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
+        map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}/squad-kpis",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="SquadMatchsums"
         ).assign(
@@ -335,10 +334,9 @@ def getSquadMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataFr
 
     # get squads
     squads = pd.concat(
-        map(lambda iteration: rate_limited_api.make_api_request_limited(
+        map(lambda iteration: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="Squads"
         ),
@@ -349,10 +347,9 @@ def getSquadMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataFr
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get kpis
-    kpis = rate_limited_api.make_api_request_limited(
+    kpis = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/kpis",
-        method="GET",
-        headers=my_header
+        method="GET"
     ).process_response(
         endpoint="KPIs"
     )[["id", "name"]]
@@ -361,15 +358,14 @@ def getSquadMatchsumsFromHost(matches: list, token: str, host: str) -> pd.DataFr
     matchplan = pd.concat(
         map(lambda iteration: getMatchesFromHost(
             iteration=iteration,
-            token=token,
-            session=rate_limited_api.session,
+            connection=connection,
             host=host
         ),
             iterations),
         ignore_index=True)
 
     # get iterations
-    iterations = getIterationsFromHost(token=token, session=rate_limited_api.session, host=host)
+    iterations = getIterationsFromHost(connection=connection, host=host)
 
     # create empty df to store matchsums
     matchsums = pd.DataFrame()

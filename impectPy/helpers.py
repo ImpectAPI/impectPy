@@ -184,9 +184,6 @@ def process_response(self: requests.Response, endpoint: str, raise_exception: bo
     # validate and get data from response
     result = validate_response(response=self, endpoint=endpoint, raise_exception=raise_exception)
 
-    # get data from response
-    # result = self.json()["data"]
-
     # convert to df
     result = pd.json_normalize(result)
 
