@@ -788,13 +788,13 @@ def generateSportsCodeXML(events: pd.DataFrame,
                 instance = ET.SubElement(instances, "instance")
                 # add event id
                 event_id = ET.SubElement(instance, "ID")
-                event_id.text = str(event.sequence_id + max_id)
+                event_id.text = str(event.eventNumber + max_id)
                 # add start time
                 start = ET.SubElement(instance, "start")
-                start.text = str(round(sequence_timing.at[seq_id_new - 1, "start"], 2))
+                start.text = str(round(event.start, 2))
                 # add end time
                 end = ET.SubElement(instance, "end")
-                end.text = str(round(sequence_timing.at[seq_id_new - 1, "end"], 2))
+                end.text = str(round(event.end, 2))
                 # add player as code
                 code = ET.SubElement(instance, "code")
                 code.text = event.playerName
@@ -867,8 +867,13 @@ def generateSportsCodeXML(events: pd.DataFrame,
               {"order": "KPI: ",
                "name": "PACKING_XG"}]
 
-    # update max id after adding players
-    max_id += players.sequence_id.max() + 1
+    if sequencing:
+        # update max id after adding players
+        max_id += players.sequence_id.max() + 1
+    else:
+        # update max id after adding players
+        max_id += event.eventNumber + 1
+
 
     # add to xml structure
     for index, phase in phases.iterrows():
