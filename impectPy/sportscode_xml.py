@@ -18,7 +18,8 @@ def generateSportsCodeXML(events: pd.DataFrame,
                           p3Start: int,
                           p4Start: int,
                           p5Start: int,
-                          sequencing: bool = True) -> ET.ElementTree:
+                          sequencing: bool = True,
+                          apply_buckets: bool = True) -> ET.ElementTree:
     # define parameters
 
     # compile periods start times into dict
@@ -507,59 +508,63 @@ def generateSportsCodeXML(events: pd.DataFrame,
     if len(penalty_shootout) > 0:
         kickoffs = pd.concat([kickoffs, penalty_shootout.iloc[[0]]])
 
+    # rename PXT_DELTA
+    players = players.rename(columns={"PXT_PLAYER_DELTA": "PXT_DELTA"})
+    phases = phases.rename(columns={"PXT_TEAM_DELTA": "PXT_DELTA"})
+
     # apply bucket logic
+    if apply_buckets:
+        # define function to apply bucket logic for events
+        def get_bucket(bucket, value, zero_value, error_value):
+            # check if value is 0.0
+            if value == 0:
+                # this is required because 0 values for kpis should be handled differently from attributes
+                return zero_value
+            # iterate over bucket entries
+            for entry in bucket:
+                if entry["min"] <= value < entry["max"]:
+                    # return bucket label
+                    return entry["label"]
+            # if no bucket was assigned, actively assign error_value
+            return error_value
 
-    # define function to apply bucket logic for events
-    def get_bucket(bucket, value, zero_value, error_value):
-        # check if value is 0.0
-        if value == 0:
-            # this is required because 0 values for kpis should be handled differently from attributes
-            return zero_value
-        # iterate over bucket entries
-        for entry in bucket:
-            if entry["min"] <= value < entry["max"]:
-                # return bucket label
-                return entry["label"]
-        # if no bucket was assigned, actively assign error_value
-        return error_value
+        # apply on player level
+        # iterate over kpis
+        for kpi in kpis:
+            # get bucket for column
+            bucket = kpi_buckets[kpi]
+            # apply function
+            players[kpi] = players[kpi].apply(lambda x: get_bucket(bucket, x, None, None))
 
-    # apply on player level
-    # iterate over kpis
-    for kpi in kpis:
-        # get bucket for column
-        bucket = kpi_buckets[kpi]
-        # apply function
-        players[kpi] = players[kpi].apply(lambda x: get_bucket(bucket, x, None, None))
+        # apply pressure bucket
+        players.pressure = players.pressure.apply(lambda x: get_bucket(pressure_buckets, x, "[0%,10%[", None))
 
-    # apply pressure bucket
-    players.pressure = players.pressure.apply(lambda x: get_bucket(pressure_buckets, x, "[0%,10%[", None))
+        # apply opponents bucket
+        players.opponents = players.opponents.apply(lambda x: get_bucket(opponent_buckets, x, "[0,5[", None))
 
-    # apply opponents bucket
-    players.opponents = players.opponents.apply(lambda x: get_bucket(opponent_buckets, x, "[0,5[", None))
+        # apply pass length bucket
+        players.passDistance = players.passDistance.apply(lambda x: get_bucket(pass_buckets, x, "<15", None))
 
-    # apply pass length bucket
-    players.passDistance = players.passDistance.apply(lambda x: get_bucket(pass_buckets, x, "<15", None))
+        # apply pxt bucket to PXT_DELTA
+        players.PXT_DELTA = players.PXT_DELTA.apply(lambda x: get_bucket(pxt_buckets, x, None, None))
 
-    # apply pxt bucket to PXT_DELTA
-    players["PXT_DELTA"] = players.PXT_PLAYER_DELTA.apply(lambda x: get_bucket(pxt_buckets, x, None, None))
+        # apply pxT Team bucket
+        players.pxTTeam = players.pxTTeam.apply(lambda x: get_bucket(pxt_buckets, x, "[0%,1%[", None))
 
-    # apply pxT Team bucket
-    players.pxTTeam = players.pxTTeam.apply(lambda x: get_bucket(pxt_buckets, x, "[0%,1%[", None))
+        # apply on team level
+        # apply pxt bucket to PXT_DELTA
+        phases.PXT_DELTA = phases.PXT_DELTA.apply(lambda x: get_bucket(pxt_buckets, x, "[0%,1%[", None))
 
-    # apply on team level
-    # apply pxt bucket to PXT_DELTA
-    phases["PXT_DELTA"] = phases.PXT_TEAM_DELTA.apply(lambda x: get_bucket(pxt_buckets, x, "[0%,1%[", None))
+        # apply pxT Team bucket
+        phases.pxTTeamStart = phases.pxTTeamStart.apply(lambda x: get_bucket(pxt_buckets, x, "[0%,1%[", None))
+        phases.pxTTeamEnd = phases.pxTTeamEnd.apply(lambda x: get_bucket(pxt_buckets, x, "[0%,1%[", None))
 
-    # apply pxT Team bucket
-    phases.pxTTeamStart = phases.pxTTeamStart.apply(lambda x: get_bucket(pxt_buckets, x, "[0%,1%[", None))
-    phases.pxTTeamEnd = phases.pxTTeamEnd.apply(lambda x: get_bucket(pxt_buckets, x, "[0%,1%[", None))
-
-    # iterate over kpis and apply buckets
-    for kpi in kpis:
-        # get bucket for column
-        bucket = kpi_buckets[kpi]
-        # apply function
-        phases[kpi] = phases[kpi].apply(lambda x: get_bucket(bucket, x, None, None))
+        # iterate over kpis and apply buckets
+        for kpi in kpis:
+            # get bucket for column
+            bucket = kpi_buckets[kpi]
+            # apply function
+            phases[kpi] = phases[kpi].apply(lambda x: get_bucket(bucket, x, None, None))
 
     # convert to sportscode xml
 
