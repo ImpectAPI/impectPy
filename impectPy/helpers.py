@@ -27,9 +27,9 @@ class RateLimitedAPI:
         self.bucket = None  # TokenBucket object to manage rate limit tokens
 
     # make a rate-limited API request
-    def make_api_request_limited(self, url: str, method: str, headers: Optional[Dict[str, Any]] = None,
-                                 data: Optional[Dict[str, Any]] = None,
-                                 json: Optional[Dict[str, Any]] = None) -> requests.Response:
+    def make_api_request_limited(
+            self, url: str, method: str, data: Optional[Dict[str, str]] = None
+    ) -> requests.Response:
         """
         Executes an API call while applying the rate limit.
 
@@ -40,7 +40,7 @@ class RateLimitedAPI:
         # check if bucket is not initialized
         if not self.bucket:
             # make an initial API call to get rate limit information
-            response = self.make_api_request(url=url, method=method, headers=headers, data=data, json=json)
+            response = self.make_api_request(url=url, method=method, data=data)
 
             # get rate limit policy
             policy = response.headers["RateLimit-Policy"]
@@ -64,7 +64,7 @@ class RateLimitedAPI:
         # check if a token is available
         if self.bucket.isTokenAvailable():
             # get API response
-            response = self.make_api_request(url=url, method=method, headers=headers, data=data, json=json)
+            response = self.make_api_request(url=url, method=method, data=data)
 
             # consume a token
             self.bucket.consumeToken()
@@ -79,15 +79,15 @@ class RateLimitedAPI:
             )
 
             # call function again
-            response = self.make_api_request_limited(url=url, method=method, headers=headers, data=data, json=json)
+            response = self.make_api_request_limited(url=url, method=method, data=data)
 
         # return response
         return response
 
-    def make_api_request(self, url: str, method: str, headers: Optional[Dict[str, Any]] = None,
-                         data: Optional[Dict[str, Any]] = None,
-                         json: Optional[Dict[str, Any]] = None, max_retries: int = 3,
-                         retry_delay: int = 1) -> requests.Response:
+    def make_api_request(
+            self, url: str, method: str, data: Optional[Dict[str, Any]] = None,
+            max_retries: int = 3, retry_delay: int = 1
+    ) -> requests.Response:
         """
         Executes an API call.
 
@@ -96,7 +96,7 @@ class RateLimitedAPI:
         """
         # try API call
         for i in range(max_retries):
-            response = self.session.request(method=method, url=url, headers=headers, data=data, json=json)
+            response = self.session.request(method=method, url=url, data=data)
 
             # check status code and return if 200
             if response.status_code == 200:
