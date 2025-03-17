@@ -12,6 +12,7 @@ from .player_profile_scores import getPlayerProfileScoresFromHost
 from .sportscode_xml import generateSportsCodeXML
 from .set_pieces import getSetPiecesFromHost
 from .squad_ratings import getSquadRatingsFromHost
+from .match_info import getFormationsFromHost, getSubstitutionsFromHost, getStartingPositionsFromHost
 import pandas as pd
 from xml.etree import ElementTree as ET
 
@@ -100,6 +101,21 @@ class Impect:
     def getSquadRatings(self, iteration: int) -> pd.DataFrame:
         return getSquadRatingsFromHost(
             iteration, self.connection, self.__config.HOST
+        )
+
+    def getFormations(self, matches: list) -> pd.DataFrame:
+        return getFormationsFromHost(
+            matches, self.connection, self.__config.HOST
+        )
+
+    def getSubstitutions(self, matches: list) -> pd.DataFrame:
+        return getSubstitutionsFromHost(
+            matches, self.connection, self.__config.HOST
+        )
+
+    def getStartingPositions(self, matches: list) -> pd.DataFrame:
+        return getStartingPositionsFromHost(
+            matches, self.connection, self.__config.HOST
         )
     
     @staticmethod
