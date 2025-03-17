@@ -1,8 +1,8 @@
 # load packages
 import pandas as pd
+import requests
 from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
-from .iterations import getIterations
-
+from .iterations import getIterationsFromHost
 
 ######
 #
@@ -12,22 +12,30 @@ from .iterations import getIterations
 ######
 
 
-def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
+def getPlayerIterationAverages(
+        iteration: int, token: str, session: requests.Session = requests.Session()
+) -> pd.DataFrame:
+
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
+    connection = RateLimitedAPI(session)
 
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getPlayerIterationAveragesFromHost(iteration, connection, "https://api.impect.com")
+
+def getPlayerIterationAveragesFromHost(
+        iteration: int, connection: RateLimitedAPI, host: str
+) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(iteration, int):
         raise Exception("Input vor iteration argument must be an integer")
 
     # get squads
-    squads = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
-        method="GET",
-        headers=my_header
+    squads = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
+        method="GET"
     ).process_response(
         endpoint="Squads"
     )
@@ -37,11 +45,10 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
 
     # get player iteration averages per squad
     averages_raw = pd.concat(
-        map(lambda squadId: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/"
+        map(lambda squadId: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/"
                 f"squads/{squadId}/player-kpis",
-            method="GET",
-            headers=my_header
+            method="GET"
         ).process_response(
             endpoint="PlayerAverages"
         ).assign(
@@ -52,10 +59,9 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
         ignore_index=True)
 
     # get players
-    players = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
-        method="GET",
-        headers=my_header
+    players = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/iterations/{iteration}/players",
+        method="GET"
     ).process_response(
         endpoint="Players"
     )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
@@ -64,16 +70,15 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get kpis
-    kpis = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/kpis",
-        method="GET",
-        headers=my_header
+    kpis = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/kpis",
+        method="GET"
     ).process_response(
         endpoint="KPIs"
     )[["id", "name"]]
 
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(connection=connection, host=host)
 
     # unnest scorings
     averages = averages_raw.explode("kpis").reset_index(drop=True)
@@ -201,24 +206,28 @@ def getPlayerIterationAverages(iteration: int, token: str) -> pd.DataFrame:
 # given iteration aggregated per squad
 #
 ######
+def getSquadIterationAverages(
+        iteration: int, token: str, session: requests.Session = requests.Session()
+    ) -> pd.DataFrame:
 
-
-def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
+    connection = RateLimitedAPI(session)
 
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getSquadIterationAveragesFromHost(iteration, connection, "https://api.impect.com")
+
+def getSquadIterationAveragesFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(iteration, int):
         raise Exception("Input vor iteration argument must be an integer")
 
     # get squads
-    squads = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
-        method="GET",
-        headers=my_header
+    squads = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
+        method="GET"
     ).process_response(
         endpoint="Squads"
     )[["id", "name", "idMappings"]]
@@ -227,25 +236,23 @@ def getSquadIterationAverages(iteration: int, token: str) -> pd.DataFrame:
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get squad iteration averages
-    averages_raw = rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squad-kpis",
-            method="GET",
-            headers=my_header
+    averages_raw = connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squad-kpis",
+            method="GET"
         ).process_response(
         endpoint="SquadAverages"
     ).assign(iterationId=iteration)
 
     # get kpis
-    kpis = rate_limited_api.make_api_request_limited(
-        url=f"https://api.impect.com/v5/customerapi/kpis",
-        method="GET",
-        headers=my_header
+    kpis = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/kpis",
+        method="GET"
     ).process_response(
         endpoint="KPIs"
     )[["id", "name"]]
 
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(connection=connection, host=host)
 
     # get matches played
     matches = averages_raw[["squadId", "matches"]].drop_duplicates()
