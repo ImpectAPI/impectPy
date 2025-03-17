@@ -25,11 +25,13 @@ def getAccessTokenFromUrl(username: str, password: str, connection: RateLimitedA
         username) + '&password=' + urllib.parse.quote(password)
 
     # define request headers
-    headers = {"body": login,
-               "Content-Type": "application/x-www-form-urlencoded"}
+    connection.session.headers.update({"body": login, "Content-Type": "application/x-www-form-urlencoded"})
 
     # request access token
-    response = connection.make_api_request(url=token_url, method="POST", headers=headers, data=login, json=None)
+    response = connection.make_api_request(url=token_url, method="POST", data=login)
+
+    # remove headers again
+    connection.session.headers.clear()
 
     # get access token from response and return it
     token = response.json()["access_token"]
