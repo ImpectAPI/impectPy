@@ -1,8 +1,9 @@
 # load packages
 import pandas as pd
+import requests
 from impectPy.helpers import RateLimitedAPI
-from .matches import getMatches
-from .iterations import getIterations
+from .matches import getMatchesFromHost
+from .iterations import getIterationsFromHost
 import re
 
 ######
@@ -14,12 +15,17 @@ import re
 
 
 # define function
-def getSetPieces(matches: list, token: str) -> pd.DataFrame:
+def getSetPieces(matches: list, token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
+
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI()
+    connection = RateLimitedAPI(session)
 
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getSetPiecesFromHost(matches, connection, "https://api.impect.com")
+
+def getSetPiecesFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(matches, list):
@@ -27,10 +33,9 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
 
     # get match info
     iterations = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}",
-            method="GET",
-            headers=my_header
+        map(lambda match: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/matches/{match}",
+            method="GET"
         ).process_response(
             endpoint="Iterations"
         ),
@@ -55,10 +60,9 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
 
     # get players
     players = pd.concat(
-        map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/players",
-            method="GET",
-            headers=my_header
+        map(lambda iteration: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/players",
+            method="GET"
         ).process_response(
             endpoint="Players"
         ),
@@ -67,10 +71,9 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
 
     # get squads
     squads = pd.concat(
-        map(lambda iteration: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads",
-            method="GET",
-            headers=my_header
+        map(lambda iteration: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
+            method="GET"
         ).process_response(
             endpoint="Squads"
         ),
@@ -79,23 +82,22 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
 
     # get matches
     matchplan = pd.concat(
-        map(lambda iteration: getMatches(
+        map(lambda iteration: getMatchesFromHost(
             iteration=iteration,
-            token=token,
-            session=rate_limited_api.session
+            connection=connection,
+            host=host
         ),
             iterations),
         ignore_index=True)
 
     # get iterations
-    iterations = getIterations(token=token, session=rate_limited_api.session)
+    iterations = getIterationsFromHost(connection=connection, host=host)
 
     # get set piece data
     set_pieces = pd.concat(
-        map(lambda match: rate_limited_api.make_api_request_limited(
-            url=f"https://api.impect.com/v5/customerapi/matches/{match}/set-pieces",
-            method="GET",
-            headers=my_header
+        map(lambda match: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/matches/{match}/set-pieces",
+            method="GET"
         ).process_response(
             endpoint="Set-Pieces"
         ),
@@ -114,6 +116,7 @@ def getSetPieces(matches: list, token: str) -> pd.DataFrame:
         axis=1
     ).rename(columns=lambda x: re.sub(r"\.(.)", lambda y: y.group(1).upper(), x))
 
+    # fix typing
     set_pieces.setPieceSubPhaseMainEventPlayerId = set_pieces.setPieceSubPhaseMainEventPlayerId.astype("Int64")
     set_pieces.setPieceSubPhaseFirstTouchPlayerId = set_pieces.setPieceSubPhaseFirstTouchPlayerId.astype("Int64")
     set_pieces.setPieceSubPhaseSecondTouchPlayerId = set_pieces.setPieceSubPhaseSecondTouchPlayerId.astype("Int64")

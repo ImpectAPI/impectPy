@@ -1,3 +1,16 @@
+# impectPy 2.4.0
+
+## Major Changes
+* Add function `getFormations()` to retrieve squad formations on match level
+* Add function `getStartingPositions()` to retrieve squad starting positions on match level
+* Add function `getSubstitutions()` to retrieve squad substitutions on match level
+
+## Minor changes
+* Add IMPECT class to enable object-oriented API usage and improve performance
+* Add new arguments to `getSportCcodeXML()` to enable more customization options for the generated XML:
+  * Disable sequencing
+  * Disable KPI buckets
+
 # impectPy 2.3.1
 
 ## Major Changes

@@ -1,3 +1,8 @@
+import pandas as pd
+import re
+import requests
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_dict, validate_response
+
 ######
 #
 # This function returns a dataframe with basic information
@@ -5,46 +10,45 @@
 #
 ######
 
-import pandas as pd
-import re
-import requests
-from typing import Optional
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_dict, validate_response
 
+def getMatches(iteration: int, token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
 
-# define function
-def getMatches(iteration: int, token: str, session: Optional[requests.Session] = None) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
-    rate_limited_api = RateLimitedAPI(session)
+    connection = RateLimitedAPI(session)
 
     # construct header with access token
-    my_header = {"Authorization": f"Bearer {token}"}
+    connection.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    return getMatchesFromHost(iteration, connection, "https://api.impect.com")
+
+# define function
+def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
 
     # get match data
-    matches = rate_limited_api.make_api_request_limited(
-        url="https://api.impect.com/v5/customerapi/iterations/"
+    matches = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/iterations/"
             f"{iteration}/matches",
-        method="GET",
-        headers=my_header)
+        method="GET"
+    )
 
     # get data from response
     matches = validate_response(response=matches, endpoint="Matches")
 
     # get squads data
-    squads = rate_limited_api.make_api_request_limited(
-        url="https://api.impect.com/v5/customerapi/iterations/"
+    squads = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/iterations/"
             f"{iteration}/squads",
-        method="GET",
-        headers=my_header)
+        method="GET"
+    )
 
     # get data from response
     squads = validate_response(response=squads, endpoint="Squads")
 
     # get country data
-    countries = rate_limited_api.make_api_request_limited(
-        url="https://api.impect.com/v5/customerapi/countries",
-        method="GET",
-        headers=my_header)
+    countries = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/countries",
+        method="GET"
+    )
 
     # get data from response
     countries = validate_response(response=countries, endpoint="Countries")

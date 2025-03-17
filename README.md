@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.3.1
+Version: v2.4.0
 
-**Updated: February 24th 2025**
+**Updated: March 17th 2025**
 
 ---
 
@@ -30,7 +30,7 @@ You can install the latest version of impectPy from
 [GitHub](https://github.com/) with:
 
 ``` cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.3.1
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.4.0
 ```
 
 ## Usage
@@ -85,11 +85,11 @@ and the data is available to you.
 
 ### Retrieve Match Level Data
 
-Let's assume you are interested in the FC
-Bayern München vs Borussia Dortmund game from April 1st 2023 (matchId = 84344).
-As the function allow for multiple games to be requested at once, we need to wrap
-the matchId into a list. Hence, to request the event data for this game, run the
-following code snippet:
+Let's assume you are interested in the FC Bayern München vs Borussia Dortmund game 
+from April 1st 2023 (matchId = 84344) and want to retrieve event level data as well 
+as team formation, starting position and substitution data. As the functions allows 
+for multiple games to be requested at once, we need to wrap the matchId into a list. 
+Hence, to request data for this game, run the following code snippet:
 
 ``` python
 # define matches to get event data for
@@ -102,6 +102,11 @@ events = ip.getEvents(
     include_kpis=True,
     include_set_pieces=True
 )
+
+# get match info
+formations = ip.getFormations(matches, token)
+substitutions = ip.getSubstitutions(matches, token)
+starting_positions = ip.getStartingPositions(matches, token)
 
 # print first few rows from events dataframe to console
 events.head()
@@ -301,6 +306,81 @@ with open(f"match{matches[0]}_"
                    xml_declaration=True,
                    encoding='utf-8',
                    method="xml")
+```
+
+## Object-Oriented Package Version
+
+Since version 2.4.0, there is another way to call the familiar functions in a more object-oriented way. 
+An object of the class "Impect" can be used to query the API. This new object offers a slightly enhanced 
+performance and stores your token as an object attribute. This means you no longer have to include it in 
+every function call. This new IMPECT object can be used as shown in the example below:
+
+```python
+from impectPy import Impect
+
+# define login credentials
+username = "yourUsername"
+password = "yourPassword"
+
+# create Impect instance and login
+api = Impect()
+api.login(username, password)
+
+# define iteration ID
+iteration = 518
+
+# define matchId
+matches = [84344]
+
+# define positions to get scores/profiles aggregated by
+positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
+
+# get iterations
+iterations = api.getIterations()
+
+# get squad ratings
+ratings = api.getSquadRatings(iteration)
+
+# get matches
+matchplan = api.getMatches(iteration)
+
+# get match info
+formations = api.getFormations(matches)
+substitutions = api.getSubstitutions(matches)
+startingPositions = api.getStartingPositions(matches)
+
+# get match events
+events = api.getEvents(matches, include_kpis=True, include_set_pieces=True)
+
+# get set pieces
+setPieces = api.getSetPieces(matches)
+
+# get player iteration averages
+playerIterationAverages = api.getPlayerIterationAverages(iteration)
+
+# get player matchsums
+playerMatchsums = api.getPlayerMatchsums(matches)
+
+# get squad iteration averages
+squadIterationAverages = api.getSquadIterationAverages(iteration)
+
+# get squad matchsums
+squadMatchsums = api.getSquadMatchsums(matches)
+
+# get player match scores
+playerMatchScores = api.getPlayerMatchScores(matches, positions)
+
+# get squad match scores
+squadMatchScores = api.getSquadMatchScores(matches)
+
+# get player iteration scores
+playerIterationScores = api.getPlayerIterationScores(iteration, positions)
+
+# get squad iteration scores
+squadIterationScores = api.getSquadIterationScores(iteration)
+
+# get player profile scores
+playerProfileScores = api.getPlayerProfileScores(iteration, positions)
 ```
 
 ## Final Notes
