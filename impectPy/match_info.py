@@ -255,6 +255,23 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
+    # extract shirt numbers
+    shirt_numbers_home = matches[["id", "squadHomeId", "squadHomePlayers"]].rename(
+        columns={"squadHomePlayers": "players", "squadHomeId": "squadId"}
+    )
+    shirt_numbers_away = matches[["id", "squadAwayId", "squadAwayPlayers"]].rename(
+        columns={"squadAwayPlayers": "players", "squadAwayId": "squadId"}
+    )
+
+    # concat dfs
+    shirt_numbers = pd.concat([shirt_numbers_home, shirt_numbers_away], axis=0).reset_index(drop=True)
+
+    # unnest players column
+    shirt_numbers = shirt_numbers.explode("players").reset_index(drop=True)
+
+    # normalize the JSON structure into separate columns
+    shirt_numbers = pd.json_normalize(shirt_numbers["players"]).rename(columns={"id": "playerId"})
+
     # extract substitutions
     substitutions_home = matches[["id", "squadHomeId", "squadHomeSubstitutions"]].rename(
         columns={"squadHomeSubstitutions": "squadSubstitutions", "squadHomeId": "squadId"}
@@ -289,7 +306,24 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
         suffixes=("", "_x")
     )
 
-    # merge substitutions with squads
+    # merge substitutions with shirt numbers
+    substitutions = substitutions.merge(
+        shirt_numbers,
+        left_on="playerId",
+        right_on="playerId",
+        how="left",
+        suffixes=("", "_x")
+    ).merge(
+        shirt_numbers.rename(
+            columns={"playerId": "exchangedPlayerId", "shirtNumber": "exchangedShirtNumber"}
+        ),
+        left_on="exchangedPlayerId",
+        right_on="exchangedPlayerId",
+        how="left",
+        suffixes=("", "_x")
+    )
+
+    # merge substitutions with players
     substitutions = substitutions.merge(
         players[["id", "commonname"]].rename(
             columns={"commonname": "playerName"}
@@ -338,6 +372,10 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
         "gameTime.gameTimeInSec": "gameTimeInSec"
     })
 
+    # fix column types
+    substitutions["shirtNumber"] = substitutions["shirtNumber"].astype("Int64")
+    substitutions["exchangedShirtNumber"] = substitutions["exchangedShirtNumber"].astype("Int64")
+
     # define desired column order
     cols = [
         "matchId",
@@ -356,12 +394,14 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
         "substitutionType",
         "playerId",
         "playerName",
+        "shirtNumber",
         "fromPosition",
         "fromPositionSide",
         "toPosition",
         "toPositionSide",
         "exchangedPlayerId",
         "exchangedPlayerName",
+        "exchangedShirtNumber",
     ]
 
     # reorder data
@@ -460,6 +500,24 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
+    # extract shirt numbers
+    shirt_numbers_home = matches[["id", "squadHomeId", "squadHomePlayers"]].rename(
+        columns={"squadHomePlayers": "players", "squadHomeId": "squadId"}
+    )
+    shirt_numbers_away = matches[["id", "squadAwayId", "squadAwayPlayers"]].rename(
+        columns={"squadAwayPlayers": "players", "squadAwayId": "squadId"}
+    )
+
+    # concat dfs
+    shirt_numbers = pd.concat([shirt_numbers_home, shirt_numbers_away], axis=0).reset_index(drop=True)
+
+    # unnest players column
+    shirt_numbers = shirt_numbers.explode("players").reset_index(drop=True)
+
+    # normalize the JSON structure into separate columns
+    shirt_numbers = pd.json_normalize(shirt_numbers["players"]).rename(columns={"id": "playerId"})
+
+
     # extract starting_positions
     starting_positions_home = matches[["id", "squadHomeId", "squadHomeStartingPositions"]].rename(
         columns={"squadHomeStartingPositions": "squadStartingPositions", "squadHomeId": "squadId"}
@@ -482,6 +540,15 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
 
     # start merging dfs
 
+    # merge substitutions with shirt numbers
+    starting_positions = starting_positions.merge(
+        shirt_numbers,
+        left_on="playerId",
+        right_on="playerId",
+        how="left",
+        suffixes=("", "_x")
+    )
+
     # merge substitutions with squads
     starting_positions = starting_positions.merge(
         squads[["id", "name"]].rename(columns={"id": "squadId", "name": "squadName"}),
@@ -491,7 +558,7 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
         suffixes=("", "_x")
     )
 
-    # merge substitutions with squads
+    # merge substitutions with players
     starting_positions = starting_positions.merge(
         players[["id", "commonname"]].rename(
             columns={"commonname": "playerName"}
@@ -529,6 +596,9 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
         "scheduledDate": "dateTime",
     })
 
+    # fix column types
+    starting_positions["shirtNumber"] = starting_positions["shirtNumber"].astype(int)
+
     # define desired column order
     cols = [
         "matchId",
@@ -544,6 +614,7 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
         "squadName",
         "playerId",
         "playerName",
+        "shirtNumber",
         "position",
         "positionSide"
     ]
