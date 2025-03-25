@@ -1,3 +1,9 @@
+# impectPy 2.4.1
+
+## Minor Changes
+* fix error in `getEvents()` that prevented set piece data from properly being joined to event data
+* fix error in `getSubstitutions()` & `getStartingPositions()` that caused an error when players switched shirt numbers
+
 # impectPy 2.4.0
 
 ## Major Changes
