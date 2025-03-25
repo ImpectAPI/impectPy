@@ -270,7 +270,13 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     shirt_numbers = shirt_numbers.explode("players").reset_index(drop=True)
 
     # normalize the JSON structure into separate columns
-    shirt_numbers = pd.json_normalize(shirt_numbers["players"]).rename(columns={"id": "playerId"})
+    shirt_numbers = pd.concat(
+        [
+            shirt_numbers.drop(columns=["players"]),
+            pd.json_normalize(shirt_numbers["players"]).rename(columns={"id": "playerId"})
+        ],
+        axis=1
+    )
 
     # extract substitutions
     substitutions_home = matches[["id", "squadHomeId", "squadHomeSubstitutions"]].rename(
@@ -309,16 +315,16 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     # merge substitutions with shirt numbers
     substitutions = substitutions.merge(
         shirt_numbers,
-        left_on="playerId",
-        right_on="playerId",
+        left_on=["playerId", "squadId", "id"],
+        right_on=["playerId", "squadId", "id"],
         how="left",
         suffixes=("", "_x")
     ).merge(
         shirt_numbers.rename(
             columns={"playerId": "exchangedPlayerId", "shirtNumber": "exchangedShirtNumber"}
         ),
-        left_on="exchangedPlayerId",
-        right_on="exchangedPlayerId",
+        left_on=["exchangedPlayerId", "squadId", "id"],
+        right_on=["exchangedPlayerId", "squadId", "id"],
         how="left",
         suffixes=("", "_x")
     )
@@ -515,8 +521,13 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
     shirt_numbers = shirt_numbers.explode("players").reset_index(drop=True)
 
     # normalize the JSON structure into separate columns
-    shirt_numbers = pd.json_normalize(shirt_numbers["players"]).rename(columns={"id": "playerId"})
-
+    shirt_numbers = pd.concat(
+        [
+            shirt_numbers.drop(columns=["players"]),
+            pd.json_normalize(shirt_numbers["players"]).rename(columns={"id": "playerId"})
+        ],
+        axis=1
+    )
 
     # extract starting_positions
     starting_positions_home = matches[["id", "squadHomeId", "squadHomeStartingPositions"]].rename(
@@ -543,8 +554,8 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
     # merge substitutions with shirt numbers
     starting_positions = starting_positions.merge(
         shirt_numbers,
-        left_on="playerId",
-        right_on="playerId",
+        left_on=["playerId", "squadId", "id"],
+        right_on=["playerId", "squadId", "id"],
         how="left",
         suffixes=("", "_x")
     )
