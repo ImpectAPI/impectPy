@@ -295,8 +295,8 @@ def getEventsFromHost(
     if include_set_pieces:
         events = events.merge(
             set_pieces,
-            left_on=["setPieceId", "setPieceSubPhaseId", "matchId", "squadId"],
-            right_on=["setPieceId", "setPieceSubPhaseId", "matchId", "squadId"],
+            left_on=["setPieceId", "setPieceSubPhaseId"],
+            right_on=["setPieceId", "setPieceSubPhaseId"],
             how="left",
             suffixes=("", "_right")
         ).merge(

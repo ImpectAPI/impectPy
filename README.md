@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.4.0
+Version: v2.4.1
 
-**Updated: March 17th 2025**
+**Updated: March 25th 2025**
 
 ---
 
@@ -30,7 +30,7 @@ You can install the latest version of impectPy from
 [GitHub](https://github.com/) with:
 
 ``` cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.4.0
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.4.1
 ```
 
 ## Usage
@@ -232,6 +232,9 @@ squadIterationScores = ip.getSquadIterationScores(
     iteration=iteration,
     token=token
 )
+
+# get squad rating for iteration
+squadRatings = ip.getSquadRatings(iteration=iteration, token=token
 ```
 
 You can now also retrieve the positional profile scores for players via our API. This 
