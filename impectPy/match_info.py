@@ -292,6 +292,9 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     # unnest formations column
     substitutions = substitutions.explode("squadSubstitutions").reset_index(drop=True)
 
+    # drop emtpy row that occurs if one team did not substitute
+    substitutions = substitutions[substitutions.squadSubstitutions.notnull()].reset_index(drop=True)
+
     # normalize the JSON structure into separate columns
     substitutions = substitutions.join(pd.json_normalize(substitutions["squadSubstitutions"]))
 
