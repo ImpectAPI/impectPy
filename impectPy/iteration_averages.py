@@ -43,21 +43,6 @@ def getPlayerIterationAveragesFromHost(
     # get squadIds
     squad_ids = squads[squads.access].id.to_list()
 
-    # get player iteration averages per squad
-    averages_raw = pd.concat(
-        map(lambda squadId: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/iterations/{iteration}/"
-                f"squads/{squadId}/player-kpis",
-            method="GET"
-        ).process_response(
-            endpoint="PlayerAverages"
-        ).assign(
-            iterationId=iteration,
-            squadId=squadId
-        ),
-            squad_ids),
-        ignore_index=True)
-
     # get players
     players = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/players",
@@ -80,55 +65,85 @@ def getPlayerIterationAveragesFromHost(
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
-    # unnest scorings
-    averages = averages_raw.explode("kpis").reset_index(drop=True)
+    # create empty df to store averages
+    averages = pd.DataFrame()
 
-    # unnest dictionary in kpis column
-    averages = pd.concat(
-        [averages.drop(["kpis"], axis=1), pd.json_normalize(averages["kpis"])],
-        axis=1
-    )
+    # iterate over squads
+    for squad_id in squad_ids:
 
-    # merge with kpis to ensure all kpis are present
-    averages = averages.merge(
-        kpis,
-        left_on="kpiId",
-        right_on="id",
-        how="outer",
-        suffixes=("", "_right")
-    )
+        # get player iteration averages per squad
+        averages_raw = connection.make_api_request_limited(
+                url=f"{host}/v5/customerapi/iterations/{iteration}/"
+                    f"squads/{squad_id}/player-kpis",
+                method="GET"
+            ).process_response(
+                endpoint="PlayerAverages"
+            ).assign(
+                iterationId=iteration,
+                squadId=squad_id
+            )
 
-    # get matchShares
-    match_shares = averages[
-        ["iterationId", "squadId", "playerId", "position", "playDuration", "matchShare"]].drop_duplicates()
+        # unnest scorings
+        averages_raw = averages_raw.explode("kpis").reset_index(drop=True)
 
-    # fill missing values in the "name" column with a default value to ensure players without scorings don't get lost
-    if len(averages["name"][averages["name"].isnull()]) > 0:
-        averages["name"] = averages["name"].fillna("-1")
+        # unnest dictionary in kpis column
+        averages_raw = pd.concat(
+            [averages_raw.drop(["kpis"], axis=1), pd.json_normalize(averages_raw["kpis"])],
+            axis=1
+        )
 
-    # pivot kpi values
-    averages = pd.pivot_table(
-        averages,
-        values="value",
-        index=["iterationId", "squadId", "playerId", "position"],
-        columns="name",
-        aggfunc="sum",
-        fill_value=0,
-        dropna=False
-    ).reset_index()
+        # merge with kpis to ensure all kpis are present
+        averages_raw = averages_raw.merge(
+            kpis,
+            left_on="kpiId",
+            right_on="id",
+            how="outer",
+            suffixes=("", "_right")
+        )
 
-    # drop "-1" column
-    if "-1" in averages.columns:
-        averages.drop(["-1"], inplace=True, axis=1)
+        # get matchShares
+        match_shares_raw = averages_raw[
+            ["iterationId", "squadId", "playerId", "position", "playDuration", "matchShare"]].drop_duplicates()
 
-    # merge with playDuration and matchShare
-    averages = averages.merge(
-        match_shares,
-        left_on=["iterationId", "squadId", "playerId", "position"],
-        right_on=["iterationId", "squadId", "playerId", "position"],
-        how="inner",
-        suffixes=("", "_right")
-    )
+        # fill missing values in the "name" column with a default value to ensure players without scorings don't get lost
+        if len(averages_raw["name"][averages_raw["name"].isnull()]) > 0:
+            averages_raw["name"] = averages_raw["name"].fillna("-1")
+
+        # downcast numerics and category types
+        averages_raw["iterationId"] = averages_raw["iterationId"].astype("Int16")
+        averages_raw["squadId"] = averages_raw["squadId"].astype("Int16")
+        averages_raw["playerId"] = averages_raw["playerId"].astype("Int32")
+        averages_raw["position"] = averages_raw["position"].astype("category")
+        averages_raw["name"] = averages_raw["name"].astype("category")
+        averages_raw["value"] = averages_raw["value"].astype("Float32")
+
+        # pivot kpi values
+        averages_raw = pd.pivot_table(
+            averages_raw,
+            values="value",
+            index=["iterationId", "squadId", "playerId", "position"],
+            columns="name",
+            aggfunc="sum",
+            fill_value=0,
+            dropna=False,
+            observed=True,
+        ).reset_index()
+
+        # drop "-1" column
+        if "-1" in averages_raw.columns:
+            averages_raw.drop(["-1"], inplace=True, axis=1)
+
+        # merge with playDuration and matchShare
+        averages_raw = averages_raw.merge(
+            match_shares_raw,
+            left_on=["iterationId", "squadId", "playerId", "position"],
+            right_on=["iterationId", "squadId", "playerId", "position"],
+            how="inner",
+            suffixes=("", "_right")
+        )
+
+        averages = pd.concat([averages, averages_raw], axis=0)
+
     # merge with other data
     averages = averages.merge(
         iterations[["id", "competitionName", "season"]],
@@ -156,7 +171,7 @@ def getPlayerIterationAveragesFromHost(
         how="left",
         suffixes=("", "_right")
     )
-    
+
     # remove NA rows
     averages = averages[averages.iterationId.notnull()]
 
@@ -312,7 +327,7 @@ def getSquadIterationAveragesFromHost(iteration: int, connection: RateLimitedAPI
         how="left",
         suffixes=("", "_right")
     )
-    
+
     # remove NA rows
     averages = averages[averages.iterationId.notnull()]
 
