@@ -1,4 +1,3 @@
-# load packages
 from xml.etree import ElementTree as ET
 import pandas as pd
 
@@ -7,7 +6,55 @@ import pandas as pd
 # This function returns an XML file from a given match event dataframe
 #
 ######
+allowed_kpis = ["BYPASSED_OPPONENTS",
+                "BYPASSED_DEFENDERS",
+                "BYPASSED_OPPONENTS_RECEIVING",
+                "BYPASSED_DEFENDERS_RECEIVING",
+                "BALL_LOSS_ADDED_OPPONENTS",
+                "BALL_LOSS_REMOVED_TEAMMATES",
+                "BALL_WIN_ADDED_TEAMMATES",
+                "BALL_WIN_REMOVED_OPPONENTS",
+                "REVERSE_PLAY_ADDED_OPPONENTS",
+                "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS",
+                "BYPASSED_OPPONENTS_RAW",
+                "BYPASSED_OPPONENTS_DEFENDERS_RAW",
+                "SHOT_XG",
+                "POSTSHOT_XG",
+                "PACKING_XG"]
 
+allowed_labels = ["eventId",
+                  "matchId",
+                  "periodId",
+                  "phase",
+                  "gameState",
+                  "playerPosition",
+                  "action",
+                  "actionType",
+                  "bodyPart",
+                  "bodyPartExtended",
+                  "previousPassHeight",
+                  "actionTypeResult",
+                  "startPackingZone",
+                  "startPackingZoneGroup",
+                  "startPitchPosition",
+                  "startLane",
+                  "endPackingZone",
+                  "endPackingZoneGroup",
+                  "endPitchPosition",
+                  "endLane",
+                  "opponents",
+                  "pressure",
+                  "pxTTeam",
+                  "pressingPlayerName",
+                  "duelType",
+                  "duelPlayerName",
+                  "fouledPlayerName",
+                  "passDistance",
+                  "passReceiverPlayerName",
+                  "leadsToShot",
+                  "leadsToGoal",
+                  "squadName",
+                  "PXT_DELTA"]
 
 # define function
 def generateSportsCodeXML(events: pd.DataFrame,
@@ -18,9 +65,20 @@ def generateSportsCodeXML(events: pd.DataFrame,
                           p3Start: int,
                           p4Start: int,
                           p5Start: int,
+                          code_attr: str,
+                          selected_kpis: list,
+                          selected_labels: list,
+                          label_sort_toggle: bool = True,
                           sequencing: bool = True,
                           apply_buckets: bool = True) -> ET.ElementTree:
-    # define parameters
+    # validate selected_kpis
+    invalid_kpis = [kpi for kpi in selected_kpis if kpi not in allowed_kpis]
+    if len(invalid_kpis) > 0:
+        raise ValueError(f"Invalid KPIs: {invalid_kpis}")
+    # validate selected_labels
+    invalid_labels = [lbl for lbl in selected_labels if lbl not in allowed_labels]
+    if len(invalid_labels) > 0:
+        raise ValueError(f"Invalid Labels: {invalid_labels}")
 
     # compile periods start times into dict
     offsets = {"p1": p1Start,
@@ -716,6 +774,22 @@ def generateSportsCodeXML(events: pd.DataFrame,
                "name": "POSTSHOT_XG"},
               {"order": "KPI: ",
                "name": "PACKING_XG"}]
+    # Keep only:
+    # - KPI labels that are explicitly listed in selected_kpis
+    # - Non-KPI labels that are included in selected_labels
+    labels = [label for label in labels if (label["order"].startswith("KPI:") and label["name"] in  selected_kpis)
+        or (not label["order"].startswith("KPI:") and label["name"] in selected_labels)]
+    # Sort the label list based on the label_sort_toggle setting:
+    if label_sort_toggle:
+        labels = sorted(labels, key=lambda x: x["order"])
+    else:
+        labels = sorted(labels, key=lambda x: selected_labels.index(x["name"]) if x["name"] in selected_labels else 999)
+    if code_attr == "playerName":
+        labels = [label for label in labels if label["name"] != "playerName"]
+    elif code_attr in ["action", "actionType"]:
+        labels = [label for label in labels if label["name"] != code_attr]
+        if not any(label["name"] == "playerName" for label in labels):
+            labels.append({"order": "29 | ", "name": "playerName"})
 
     # add data to xml structure
     # the idea is to still iterate over each event separately but chose between
@@ -750,7 +824,11 @@ def generateSportsCodeXML(events: pd.DataFrame,
                     end.text = str(round(sequence_timing.at[seq_id_new - 1, "end"], 2))
                     # add player as code
                     code = ET.SubElement(instance, "code")
-                    code.text = event.playerName
+                    # use code_attr in the code-tag
+                    if code_attr in ["playerName", "action", "actionType"]:
+                        code.text = str(event[code_attr])
+                    else:
+                        code.text = event.playerName
                     # add description
                     free_text = ET.SubElement(instance, "free_text")
                     free_text.text = f"({event.gameTime}) {event.playerName}: {event.action.lower().replace('_', ' ')}"
@@ -802,7 +880,10 @@ def generateSportsCodeXML(events: pd.DataFrame,
                 end.text = str(round(event.end, 2))
                 # add player as code
                 code = ET.SubElement(instance, "code")
-                code.text = event.playerName
+                if code_attr in ["playerName", "action", "actionType"]:
+                    code.text = str(event[code_attr])
+                else:
+                    code.text = event.playerName
                 # add description
                 free_text = ET.SubElement(instance, "free_text")
                 free_text.text = f"({event.gameTime}) {event.playerName}: {event.action.lower().replace('_', ' ')}"
@@ -811,14 +892,12 @@ def generateSportsCodeXML(events: pd.DataFrame,
                 for label in labels:
                     # check for nan and None (those values should be omitted and not added as label)
                     if (value := str(event[label["name"]])) not in ["None", "nan"]:
-
                         # add label
                         wrapper = ET.SubElement(instance, "label")
                         group = ET.SubElement(wrapper, "group")
                         group.text = label["order"] + label["name"]
                         text = ET.SubElement(wrapper, "text")
                         text.text = value
-
 
     # add team level data
 
@@ -871,14 +950,32 @@ def generateSportsCodeXML(events: pd.DataFrame,
                "name": "POSTSHOT_XG"},
               {"order": "KPI: ",
                "name": "PACKING_XG"}]
-
+    # Filter the labels list:
+    # - Keep KPI labels only if they are included in the selected_kpis list
+    # - Keep non-KPI labels only if they are included in the selected_labels list
+    labels = [label for label in labels if (label["order"].startswith("KPI:") and label["name"] in            selected_kpis)
+        or (not label["order"].startswith("KPI:") and label["name"] in selected_labels)]
+    # Sort the filtered label list
+    if label_sort_toggle:
+        # If sorting toggle is ON, use default sorting via "order" attribute
+        labels = sorted(labels, key=lambda x: x["order"])
+    else:
+        # If sorting toggle is OFF, manually sort labels based on the user-defined selected_labels list
+        labels = sorted(labels, key=lambda x: selected_labels.index(x["name"]) if x["name"] in selected_labels else 999)
+    # Remove "playerName" as label if it's already used as the main code (to avoid duplication)
+    if code_attr == "playerName":
+        labels = [label for label in labels if label["name"] != "playerName"]
+    # If "action" or "actionType" is used as code attribute, remove it from label list
+    elif code_attr in ["action", "actionType"]:
+        labels = [label for label in labels if label["name"] != code_attr]
+        if not any(label["name"] == "playerName" for label in labels):
+            labels.append({"order": "29 | ", "name": "playerName"})
     if sequencing:
         # update max id after adding players
         max_id += players.sequence_id.max() + 1
     else:
         # update max id after adding players
         max_id += event.eventNumber + 1
-
 
     # add to xml structure
     for index, phase in phases.iterrows():
