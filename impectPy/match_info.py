@@ -611,7 +611,11 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
     })
 
     # fix column types
-    starting_positions["shirtNumber"] = starting_positions["shirtNumber"].astype(int)
+    missing_shirt_numbers = starting_positions["shirtNumber"].isnull()
+    if missing_shirt_numbers.any():
+        print("Warning: The following players are missing a shirt number and will be set to None:")
+        print(starting_positions[missing_shirt_numbers][["matchId", "squadName", "playerName"]].to_string(index=False))
+    starting_positions["shirtNumber"] = starting_positions["shirtNumber"].astype("Int64")
 
     # define desired column order
     cols = [
