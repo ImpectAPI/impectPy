@@ -50,8 +50,44 @@ def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame
     df.heimSpielId = df.heimSpielId.apply(lambda x: x[0] if x else None)
     df.wyscoutId = df.wyscoutId.apply(lambda x: x[0] if x else None)
 
+    # get country data
+    countries = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/countries",
+        method="GET"
+    ).process_response(
+        endpoint="KPIs"
+    )
+
+    df = df.merge(
+        countries[["id", "fifaName"]].rename(
+            columns={"id": "competitionCountryId", "fifaName": "competitionCountryName"}
+        ),
+        how="left",
+        on="competitionCountryId"
+    )
+
     # sort iterations
     df = df.sort_values(by="id")
+
+    # define column order
+    order = [
+        "id",
+        "competitionId",
+        "competitionName",
+        "season",
+        "competitionType",
+        "competitionCountryId",
+        "competitionCountryName",
+        "competitionGender",
+        "dataVersion",
+        "lastChangeTimestamp",
+        "wyscoutId",
+        "heimSpielId",
+        "skillCornerId",
+    ]
+
+    # select columns
+    df = df[order]
 
     # return dataframe
     return df
