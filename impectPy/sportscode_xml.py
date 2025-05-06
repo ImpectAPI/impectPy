@@ -6,6 +6,9 @@ import pandas as pd
 # This function returns an XML file from a given match event dataframe
 #
 ######
+
+#define allowed KPIs and labels
+
 allowed_kpis = ["BYPASSED_OPPONENTS",
                 "BYPASSED_DEFENDERS",
                 "BYPASSED_OPPONENTS_RECEIVING",
@@ -20,7 +23,8 @@ allowed_kpis = ["BYPASSED_OPPONENTS",
                 "BYPASSED_OPPONENTS_DEFENDERS_RAW",
                 "SHOT_XG",
                 "POSTSHOT_XG",
-                "PACKING_XG"]
+                "PACKING_XG",
+                "PXT_DELTA"]
 
 allowed_labels = ["eventId",
                   "matchId",
@@ -54,7 +58,10 @@ allowed_labels = ["eventId",
                   "leadsToShot",
                   "leadsToGoal",
                   "squadName",
-                  "PXT_DELTA"]
+                  "playerName",
+                  "pxTTeamStart",
+                  "pxTTeamEnd"]
+
 
 # define function
 def generateSportsCodeXML(events: pd.DataFrame,
@@ -677,343 +684,278 @@ def generateSportsCodeXML(events: pd.DataFrame,
     # concatenate actionType and result into one column if result exists
     players["actionTypeResult"] = players.apply(lambda x: x.actionType + "_" + x.result if x.result else None, axis=1)
 
-    # define labels to be added
-    labels = [{"order": "00 | ",
-               "name": "eventId"},
-              {"order": "01 | ",
-               "name": "matchId"},
-              {"order": "02 | ",
-               "name": "periodId"},
-              {"order": "03 | ",
-               "name": "phase"},
-              {"order": "04 | ",
-               "name": "gameState"},
-              {"order": "05 | ",
-               "name": "playerPosition"},
-              {"order": "06 | ",
-               "name": "action"},
-              {"order": "07 | ",
-               "name": "actionType"},
-              {"order": "08 | ",
-               "name": "bodyPart"},
-              {"order": "09a | ",
-               "name": "bodyPartExtended"},
-              {"order": "09b | ",
-               "name": "previousPassHeight"},
-              {"order": "09c | ",
-               "name": "actionTypeResult"},
-              {"order": "10 | ",
-               "name": "startPackingZone"},
-              {"order": "11 | ",
-               "name": "startPackingZoneGroup"},
-              {"order": "12 | ",
-               "name": "startPitchPosition"},
-              {"order": "13 | ",
-               "name": "startLane"},
-              {"order": "14 | ",
-               "name": "endPackingZone"},
-              {"order": "15 | ",
-               "name": "endPackingZoneGroup"},
-              {"order": "16 | ",
-               "name": "endPitchPosition"},
-              {"order": "17 | ",
-               "name": "endLane"},
-              {"order": "18 | ",
-               "name": "opponents"},
-              {"order": "19 | ",
-               "name": "pressure"},
-              {"order": "20 | ",
-               "name": "pxTTeam"},
-              {"order": "21 | ",
-               "name": "pressingPlayerName"},
-              {"order": "22 | ",
-               "name": "duelType"},
-              {"order": "23 | ",
-               "name": "duelPlayerName"},
-              {"order": "24 | ",
-               "name": "fouledPlayerName"},
-              {"order": "25 | ",
-               "name": "passDistance"},
-              {"order": "26 | ",
-               "name": "passReceiverPlayerName"},
-              {"order": "27 | ",
-               "name": "leadsToShot"},
-              {"order": "28 | ",
-               "name": "leadsToGoal"},
-              {"order": "29 | ",
-               "name": "squadName"},
-              {"order": "KPI: ",
-               "name": "PXT_DELTA"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_DEFENDERS"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS_RECEIVING"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_DEFENDERS_RECEIVING"},
-              {"order": "KPI: ",
-               "name": "BALL_LOSS_ADDED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "BALL_LOSS_REMOVED_TEAMMATES"},
-              {"order": "KPI: ",
-               "name": "BALL_WIN_ADDED_TEAMMATES"},
-              {"order": "KPI: ",
-               "name": "BALL_WIN_REMOVED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "REVERSE_PLAY_ADDED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS_RAW"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS_DEFENDERS_RAW"},
-              {"order": "KPI: ",
-               "name": "SHOT_XG"},
-              {"order": "KPI: ",
-               "name": "POSTSHOT_XG"},
-              {"order": "KPI: ",
-               "name": "PACKING_XG"}]
-    # Keep only:
-    # - KPI labels that are explicitly listed in selected_kpis
-    # - Non-KPI labels that are included in selected_labels
-    labels = [label for label in labels if (label["order"].startswith("KPI:") and label["name"] in  selected_kpis)
-        or (not label["order"].startswith("KPI:") and label["name"] in selected_labels)]
-    # Sort the label list based on the label_sort_toggle setting:
-    if label_sort_toggle:
-        labels = sorted(labels, key=lambda x: x["order"])
-    else:
-        labels = sorted(labels, key=lambda x: selected_labels.index(x["name"]) if x["name"] in selected_labels else 999)
+    # define all labels
+    all_labels = [
+        {"order": "00 | ", "name": "eventId"},
+        {"order": "01 | ", "name": "matchId"},
+        {"order": "02 | ", "name": "periodId"},
+        {"order": "03 | ", "name": "phase"},
+        {"order": "04 | ", "name": "gameState"},
+        {"order": "05 | ", "name": "playerPosition"},
+        {"order": "06 | ", "name": "action"},
+        {"order": "07 | ", "name": "actionType"},
+        {"order": "08 | ", "name": "bodyPart"},
+        {"order": "09a | ", "name": "bodyPartExtended"},
+        {"order": "09b | ", "name": "previousPassHeight"},
+        {"order": "09c | ", "name": "actionTypeResult"},
+        {"order": "10 | ", "name": "startPackingZone"},
+        {"order": "11 | ", "name": "startPackingZoneGroup"},
+        {"order": "12 | ", "name": "startPitchPosition"},
+        {"order": "13 | ", "name": "startLane"},
+        {"order": "14 | ", "name": "endPackingZone"},
+        {"order": "15 | ", "name": "endPackingZoneGroup"},
+        {"order": "16 | ", "name": "endPitchPosition"},
+        {"order": "17 | ", "name": "endLane"},
+        {"order": "18 | ", "name": "opponents"},
+        {"order": "19 | ", "name": "pressure"},
+        {"order": "20 | ", "name": "pxTTeam"},
+        {"order": "21 | ", "name": "pressingPlayerName"},
+        {"order": "22 | ", "name": "duelType"},
+        {"order": "23 | ", "name": "duelPlayerName"},
+        {"order": "24 | ", "name": "fouledPlayerName"},
+        {"order": "25 | ", "name": "passDistance"},
+        {"order": "26 | ", "name": "passReceiverPlayerName"},
+        {"order": "27 | ", "name": "leadsToShot"},
+        {"order": "28 | ", "name": "leadsToGoal"},
+        {"order": "29 | ", "name": "squadName"},
+        {"order": "30 | ", "name": "playerName"},
+        {"order": "31 | ", "name": "pxTTeamStart"},
+        {"order": "32 | ", "name": "pxTTeamEnd"},
+        {"order": "KPI: ", "name": "PXT_DELTA"},
+        {"order": "KPI: ", "name": "BYPASSED_OPPONENTS"},
+        {"order": "KPI: ", "name": "BYPASSED_DEFENDERS"},
+        {"order": "KPI: ", "name": "BYPASSED_OPPONENTS_RECEIVING"},
+        {"order": "KPI: ", "name": "BYPASSED_DEFENDERS_RECEIVING"},
+        {"order": "KPI: ", "name": "BALL_LOSS_ADDED_OPPONENTS"},
+        {"order": "KPI: ", "name": "BALL_LOSS_REMOVED_TEAMMATES"},
+        {"order": "KPI: ", "name": "BALL_WIN_ADDED_TEAMMATES"},
+        {"order": "KPI: ", "name": "BALL_WIN_REMOVED_OPPONENTS"},
+        {"order": "KPI: ", "name": "REVERSE_PLAY_ADDED_OPPONENTS"},
+        {"order": "KPI: ", "name": "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS"},
+        {"order": "KPI: ", "name": "BYPASSED_OPPONENTS_RAW"},
+        {"order": "KPI: ", "name": "BYPASSED_OPPONENTS_DEFENDERS_RAW"},
+        {"order": "KPI: ", "name": "SHOT_XG"},
+        {"order": "KPI: ", "name": "POSTSHOT_XG"},
+        {"order": "KPI: ", "name": "PACKING_XG"}
+    ]
+
+    # define legend
+    legend = {
+        'eventId': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'matchId': {'playerName': 1, 'team': 1, 'action': 1, 'actionType': 1},
+        'periodId': {'playerName': 1, 'team': 1, 'action': 1, 'actionType': 1},
+        'phase': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'gameState': {'playerName': 1, 'team': 1, 'action': 1, 'actionType': 1},
+        'playerPosition': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'action': {'playerName': 1, 'team': 0, 'action': 0, 'actionType': 1},
+        'actionType': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 0},
+        'bodyPart': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'bodyPartExtended': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'previousPassHeight': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'actionTypeResult': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'startPackingZone': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'startPackingZoneGroup': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'startPitchPosition': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'startLane': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'endPackingZone': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'endPackingZoneGroup': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'endPitchPosition': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'endLane': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'opponents': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'pressure': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'pxTTeam': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'pressingPlayerName': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'duelType': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'duelPlayerName': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'fouledPlayerName': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'passDistance': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'passReceiverPlayerName': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'leadsToShot': {'playerName': 1, 'team': 1, 'action': 1, 'actionType': 1},
+        'leadsToGoal': {'playerName': 1, 'team': 1, 'action': 1, 'actionType': 1},
+        'squadName': {'playerName': 1, 'team': 0, 'action': 1, 'actionType': 1},
+        'playerName': {'playerName': 0, 'team': 1, 'action': 1, 'actionType': 1},
+        'pxTTeamStart': {'playerName': 0, 'team': 1, 'action': 0, 'actionType': 0},
+        'pxTTeamEnd': {'playerName': 0, 'team': 1, 'action': 0, 'actionType': 0}
+    }
+    # Keep only :
+    # - If KPI in selected_kpis
+    # - If Label in selected_labels
+    # - Code_Attr matches Legend
+    labels = []
+    for label in all_labels:
+        is_kpi = label['order'].startswith('KPI:')
+        if is_kpi and label['name'] in selected_kpis:
+            labels.append(label)
+        elif not is_kpi and label['name'] in selected_labels \
+                and legend.get(label['name'], {}).get(code_attr, 0) == 1:
+            labels.append(label)
+        if label_sort_toggle:
+            labels = sorted(labels, key=lambda x: x['order'])
+        else:
+            labels = sorted(labels,
+                            key=lambda x: selected_labels.index(x['name']) if x['name'] in selected_labels else 999)
+
+    # If the current code attribute is "playerName", then we don't want to also include "playerName" as a label.
     if code_attr == "playerName":
-        labels = [label for label in labels if label["name"] != "playerName"]
+        labels = [label for label in labels if label['name'] != "playerName"]
+    # If the current code attribute is "action" or "actionType", then remove that attribute from the labels list.
     elif code_attr in ["action", "actionType"]:
-        labels = [label for label in labels if label["name"] != code_attr]
-        if not any(label["name"] == "playerName" for label in labels):
-            labels.append({"order": "29 | ", "name": "playerName"})
+        labels = [label for label in labels if label['name'] != code_attr]
+        # make sure to show playerName
+        if not any(label['name'] == "playerName" for label in labels):
+            labels.append({"order": "30 | ", "name": "playerName"})
+    # Remove squadName from labels if code_attr is "team" because it´s in code
+    elif code_attr == "team":
+        labels = [label for label in labels if label['name'] != "squadName"]
 
     # add data to xml structure
     # the idea is to still iterate over each event separately but chose between
     # creating a new instance and appending to the existing instance
+    # add data to xml structure
     if sequencing:
-        for index, event in players.iterrows():
+        seq_id_current = None
 
-            # skip row if no player (e.g. no video, referee interception, etc.)
-            if pd.notnull(event.playerName):
-
-                # if first iteration set seq_id_current to 1
-                if index == 0:
-                    seq_id_current = 0
-                else:
-                    pass
-
-                # get new sequence_id
-                seq_id_new = event.sequence_id
-
-                # check if new sequence_id or first iteration
-                if seq_id_new != seq_id_current or index == 0:
-                    # add instance
-                    instance = ET.SubElement(instances, "instance")
-                    # add event id
-                    event_id = ET.SubElement(instance, "ID")
-                    event_id.text = str(event.sequence_id + max_id)
-                    # add start time
-                    start = ET.SubElement(instance, "start")
-                    start.text = str(round(sequence_timing.at[seq_id_new - 1, "start"], 2))
-                    # add end time
-                    end = ET.SubElement(instance, "end")
-                    end.text = str(round(sequence_timing.at[seq_id_new - 1, "end"], 2))
-                    # add player as code
-                    code = ET.SubElement(instance, "code")
-                    # use code_attr in the code-tag
-                    if code_attr in ["playerName", "action", "actionType"]:
-                        code.text = str(event[code_attr])
-                    else:
-                        code.text = event.playerName
-                    # add description
-                    free_text = ET.SubElement(instance, "free_text")
-                    free_text.text = f"({event.gameTime}) {event.playerName}: {event.action.lower().replace('_', ' ')}"
-                else:
-                    # append current action to existing description
-                    free_text.text += f" | {event.action.lower().replace('_', ' ')}"
-
-                # add labels
-                for label in labels:
-                    # check for nan and None (those values should be omitted and not added as label)
-                    if (value := str(event[label["name"]])) not in ["None", "nan"]:
-                        # get value from previous event to compare if the value remains the same (and can be omitted
-                        # or if the value changed and therefore has to be added)
-                        try:
-                            prev_value = str(players.at[index - 1, label["name"]])
-                        # if the key doesn't exist (previous to first row), assign current value
-                        except KeyError:
-                            prev_value = event[label["name"]]
-                        # check if first event of a sequence or the value is unequal to previous row
-                        if seq_id_new != seq_id_current or value != prev_value:
-                            # add label
-                            wrapper = ET.SubElement(instance, "label")
-                            group = ET.SubElement(wrapper, "group")
-                            group.text = label["order"] + label["name"]
-                            text = ET.SubElement(wrapper, "text")
-                            text.text = value
-                    else:
-                        # don't add label
-                        pass
-
-                # update current sequence_id
-                seq_id_current = seq_id_new
-    else:
-        for index, event in players.iterrows():
-
-            # skip row if no player (e.g. no video, referee interception, etc.)
-            if pd.notnull(event.playerName):
-
-                # add instance
+        # If the selected code attribute is "team", generate XML entries from the `phases` DataFrame
+        if code_attr == "team":
+            for index, phase in phases.iterrows():
+                # Create a new XML instance for each team phase
                 instance = ET.SubElement(instances, "instance")
-                # add event id
-                event_id = ET.SubElement(instance, "ID")
-                event_id.text = str(event.eventNumber + max_id)
-                # add start time
-                start = ET.SubElement(instance, "start")
-                start.text = str(round(event.start, 2))
-                # add end time
-                end = ET.SubElement(instance, "end")
-                end.text = str(round(event.end, 2))
-                # add player as code
-                code = ET.SubElement(instance, "code")
-                if code_attr in ["playerName", "action", "actionType"]:
-                    code.text = str(event[code_attr])
-                else:
-                    code.text = event.playerName
-                # add description
-                free_text = ET.SubElement(instance, "free_text")
-                free_text.text = f"({event.gameTime}) {event.playerName}: {event.action.lower().replace('_', ' ')}"
 
-                # add labels
+                # Set unique ID using phase_id offset by max_id
+                event_id = ET.SubElement(instance, "ID")
+                event_id.text = str(phase.phase_id + max_id)
+
+                # Define the time range of the instance
+                start = ET.SubElement(instance, "start")
+                start.text = str(round(phase.start, 2))
+                end = ET.SubElement(instance, "end")
+                end.text = str(round(phase.end, 2))
+
+                # Set the code to the team phase
+                code = ET.SubElement(instance, "code")
+                code.text = phase.teamPhase
+
+                # Create free_text as descriptive note for the clip
+                free_text = ET.SubElement(instance, "free_text")
+                free_text.text = f"Phase: {phase.phase}, Team: {phase.squadName}"
+
+                # Add labels to the instance
                 for label in labels:
-                    # check for nan and None (those values should be omitted and not added as label)
-                    if (value := str(event[label["name"]])) not in ["None", "nan"]:
-                        # add label
+                    if label["name"] not in phase:
+                        continue
+                    value = str(phase[label["name"]])
+                    if value not in ["None", "nan"]:
                         wrapper = ET.SubElement(instance, "label")
                         group = ET.SubElement(wrapper, "group")
                         group.text = label["order"] + label["name"]
                         text = ET.SubElement(wrapper, "text")
                         text.text = value
 
-    # add team level data
+        # If not team-level, use player-level data from `players` DataFrame
+        else:
+            for index, event in players.iterrows():
+                # Skip entries without valid player name
+                if pd.notnull(event.playerName):
+                    # Set first sequence_id
+                    if index == 0:
+                        seq_id_current = 0
 
-    # define labels
-    labels = [{"order": "01 | ",
-               "name": "matchId"},
-              {"order": "02 | ",
-               "name": "periodId"},
-              {"order": "04 | ",
-               "name": "gameState"},
-              {"order": "29 | ",
-               "name": "playerName"},
-              {"order": "30 | ",
-               "name": "pxTTeamStart"},
-              {"order": "31 | ",
-               "name": "pxTTeamEnd"},
-              {"order": "27 | ",
-               "name": "leadsToShot"},
-              {"order": "28 | ",
-               "name": "leadsToGoal"},
-              {"order": "KPI: ",
-               "name": "PXT_DELTA"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_DEFENDERS"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS_RECEIVING"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_DEFENDERS_RECEIVING"},
-              {"order": "KPI: ",
-               "name": "BALL_LOSS_ADDED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "BALL_LOSS_REMOVED_TEAMMATES"},
-              {"order": "KPI: ",
-               "name": "BALL_WIN_ADDED_TEAMMATES"},
-              {"order": "KPI: ",
-               "name": "BALL_WIN_REMOVED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "REVERSE_PLAY_ADDED_OPPONENTS"},
-              {"order": "KPI: ",
-               "name": "REVERSE_PLAY_ADDED_OPPONENTS_DEFENDERS"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS_RAW"},
-              {"order": "KPI: ",
-               "name": "BYPASSED_OPPONENTS_DEFENDERS_RAW"},
-              {"order": "KPI: ",
-               "name": "SHOT_XG"},
-              {"order": "KPI: ",
-               "name": "POSTSHOT_XG"},
-              {"order": "KPI: ",
-               "name": "PACKING_XG"}]
-    # Filter the labels list:
-    # - Keep KPI labels only if they are included in the selected_kpis list
-    # - Keep non-KPI labels only if they are included in the selected_labels list
-    labels = [label for label in labels if (label["order"].startswith("KPI:") and label["name"] in            selected_kpis)
-        or (not label["order"].startswith("KPI:") and label["name"] in selected_labels)]
-    # Sort the filtered label list
-    if label_sort_toggle:
-        # If sorting toggle is ON, use default sorting via "order" attribute
-        labels = sorted(labels, key=lambda x: x["order"])
-    else:
-        # If sorting toggle is OFF, manually sort labels based on the user-defined selected_labels list
-        labels = sorted(labels, key=lambda x: selected_labels.index(x["name"]) if x["name"] in selected_labels else 999)
-    # Remove "playerName" as label if it's already used as the main code (to avoid duplication)
-    if code_attr == "playerName":
-        labels = [label for label in labels if label["name"] != "playerName"]
-    # If "action" or "actionType" is used as code attribute, remove it from label list
-    elif code_attr in ["action", "actionType"]:
-        labels = [label for label in labels if label["name"] != code_attr]
-        if not any(label["name"] == "playerName" for label in labels):
-            labels.append({"order": "29 | ", "name": "playerName"})
-    if sequencing:
-        # update max id after adding players
-        max_id += players.sequence_id.max() + 1
-    else:
-        # update max id after adding players
-        max_id += event.eventNumber + 1
+                    seq_id_new = event.sequence_id
 
-    # add to xml structure
-    for index, phase in phases.iterrows():
-        # add instance
-        instance = ET.SubElement(instances, "instance")
-        # add event id
-        event_id = ET.SubElement(instance, "ID")
-        event_id.text = str(phase.phase_id + max_id)
-        # add start time
-        start = ET.SubElement(instance, "start")
-        start.text = str(round(phase.start, 2))
-        # add end time
-        end = ET.SubElement(instance, "end")
-        end.text = str(round(phase.end, 2))
-        # add teamPhase as code
-        code = ET.SubElement(instance, "code")
-        code.text = phase.teamPhase
-        # add labels
-        for label in labels:
-            # check for label
-            if label["name"] == "playerName":
-                # for label "playerName" the list of players involved need to be unpacked
-                for player in phase[label["name"]]:
-                    wrapper = ET.SubElement(instance, "label")
-                    group = ET.SubElement(wrapper, "group")
-                    group.text = "27 | playerInvolved"
-                    text = ET.SubElement(wrapper, "text")
-                    text.text = player
-            else:
-                # check for nan or None (those values should be omitted and not added as label)
-                if (value := str(phase[label["name"]])) not in ["None", "nan"]:
-                    wrapper = ET.SubElement(instance, "label")
-                    group = ET.SubElement(wrapper, "group")
-                    group.text = label["order"] + label["name"]
-                    text = ET.SubElement(wrapper, "text")
-                    text.text = value
-                else:
-                    pass
+                    # Start new clip if new sequence or first event
+                    if seq_id_new != seq_id_current or index == 0:
+                        instance = ET.SubElement(instances, "instance")
+
+                        event_id = ET.SubElement(instance, "ID")
+                        event_id.text = str(event.sequence_id + max_id)
+
+                        start = ET.SubElement(instance, "start")
+                        start.text = str(round(sequence_timing.at[seq_id_new - 1, "start"], 2))
+                        end = ET.SubElement(instance, "end")
+                        end.text = str(round(sequence_timing.at[seq_id_new - 1, "end"], 2))
+
+                        # Use selected attribute (e.g., playerName, action) as the main code
+                        code = ET.SubElement(instance, "code")
+                        code.text = str(event[code_attr]) if code_attr in event else event.playerName
+
+                        # Free-text description showing action sequence
+                        free_text = ET.SubElement(instance, "free_text")
+                        free_text.text = f"({event.gameTime}) {event.playerName}: {event.action.lower().replace('_', ' ')}"
+                    else:
+                        # Append to existing free-text if still same sequence
+                        free_text.text += f" | {event.action.lower().replace('_', ' ')}"
+
+                    # Add labels to the instance
+                    for label in labels:
+                        if label["name"] not in event:
+                            continue
+                        value = str(event[label["name"]])
+                        if value not in ["None", "nan"]:
+                            try:
+                                prev_value = str(players.at[index - 1, label["name"]])
+                            except KeyError:
+                                prev_value = value
+                            # Only add label if it changed or is the first event of the sequence
+                            if seq_id_new != seq_id_current or value != prev_value:
+                                wrapper = ET.SubElement(instance, "label")
+                                group = ET.SubElement(wrapper, "group")
+                                group.text = label["order"] + label["name"]
+                                text = ET.SubElement(wrapper, "text")
+                                text.text = value
+
+                    # Update current sequence ID
+                    seq_id_current = seq_id_new
+    else:
+        # Same logic as above, but without sequencing (i.e., one clip per row)
+        if code_attr == "team":
+            for index, phase in phases.iterrows():
+                instance = ET.SubElement(instances, "instance")
+                event_id = ET.SubElement(instance, "ID")
+                event_id.text = str(phase.phase_id + max_id)
+                start = ET.SubElement(instance, "start")
+                start.text = str(round(phase.start, 2))
+                end = ET.SubElement(instance, "end")
+                end.text = str(round(phase.end, 2))
+                code = ET.SubElement(instance, "code")
+                code.text = phase.teamPhase
+                free_text = ET.SubElement(instance, "free_text")
+                free_text.text = f"Phase: {phase.phase}, Team: {phase.squadName}"
+
+                for label in labels:
+                    if label["name"] not in phase:
+                        continue
+                    value = str(phase[label["name"]])
+                    if value not in ["None", "nan"]:
+                        wrapper = ET.SubElement(instance, "label")
+                        group = ET.SubElement(wrapper, "group")
+                        group.text = label["order"] + label["name"]
+                        text = ET.SubElement(wrapper, "text")
+                        text.text = value
+        else:
+            for index, event in players.iterrows():
+                if pd.notnull(event.playerName):
+                    instance = ET.SubElement(instances, "instance")
+                    event_id = ET.SubElement(instance, "ID")
+                    event_id.text = str(event.eventNumber + max_id)
+                    start = ET.SubElement(instance, "start")
+                    start.text = str(round(event.start, 2))
+                    end = ET.SubElement(instance, "end")
+                    end.text = str(round(event.end, 2))
+                    code = ET.SubElement(instance, "code")
+                    code.text = str(event[code_attr]) if code_attr in event else event.playerName
+                    free_text = ET.SubElement(instance, "free_text")
+                    free_text.text = f"({event.gameTime}) {event.playerName}: {event.action.lower().replace('_', ' ')}"
+
+                    for label in labels:
+                        if label["name"] not in event:
+                            continue
+                        value = str(event[label["name"]])
+                        if value not in ["None", "nan"]:
+                            wrapper = ET.SubElement(instance, "label")
+                            group = ET.SubElement(wrapper, "group")
+                            group.text = label["order"] + label["name"]
+                            text = ET.SubElement(wrapper, "text")
+                            text.text = value
 
     # create row order
 
