@@ -1,3 +1,15 @@
+# impectPy 2.4.3
+
+## Minor Changes
+* Add FIFA Country Name to the following functions
+  * `getIterations()`
+  * `getPlayerMatchsums()`
+  * `getPlayerIterationAverages()`
+  * `getPlayerMatchScores()`
+  * `getPlayerIterationScores()`
+  * `getPlayerProfileScores()`
+* Fix bug in `getStartingPositions()` that resulted from players not having a shirt number assigned
+
 # impectPy 2.4.2
 
 ## Minor Changes
