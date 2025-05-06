@@ -44,11 +44,11 @@ def getPlayerMatchScoresFromHost(matches: list, positions: list, connection: Rat
     # check input for matches argument
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
-        
+
     # check input for positions argument
     if not isinstance(positions, list):
         raise Exception("Input for positions argument must be a list")
-    
+
     # check if the input positions are valid
     invalid_positions = [position for position in positions if position not in allowed_positions]
     if len(invalid_positions) > 0:
@@ -83,7 +83,7 @@ def getPlayerMatchScoresFromHost(matches: list, positions: list, connection: Rat
 
     # extract iterationIds
     iterations = list(iterations[iterations.lastCalculationDate.notnull()].iterationId.unique())
-    
+
     # compile list of positions
     position_string = ",".join(positions)
 
@@ -112,7 +112,12 @@ def getPlayerMatchScoresFromHost(matches: list, positions: list, connection: Rat
             ),
             iterations),
         ignore_index=True
-    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
+    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "countryIds", "idMappings"]]
+
+    # only keep first country id for each player
+    country_series = players["countryIds"].explode().groupby(level=0).first()
+    players["countryIds"] = players.index.to_series().map(country_series).astype("float").astype("Int64")
+    players = players.rename(columns={"countryIds": "countryId"})
 
     # unnest mappings
     players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
@@ -148,6 +153,14 @@ def getPlayerMatchScoresFromHost(matches: list, positions: list, connection: Rat
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
+
+    # get country data
+    countries = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/countries",
+        method="GET"
+    ).process_response(
+        endpoint="KPIs"
+    )
 
     # create empty df to store player scores
     player_scores = pd.DataFrame()
@@ -260,11 +273,17 @@ def getPlayerMatchScoresFromHost(matches: list, positions: list, connection: Rat
     ).merge(
         players[[
             "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
-            "firstname", "lastname", "birthdate", "birthplace", "leg"
+            "firstname", "lastname", "birthdate", "birthplace", "countryId", "leg"
         ]].rename(
             columns={"commonname": "playerName"}
         ),
         left_on="id",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        countries.rename(columns={"fifaName": "playerCountry"}),
+        left_on="countryId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
@@ -298,6 +317,7 @@ def getPlayerMatchScoresFromHost(matches: list, positions: list, connection: Rat
         "lastname",
         "birthdate",
         "birthplace",
+        "playerCountry",
         "leg",
         "positions",
         "matchShare",
@@ -317,7 +337,7 @@ def getPlayerMatchScoresFromHost(matches: list, positions: list, connection: Rat
     player_scores["wyscoutId"] = player_scores["wyscoutId"].astype("Int64")
     player_scores["heimSpielId"] = player_scores["heimSpielId"].astype("Int64")
     player_scores["skillCornerId"] = player_scores["skillCornerId"].astype("Int64")
-    
+
     # return data
     return player_scores
 
@@ -349,11 +369,11 @@ def getPlayerIterationScoresFromHost(
     # check input for iteration argument
     if not isinstance(iteration, int):
         raise Exception("Input for iteration argument must be an integer")
-        
+
     # check input for positions argument
     if not isinstance(positions, list):
         raise Exception("Input for positions argument must be a list")
-    
+
     # check if the input positions are valid
     invalid_positions = [position for position in positions if position not in allowed_positions]
     if len(invalid_positions) > 0:
@@ -361,7 +381,7 @@ def getPlayerIterationScoresFromHost(
             f"Invalid position(s): {', '.join(invalid_positions)}."
             f"\nChoose one or more of: {', '.join(allowed_positions)}"
         )
-    
+
     # get squads
     squads = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
@@ -369,13 +389,13 @@ def getPlayerIterationScoresFromHost(
     ).process_response(
         endpoint="Squads"
     )
-    
+
     # get squadIds
     squad_ids = squads[squads.access].id.to_list()
-    
+
     # compile position string
     position_string = ",".join(positions)
-    
+
     # get player iteration averages per squad
     scores_raw = pd.concat(
         map(lambda squadId: connection.make_api_request_limited(
@@ -401,18 +421,23 @@ def getPlayerIterationScoresFromHost(
     error_list = [str(squadId) for squadId in squad_ids if squadId not in scores_raw.squadId.to_list()]
     if len(error_list) > 0:
         print(f"No players played at positions {positions} for iteration {iteration} for following squads:\n\t{', '.join(error_list)}")
-    
+
     # get players
     players = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/players",
         method="GET"
     ).process_response(
         endpoint="Players"
-    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
+    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "countryIds", "idMappings"]]
+
+    # only keep first country id for each player
+    country_series = players["countryIds"].explode().groupby(level=0).first()
+    players["countryIds"] = players.index.to_series().map(country_series).astype("float").astype("Int64")
+    players = players.rename(columns={"countryIds": "countryId"})
 
     # unnest mappings
     players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
-    
+
     # get scores
     scores = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/player-scores",
@@ -420,19 +445,27 @@ def getPlayerIterationScoresFromHost(
     ).process_response(
         endpoint="playerScores"
     )[["id", "name"]]
-    
+
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
-    
+
+    # get country data
+    countries = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/countries",
+        method="GET"
+    ).process_response(
+        endpoint="KPIs"
+    )
+
     # unnest scorings
     averages = scores_raw.explode("playerScores").reset_index(drop=True)
-    
+
     # unnest dictionary in kpis column
     averages = pd.concat(
         [averages.drop(["playerScores"], axis=1), pd.json_normalize(averages["playerScores"])],
         axis=1
     )
-    
+
     # merge with player scores to ensure all kpis are present
     averages = averages.merge(
         scores,
@@ -441,15 +474,15 @@ def getPlayerIterationScoresFromHost(
         how="outer",
         suffixes=("", "_right")
     )
-    
+
     # get matchShares
     match_shares = averages[
         ["iterationId", "squadId", "playerId", "positions", "playDuration", "matchShare"]].drop_duplicates()
-    
+
     # fill missing values in the "name" column with a default value to ensure players without scorings don't get lost
     if len(averages["name"][averages["name"].isnull()]) > 0:
         averages["name"] = averages["name"].fillna("-1")
-    
+
     # pivot kpi values
     averages = pd.pivot_table(
         averages,
@@ -460,11 +493,11 @@ def getPlayerIterationScoresFromHost(
         fill_value=0,
         dropna=False
     ).reset_index()
-    
+
     # drop "-1" column
     if "-1" in averages.columns:
         averages.drop(["-1"], inplace=True, axis=1)
-    
+
     # merge with playDuration and matchShare
     averages = averages.merge(
         match_shares,
@@ -491,7 +524,7 @@ def getPlayerIterationScoresFromHost(
     ).merge(
         players[[
             "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
-            "firstname", "lastname", "birthdate", "birthplace", "leg"
+            "firstname", "lastname", "birthdate", "birthplace", "countryId", "leg"
         ]].rename(
             columns={"commonname": "playerName"}
         ),
@@ -499,16 +532,22 @@ def getPlayerIterationScoresFromHost(
         right_on="id",
         how="left",
         suffixes=("", "_right")
+    ).merge(
+        countries.rename(columns={"fifaName": "playerCountry"}),
+        left_on="countryId",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
     )
-    
+
     # remove NA rows
     averages = averages[averages.iterationId.notnull()]
-    
+
     # fix column types
     averages["squadId"] = averages["squadId"].astype(int)
     averages["playerId"] = averages["playerId"].astype(int)
     averages["iterationId"] = averages["iterationId"].astype(int)
-    
+
     # define column order
     order = [
         "iterationId",
@@ -525,15 +564,16 @@ def getPlayerIterationScoresFromHost(
         "lastname",
         "birthdate",
         "birthplace",
+        "playerCountry",
         "leg",
         "positions",
         "matchShare",
         "playDuration"
     ]
-    
+
     # add kpiNames to order
     order = order + scores.name.to_list()
-    
+
     # select columns
     averages = averages[order]
 
@@ -543,6 +583,6 @@ def getPlayerIterationScoresFromHost(
     averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
     averages["heimSpielId"] = averages["heimSpielId"].astype("Int64")
     averages["skillCornerId"] = averages["skillCornerId"].astype("Int64")
-    
+
     # return result
     return averages

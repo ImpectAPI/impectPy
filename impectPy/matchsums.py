@@ -80,7 +80,12 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
             ),
             iterations),
         ignore_index=True
-    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "idMappings"]]
+    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "countryIds", "idMappings"]]
+
+    # only keep first country id for each player
+    country_series = players["countryIds"].explode().groupby(level=0).first()
+    players["countryIds"] = players.index.to_series().map(country_series).astype("float").astype("Int64")
+    players = players.rename(columns={"countryIds": "countryId"})
 
     # unnest mappings
     players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
@@ -116,6 +121,14 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
+
+    # get country data
+    countries = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/countries",
+        method="GET"
+    ).process_response(
+        endpoint="KPIs"
+    )
 
     # create empty df to store matchsums
     matchsums = pd.DataFrame()
@@ -181,7 +194,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
 
             # append to matchsums
             matchsums = pd.concat([matchsums, temp])
-    
+
     # merge with other data
     matchsums = matchsums.merge(
         matchplan[["id", "scheduledDate", "matchDayIndex", "matchDayName", "iterationId"]],
@@ -206,11 +219,17 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
     ).merge(
         players[[
             "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
-            "firstname", "lastname", "birthdate", "birthplace", "leg"
+            "firstname", "lastname", "birthdate", "birthplace", "countryId", "leg"
         ]].rename(
             columns={"commonname": "playerName"}
         ),
         left_on="id",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        countries.rename(columns={"fifaName": "playerCountry"}),
+        left_on="countryId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
@@ -244,6 +263,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         "lastname",
         "birthdate",
         "birthplace",
+        "playerCountry",
         "leg",
         "position",
         "matchShare",
