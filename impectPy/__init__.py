@@ -8,6 +8,6 @@ from .iteration_averages import getPlayerIterationAverages, getSquadIterationAve
 from .player_scores import getPlayerMatchScores, getPlayerIterationScores
 from .squad_scores import getSquadMatchScores, getSquadIterationScores
 from .player_profile_scores import getPlayerProfileScores
-from .sportscode_xml import generateSportsCodeXML
+from .sportscode_xml import generateXML
 from .set_pieces import getSetPieces
 from .squad_ratings import getSquadRatings
