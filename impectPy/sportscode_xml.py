@@ -146,6 +146,8 @@ def generateXML(
         kpis = [kpi["name"] for kpi in allowed_kpis]
     if squad is None or perspective is None:
         perspective = "teamName"
+    elif squad not in events["squadId"].unique():
+        raise ValueError(f"Provided squad ID '{squad}' not found in event data.")
 
     # check for invalid kpis
     invalid_kpis = [kpi for kpi in kpis if kpi not in [kpi["name"] for kpi in allowed_kpis]]
