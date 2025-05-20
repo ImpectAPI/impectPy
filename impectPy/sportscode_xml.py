@@ -69,9 +69,14 @@ allowed_kpis = [
 
 allowed_codes = [
     "playerName",
-    "squadName",
+    "team",
     "actionType",
     "action"
+]
+
+allowed_perspectives = [
+    "teamName",
+    "teamFocus"
 ]
 
 # define allowed label/code combinations
@@ -125,6 +130,8 @@ def generateXML(
         p4Start: int,
         p5Start: int,
         codeTag: str,
+        squad: None,
+        perspective: None,
         labels=None,
         kpis=None,
         labelSorting: bool = True,
@@ -132,11 +139,13 @@ def generateXML(
         buckets: bool = True
 ) -> ET.ElementTree:
 
-    # handle kpis and labels defaults
+    # handle kpis, labels, squad and perspective defaults
     if labels is None:
         labels = [label["name"] for label in allowed_labels if combinations.get(label.get("name")).get(codeTag)]
     if kpis is None:
         kpis = [kpi["name"] for kpi in allowed_kpis]
+    if squad is None or perspective is None:
+        perspective = "teamName"
 
     # check for invalid kpis
     invalid_kpis = [kpi for kpi in kpis if kpi not in [kpi["name"] for kpi in allowed_kpis]]
@@ -151,6 +160,9 @@ def generateXML(
     # check for invalid code tag
     if not codeTag in allowed_codes:
         raise ValueError(f"Invalid Code: {codeTag}")
+
+    if not perspective in allowed_perspectives:
+        raise ValueError(f"Invalid perspective: {perspective}")
 
     # keep only :
     # - if KPI in kpis
@@ -646,8 +658,19 @@ def generateXML(
     # reset index
     phases.reset_index(inplace=True)
 
-    # merge phase and squadName into one column to later pass into code tag
-    phases["teamPhase"] = phases["squadName"] + " - " + phases["phase"].str.replace("_", " ")
+    # Determine how to label team phases: by squadName or by role (home/away)
+
+    if perspective == "teamName":
+        phases["teamPhase"] = phases["squadName"] + " - " + phases["phase"].str.replace("_", " ")
+    elif perspective == "teamFocus":
+        my_squad_id = squad
+        phases["teamPhase"] = np.where(
+            phases["squadId"] == my_squad_id,
+            "mySquad - " + phases["phase"].str.replace("_", " "),
+            "opponent - " + phases["phase"].str.replace("_", " ")
+        )
+    else:
+        raise ValueError(f"Invalid value for perspective: {perspective}")
 
     # get period starts
 
@@ -786,7 +809,7 @@ def generateXML(
         seq_id_current = None
 
         # If the selected code attribute is "squadName", generate XML entries from the `phases` DataFrame
-        if codeTag == "squadName":
+        if codeTag == "team":
             for index, phase in phases.iterrows():
                 # Create a new XML instance for each team phase
                 instance = ET.SubElement(instances, "instance")
@@ -873,7 +896,7 @@ def generateXML(
                     seq_id_current = seq_id_new
     else:
         # Same logic as above, but without sequencing (i.e., one clip per row)
-        if codeTag == "squadName":
+        if codeTag == "team":
             for index, phase in phases.iterrows():
                 instance = ET.SubElement(instances, "instance")
                 event_id = ET.SubElement(instance, "ID")
@@ -968,7 +991,7 @@ def generateXML(
             # call function
             row(player, home_colors)
 
-    elif codeTag == "squadName":
+    elif codeTag == "team":
         # add entries for away team phases
         for phase in away_phases:
             # call function
