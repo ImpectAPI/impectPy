@@ -1,3 +1,17 @@
+# impectPy 2.4.4
+
+# Major Changes
+* Rename function `generateSportsCodeXML()` to `generateXML()`
+* Add proper xml structure to the `generateXML()` function for Python versions >= 3.9
+* Significantly improve customization options for new `generateXML()` function with new function arguments
+  * `kpis`:Customize KPIs included
+  * `lables`: Customize labels included
+  * `codeTag`: Customize code tag selection
+  * `labelSorting`: Enable/Disable label sorting
+
+# Minor Changes
+* fix bug in `getEvents()` that prevented the column `duelPlayerName`from being populated correctly
+
 # impectPy 2.4.3
 
 ## Minor Changes
