@@ -9,7 +9,7 @@ from .iteration_averages import getPlayerIterationAveragesFromHost, getSquadIter
 from .player_scores import getPlayerMatchScoresFromHost, getPlayerIterationScoresFromHost
 from .squad_scores import getSquadMatchScoresFromHost, getSquadIterationScoresFromHost
 from .player_profile_scores import getPlayerProfileScoresFromHost
-from .sportscode_xml import generateSportsCodeXML
+from .xml import generateXML
 from .set_pieces import getSetPiecesFromHost
 from .squad_ratings import getSquadRatingsFromHost
 from .match_info import getFormationsFromHost, getSubstitutionsFromHost, getStartingPositionsFromHost
@@ -32,7 +32,7 @@ class Impect:
     def init(self, token: str):
         self.__token = token
         self.connection.session.headers.update({"Authorization": f"Bearer {self.__token}"})
-    
+
     def getIterations(self) -> pd.DataFrame:
         return getIterationsFromHost(
             self.connection, self.__config.HOST
@@ -42,12 +42,12 @@ class Impect:
         return getMatchesFromHost(
             iteration, self.connection, self.__config.HOST
         )
-    
+
     def getEvents(self, matches: list, include_kpis: bool = True, include_set_pieces: bool = True) -> pd.DataFrame:
         return getEventsFromHost(
             matches, include_kpis, include_set_pieces, self.connection, self.__config.HOST
         )
-    
+
     def getPlayerMatchsums(self, matches: list) -> pd.DataFrame:
         return getPlayerMatchsumsFromHost(
             matches, self.connection, self.__config.HOST
@@ -57,12 +57,12 @@ class Impect:
         return getSquadMatchsumsFromHost(
             matches, self.connection, self.__config.HOST
         )
-    
+
     def getPlayerIterationAverages(self, iteration: int) -> pd.DataFrame:
         return getPlayerIterationAveragesFromHost(
             iteration, self.connection, self.__config.HOST
         )
-    
+
     def getSquadIterationAverages(self, iteration: int) -> pd.DataFrame:
         return getSquadIterationAveragesFromHost(
             iteration, self.connection, self.__config.HOST
@@ -77,7 +77,7 @@ class Impect:
         return getPlayerIterationScoresFromHost(
             iteration, positions, self.connection, self.__config.HOST
         )
-    
+
     def getSquadMatchScores(self, matches: list) -> pd.DataFrame:
         return getSquadMatchScoresFromHost(
             matches, self.connection, self.__config.HOST
@@ -87,7 +87,7 @@ class Impect:
         return getSquadIterationScoresFromHost(
             iteration, self.connection, self.__config.HOST
         )
-    
+
     def getPlayerProfileScores(self, iteration: int, positions: list) -> pd.DataFrame:
         return getPlayerProfileScoresFromHost(
             iteration, positions, self.connection, self.__config.HOST
@@ -117,9 +117,9 @@ class Impect:
         return getStartingPositionsFromHost(
             matches, self.connection, self.__config.HOST
         )
-    
+
     @staticmethod
-    def generateSportsCodeXML(
+    def generateXML(
             events: pd.DataFrame,
             lead: int,
             lag: int,
@@ -129,4 +129,4 @@ class Impect:
             p4Start: int,
             p5Start: int
     ) -> ET.ElementTree:
-        return generateSportsCodeXML(events, lead, lag, p1Start, p2Start, p3Start, p4Start, p5Start)
+        return generateXML(events, lead, lag, p1Start, p2Start, p3Start, p4Start, p5Start)
