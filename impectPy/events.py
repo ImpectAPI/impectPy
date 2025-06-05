@@ -85,7 +85,6 @@ def getEventsFromHost(
         "dribblePlayerId",
         "duelDuelType",
         "duelPlayerId",
-        "duelPlayerName",
         "opponentCoordinatesX",
         "opponentCoordinatesY",
         "opponentAdjCoordinatesX",
@@ -487,7 +486,7 @@ def getEventsFromHost(
         "setPieceSubPhaseSecondTouchPlayerName",
         "setPieceSubPhaseSecondTouchWon",
     ]
-    
+
     # add columns that might not exist in previous data versions
     for col in event_cols:
         if col not in events.columns:
