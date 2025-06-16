@@ -1,11 +1,12 @@
 # load packages
+import requests
+import re
 import numpy as np
 import pandas as pd
-import requests
-from impectPy.helpers import RateLimitedAPI
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
-import re
+from impectPy.helpers import RateLimitedAPI
+from impectPy.wrapper import Event, EventSequence
 
 ######
 #
@@ -18,7 +19,7 @@ import re
 def getEvents(
         matches: list, token: str, include_kpis: bool = True,
         include_set_pieces: bool = True, session: requests.Session = requests.Session()
-) -> pd.DataFrame:
+) -> EventSequence:
 
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
@@ -31,7 +32,7 @@ def getEvents(
 # define function
 def getEventsFromHost(
         matches: list, include_kpis: bool, include_set_pieces: bool, connection: RateLimitedAPI, host: str
-) -> pd.DataFrame:
+) -> EventSequence:
 
     # check input for matches argument
     if not isinstance(matches, list):
@@ -513,4 +514,4 @@ def getEventsFromHost(
     events = events.sort_values(["matchId", "eventNumber"])
 
     # return events
-    return events
+    return EventSequence(events)
