@@ -1,3 +1,8 @@
+# impectPy 2.4.5
+
+# Minor Changes
+* fix bug in `getPlayerIterationAverages()`function
+
 # impectPy 2.4.4
 
 # Major Changes
