@@ -109,13 +109,22 @@ class RateLimitedAPI:
                       f", retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
             # check status code and terminate if 401 or 403
-            elif response.status_code in [401, 403]:
+            elif response.status_code == 401:
                 raise Exception(f"Received status code {response.status_code} "
-                                f"({response.json().get('message', 'Unauthorized')})")
+                                f"(You do not have API access.)\n"
+                                f"Request-ID: {response.headers['x-request-id']} "
+                                f"(Make sure to include this in any support request.)")
+            elif response.status_code == 403:
+                raise Exception(f"Received status code {response.status_code} "
+                                f"(You do not have access to this resource.)\n"
+                                f"Request-ID: {response.headers['x-request-id']} "
+                                f"(Make sure to include this in any support request.)")
             # check status code and terminate if other error
             else:
                 raise Exception(f"Received status code {response.status_code} "
-                                f"({response.json().get('message', 'Unknown error')})")
+                                f"({response.json().get('message', 'Unknown error')})\n"
+                                f"Request-ID: {response.headers['x-request-id']} "
+                                f"(Make sure to include this in any support request.)")
 
 
 ######
