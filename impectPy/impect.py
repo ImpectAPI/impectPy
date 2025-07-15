@@ -9,12 +9,12 @@ from .iteration_averages import getPlayerIterationAveragesFromHost, getSquadIter
 from .player_scores import getPlayerMatchScoresFromHost, getPlayerIterationScoresFromHost
 from .squad_scores import getSquadMatchScoresFromHost, getSquadIterationScoresFromHost
 from .player_profile_scores import getPlayerProfileScoresFromHost
-from .xml import generateXML
+from .generate_xml import generateXML
 from .set_pieces import getSetPiecesFromHost
 from .squad_ratings import getSquadRatingsFromHost
 from .match_info import getFormationsFromHost, getSubstitutionsFromHost, getStartingPositionsFromHost
 import pandas as pd
-from xml.etree import ElementTree as ET
+from generate_xml.etree import ElementTree as ET
 
 
 class Impect:
