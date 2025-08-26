@@ -8,7 +8,7 @@ Version: v2.4.4
 
 ---
 
-**Supported API Version: V5**<br>
+**Supported API Version: V5**
 For older versions, please see list below:
 
 - API V4: https://github.com/ImpectAPI/impectPy/tree/v1.0.3

@@ -22,4 +22,5 @@ setup(
     license="MIT",
     description="A Python package to facilitate interaction with the Impect customer API",
     long_description=README,
+    long_description_content_type="text/markdown",
 )
