@@ -7,7 +7,7 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "README.md"))
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
     name="impectPy",
-    url="tbd",
+    url="https://github.com/ImpectAPI/impectPy",
     author="Impect",
     author_email="info@impect.com",
     # Needed to actually package something
