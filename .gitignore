@@ -130,6 +130,7 @@ celerybeat.pid
 
 # Environments
 .venv
+venv-testpypi
 env/
 venv/
 ENV/

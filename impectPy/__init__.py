@@ -1,3 +1,6 @@
+# define version attribute
+__version__ = "2.4.4"
+
 # import modules
 from .access_token import getAccessToken
 from .iterations import getIterations
