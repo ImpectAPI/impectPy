@@ -411,3 +411,6 @@ $RECYCLE.BIN/
 
 # Tests
 tests/
+
+# PyPi update pipeline
+pypi_upload.txt
