@@ -18,7 +18,7 @@ from xml.etree import ElementTree as ET
 
 
 class Impect:
-    def __init__(self,config: Config = Config(), connection: RateLimitedAPI = RateLimitedAPI()):
+    def __init__(self, config: Config = Config(), connection: RateLimitedAPI = RateLimitedAPI()):
         self.__config = config
         self.connection = connection
 
@@ -68,14 +68,14 @@ class Impect:
             iteration, self.connection, self.__config.HOST
         )
 
-    def getPlayerMatchScores(self, matches: list, positions: list) -> pd.DataFrame:
+    def getPlayerMatchScores(self, matches: list, positions: list = None) -> pd.DataFrame:
         return getPlayerMatchScoresFromHost(
-            matches, positions, self.connection, self.__config.HOST
+            matches, self.connection, self.__config.HOST, positions
         )
 
-    def getPlayerIterationScores(self, iteration: int, positions: list) -> pd.DataFrame:
+    def getPlayerIterationScores(self, iteration: int, positions: list = None) -> pd.DataFrame:
         return getPlayerIterationScoresFromHost(
-            iteration, positions, self.connection, self.__config.HOST
+            iteration, self.connection, self.__config.HOST, positions
         )
 
     def getSquadMatchScores(self, matches: list) -> pd.DataFrame:
