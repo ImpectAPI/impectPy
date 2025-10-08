@@ -12,6 +12,7 @@ from .player_profile_scores import getPlayerProfileScoresFromHost
 from .xml import generateXML
 from .set_pieces import getSetPiecesFromHost
 from .squad_ratings import getSquadRatingsFromHost
+from .squad_coefficients import getSquadCoefficientsFromHost
 from .match_info import getFormationsFromHost, getSubstitutionsFromHost, getStartingPositionsFromHost
 import pandas as pd
 from xml.etree import ElementTree as ET
@@ -100,6 +101,11 @@ class Impect:
 
     def getSquadRatings(self, iteration: int) -> pd.DataFrame:
         return getSquadRatingsFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
+
+    def getSquadCoefficients(self, iteration: int) -> pd.DataFrame:
+        return getSquadCoefficientsFromHost(
             iteration, self.connection, self.__config.HOST
         )
 
