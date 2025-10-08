@@ -24,38 +24,38 @@ def getSquadMatchScores(matches: list, token: str, session: requests.Session = r
     return getSquadMatchScoresFromHost(matches, connection, "https://api.impect.com")
 
 def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
-    
+
     # check input for matches argument
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
-    
+
     # get match info
-    iterations = pd.concat(
+    match_data = pd.concat(
         map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}",
             method="GET"
         ).process_response(
-            endpoint="Iterations"
+            endpoint="Match Info"
         ),
             matches),
         ignore_index=True)
-    
+
     # filter for matches that are unavailable
-    fail_matches = iterations[iterations.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
-    
+    fail_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+
     # drop matches that are unavailable from list of matches
     matches = [match for match in matches if match not in fail_matches]
-    
+
     # raise warnings
     if len(fail_matches) > 0:
         if len(matches) == 0:
             raise Exception("All supplied matches are unavailable. Execution stopped.")
         else:
             print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
-    
+
     # extract iterationIds
-    iterations = list(iterations[iterations.lastCalculationDate.notnull()].iterationId.unique())
-    
+    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
+
     # get squad scores
     scores_raw = pd.concat(
         map(lambda match: connection.make_api_request_limited(
@@ -68,7 +68,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         ),
             matches),
         ignore_index=True)
-    
+
     # get squads
     squads = pd.concat(
         map(lambda iteration: connection.make_api_request_limited(
@@ -79,6 +79,18 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         ),
             iterations),
         ignore_index=True)[["id", "name", "idMappings"]]
+
+    # get coaches
+    coaches = pd.concat(
+        map(lambda iteration: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
+            method="GET"
+        ).process_response(
+            endpoint="Coaches",
+            raise_exception=False
+        ),
+            iterations),
+        ignore_index=True)[["id", "name"]].drop_duplicates()
 
     # unnest mappings
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
@@ -155,6 +167,15 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         how="left",
         suffixes=("", "_right")
     ).merge(
+        pd.concat([
+            match_data[["id","squadHomeId", "squadHomeCoachId"]].rename(columns={"squadHomeId": "squadId", "squadHomeCoachId": "coachId"}),
+            match_data[["id","squadAwayId", "squadAwayCoachId"]].rename(columns={"squadAwayId": "squadId", "squadAwayCoachId": "coachId"})
+        ], ignore_index=True),
+        left_on=["matchId", "squadId"],
+        right_on=["id", "squadId"],
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
@@ -166,6 +187,14 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         ),
         left_on="squadId",
         right_on="squadId",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        coaches[["id", "name"]].rename(
+            columns={"id": "coachId", "name": "coachName"}
+        ),
+        left_on="coachId",
+        right_on="coachId",
         how="left",
         suffixes=("", "_right")
     )
@@ -190,7 +219,9 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         "wyscoutId",
         "heimSpielId",
         "skillCornerId",
-        "squadName"
+        "squadName",
+        "coachId",
+        "coachName"
     ]
 
     # add scoreNames to order
@@ -208,7 +239,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     squad_scores["wyscoutId"] = squad_scores["wyscoutId"].astype("Int64")
     squad_scores["heimSpielId"] = squad_scores["heimSpielId"].astype("Int64")
     squad_scores["skillCornerId"] = squad_scores["skillCornerId"].astype("Int64")
-    
+
     # return data
     return squad_scores
 
@@ -231,11 +262,11 @@ def getSquadIterationScores(iteration: int, token: str, session: requests.Sessio
     return getSquadIterationScoresFromHost(iteration, connection, "https://api.impect.com")
 
 def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
-    
+
     # check input for matches argument
     if not isinstance(iteration, int):
         raise Exception("Input for iteration argument must be an integer")
-    
+
     # get squads
     squads = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
@@ -246,7 +277,7 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
 
     # unnest mappings
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
-    
+
     # get squad iteration averages
     scores_raw = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/squad-scores",
@@ -254,7 +285,7 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
     ).process_response(
         endpoint="SquadIterationScores"
     ).assign(iterationId=iteration)
-    
+
     # get scores
     scores_definitions = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/squad-scores",
@@ -262,22 +293,22 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
     ).process_response(
         endpoint="scoreDefinitions"
     )[["id", "name"]]
-    
+
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
-    
+
     # get matches played
     matches = scores_raw[["squadId", "matches"]].drop_duplicates()
-    
+
     # unnest scores
     scores = scores_raw.explode("squadScores").reset_index(drop=True)
-    
+
     # unnest dictionary in kpis column
     scores = pd.concat(
         [scores.drop(["squadScores"], axis=1), pd.json_normalize(scores["squadScores"])],
         axis=1
     )
-    
+
     # merge with kpis to ensure all kpis are present
     scores = scores.merge(
         scores_definitions,
@@ -286,7 +317,7 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
         how="outer",
         suffixes=("", "_right")
     )
-    
+
     # pivot kpi values
     scores = pd.pivot_table(
         scores,
@@ -297,7 +328,7 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
         fill_value=0,
         dropna=False
     ).reset_index()
-    
+
     # inner join with matches played
     scores = pd.merge(
         scores,
@@ -307,7 +338,7 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
         how="inner",
         suffixes=("", "_right")
     )
-    
+
     # merge with other data
     scores = scores.merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
@@ -324,10 +355,10 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
         how="left",
         suffixes=("", "_right")
     )
-    
+
     # remove NA rows
     averages = scores[scores.iterationId.notnull()]
-    
+
     # fix column types
     averages["matches"] = averages["matches"].astype("Int64")
     averages["iterationId"] = averages["iterationId"].astype("Int64")
@@ -335,7 +366,7 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
     averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
     averages["heimSpielId"] = averages["heimSpielId"].astype("Int64")
     averages["skillCornerId"] = averages["skillCornerId"].astype("Int64")
-    
+
     # define column order
     order = [
         "iterationId",
@@ -348,12 +379,12 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
         "squadName",
         "matches"
     ]
-    
+
     # add scoreNames to order
     order = order + scores_definitions.name.to_list()
-    
+
     # select columns
     averages = averages[order]
-    
+
     # return result
     return averages

@@ -150,6 +150,18 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
             iterations),
         ignore_index=True)[["id", "name"]].drop_duplicates()
 
+    # get coaches
+    coaches = pd.concat(
+        map(lambda iteration: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
+            method="GET"
+        ).process_response(
+            endpoint="Coaches",
+            raise_exception=False
+        ),
+            iterations),
+        ignore_index=True)[["id", "name"]].drop_duplicates()
+
     # get player scores
     scores = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/player-scores",
@@ -305,6 +317,15 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         how="left",
         suffixes=("", "_right")
     ).merge(
+        pd.concat([
+            match_data[["id","squadHomeId", "squadHomeCoachId"]].rename(columns={"squadHomeId": "squadId", "squadHomeCoachId": "coachId"}),
+            match_data[["id","squadAwayId", "squadAwayCoachId"]].rename(columns={"squadAwayId": "squadId", "squadAwayCoachId": "coachId"})
+        ], ignore_index=True),
+        left_on=["matchId", "squadId"],
+        right_on=["id", "squadId"],
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
@@ -327,6 +348,14 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         ),
         left_on="id",
         right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        coaches[["id", "name"]].rename(
+            columns={"id": "coachId", "name": "coachName"}
+        ),
+        left_on="coachId",
+        right_on="coachId",
         how="left",
         suffixes=("", "_right")
     ).merge(
@@ -356,6 +385,8 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         "matchDayName",
         "squadId",
         "squadName",
+        "coachId",
+        "coachName",
         "playerId",
         "wyscoutId",
         "heimSpielId",
