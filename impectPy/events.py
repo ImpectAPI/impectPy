@@ -38,18 +38,18 @@ def getEventsFromHost(
         raise Exception("Argument 'matches' must be a list of integers.")
 
     # get match info
-    iterations = pd.concat(
+    match_data = pd.concat(
         map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}",
             method="GET"
         ).process_response(
-            endpoint="Iterations"
+            endpoint="Match Info"
         ),
             matches),
         ignore_index=True)
 
     # filter for matches that are unavailable
-    fail_matches = iterations[iterations.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    fail_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
     matches = [match for match in matches if match not in fail_matches]
@@ -62,7 +62,7 @@ def getEventsFromHost(
             print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
 
     # extract iterationIds
-    iterations = list(iterations[iterations.lastCalculationDate.notnull()].iterationId.unique())
+    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get match events
     events = pd.concat(
@@ -114,6 +114,18 @@ def getEventsFromHost(
             method="GET"
         ).process_response(
             endpoint="Squads"
+        ),
+            iterations),
+        ignore_index=True)[["id", "name"]].drop_duplicates()
+
+    # get coaches
+    coaches = pd.concat(
+        map(lambda iteration: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
+            method="GET"
+        ).process_response(
+            endpoint="Coaches",
+            raise_exception=False
         ),
             iterations),
         ignore_index=True)[["id", "name"]].drop_duplicates()
@@ -188,7 +200,7 @@ def getEventsFromHost(
 
     # start merging dfs
 
-    # merge events with squads
+    # merge events with secondary data
     events = events.merge(
         squads[["id", "name"]].rename(columns={"id": "squadId", "name": "squadName"}),
         left_on="squadId",
@@ -201,10 +213,7 @@ def getEventsFromHost(
         right_on="squadId",
         how="left",
         suffixes=("", "_away")
-    )
-
-    # merge events with players
-    events = events.merge(
+    ).merge(
         players[["id", "commonname"]].rename(columns={"id": "playerId", "commonname": "playerName"}),
         left_on="playerId",
         right_on="playerId",
@@ -243,19 +252,32 @@ def getEventsFromHost(
         right_on="dribbleOpponentPlayerId",
         how="left",
         suffixes=("", "_right")
-    )
-
-    # merge with matches info
-    events = events.merge(
+    ).merge(
         matchplan,
         left_on="matchId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
-    )
-
-    # merge with competition info
-    events = events.merge(
+    ).merge(
+        match_data[["id", "squadHomeCoachId", "squadAwayCoachId"]].rename(
+            columns={"squadHomeCoachId": "homeSquadCoachId", "squadAwayCoachId": "awaySquadCoachId"}),
+        left_on="matchId",
+        right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        coaches[["id", "name"]].rename(columns={"id": "homeCoachId", "name": "homeCoachName"}),
+        left_on="homeSquadCoachId",
+        right_on="homeCoachId",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        coaches[["id", "name"]].rename(columns={"id": "awayCoachId", "name": "awayCoachName"}),
+        left_on="awaySquadCoachId",
+        right_on="awayCoachId",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
         iterations,
         left_on="iterationId",
         right_on="id",
@@ -374,12 +396,16 @@ def getEventsFromHost(
         "homeSquadName",
         "homeSquadCountryId",
         "homeSquadCountryName",
+        "homeCoachId",
+        "homeCoachName",
         "homeSquadType",
         "awaySquadId",
         "awaySquadName",
         "awaySquadCountryId",
         "awaySquadCountryName",
         "awaySquadType",
+        "awayCoachId",
+        "awayCoachName",
         "eventId",
         "eventNumber",
         "sequenceIndex",
