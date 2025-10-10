@@ -14,6 +14,7 @@ from .player_profile_scores import getPlayerProfileScores
 from .xml import generateXML
 from .set_pieces import getSetPieces
 from .squad_ratings import getSquadRatings
+from .squad_coefficients import getSquadCoefficients
 from .match_info import getFormations, getSubstitutions, getStartingPositions
 from .config import Config as Config
 from .impect import Impect as Impect
