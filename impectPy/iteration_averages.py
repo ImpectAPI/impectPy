@@ -118,13 +118,16 @@ def getPlayerIterationAveragesFromHost(
         if len(averages_raw["name"][averages_raw["name"].isnull()]) > 0:
             averages_raw["name"] = averages_raw["name"].fillna("-1")
 
-        # downcast numerics and category types
-        averages_raw["iterationId"] = averages_raw["iterationId"].astype("Int16")
-        averages_raw["squadId"] = averages_raw["squadId"].astype("Int16")
-        averages_raw["playerId"] = averages_raw["playerId"].astype("Int32")
-        averages_raw["position"] = averages_raw["position"].astype("category")
-        averages_raw["name"] = averages_raw["name"].astype("category")
-        averages_raw["value"] = averages_raw["value"].astype("Float32")
+        # get KPIs without a scoring
+        mask = (
+                averages_raw.iterationId.isnull()
+                & averages_raw.squadId.isnull()
+                & averages_raw.playerId.isnull()
+                & averages_raw.position.isnull()
+        )
+
+        # fill join cols with placeholder
+        averages_raw.loc[mask] = averages_raw.loc[mask].fillna(-1)
 
         # get matchShares
         match_shares_raw = averages_raw[
@@ -145,6 +148,14 @@ def getPlayerIterationAveragesFromHost(
         # drop "-1" column
         if "-1" in averages_raw.columns:
             averages_raw.drop(["-1"], inplace=True, axis=1)
+
+        # drop -1 rows
+        averages_raw = averages_raw[
+            ~(averages_raw.iterationId == -1)
+            & ~(averages_raw.squadId == -1)
+            & ~(averages_raw.playerId == -1)
+            & ~(averages_raw.position == -1)
+        ]
 
         # merge with playDuration and matchShare
         averages_raw = averages_raw.merge(
