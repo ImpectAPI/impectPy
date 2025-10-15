@@ -130,6 +130,8 @@ celerybeat.pid
 
 # Environments
 .venv
+venv-testpypi
+venv-pypi
 env/
 venv/
 ENV/
@@ -410,3 +412,6 @@ $RECYCLE.BIN/
 
 # Tests
 tests/
+
+# Maintenance checklist
+maintenance_checklist.md

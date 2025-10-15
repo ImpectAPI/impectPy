@@ -12,13 +12,14 @@ from .player_profile_scores import getPlayerProfileScoresFromHost
 from .xml import generateXML
 from .set_pieces import getSetPiecesFromHost
 from .squad_ratings import getSquadRatingsFromHost
+from .squad_coefficients import getSquadCoefficientsFromHost
 from .match_info import getFormationsFromHost, getSubstitutionsFromHost, getStartingPositionsFromHost
 import pandas as pd
 from xml.etree import ElementTree as ET
 
 
 class Impect:
-    def __init__(self,config: Config = Config(), connection: RateLimitedAPI = RateLimitedAPI()):
+    def __init__(self, config: Config = Config(), connection: RateLimitedAPI = RateLimitedAPI()):
         self.__config = config
         self.connection = connection
 
@@ -68,14 +69,14 @@ class Impect:
             iteration, self.connection, self.__config.HOST
         )
 
-    def getPlayerMatchScores(self, matches: list, positions: list) -> pd.DataFrame:
+    def getPlayerMatchScores(self, matches: list, positions: list = None) -> pd.DataFrame:
         return getPlayerMatchScoresFromHost(
-            matches, positions, self.connection, self.__config.HOST
+            matches, self.connection, self.__config.HOST, positions
         )
 
-    def getPlayerIterationScores(self, iteration: int, positions: list) -> pd.DataFrame:
+    def getPlayerIterationScores(self, iteration: int, positions: list = None) -> pd.DataFrame:
         return getPlayerIterationScoresFromHost(
-            iteration, positions, self.connection, self.__config.HOST
+            iteration, self.connection, self.__config.HOST, positions
         )
 
     def getSquadMatchScores(self, matches: list) -> pd.DataFrame:
@@ -100,6 +101,11 @@ class Impect:
 
     def getSquadRatings(self, iteration: int) -> pd.DataFrame:
         return getSquadRatingsFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
+
+    def getSquadCoefficients(self, iteration: int) -> pd.DataFrame:
+        return getSquadCoefficientsFromHost(
             iteration, self.connection, self.__config.HOST
         )
 

@@ -2,13 +2,13 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.4.5
+Version: v2.5.0
 
-**Updated: June 26th 2025**
+**Updated: October 15th 2025**
 
 ---
 
-**Supported API Version: V5**<br>
+**Supported API Version: V5**
 For older versions, please see list below:
 
 - API V4: https://github.com/ImpectAPI/impectPy/tree/v1.0.3
@@ -26,11 +26,16 @@ match and season level.
 
 ## Installation
 
-You can install the latest version of impectPy from
-[GitHub](https://github.com/) with:
+You can install the latest version of impectPy from PyPi with:
 
-``` cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.4.5
+```cmd
+pip install impectPy
+```
+
+You can also install it from [GitHub](https://github.com/) with:
+
+```cmd
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.5.0
 ```
 
 ## Usage
@@ -41,7 +46,7 @@ Before accessing any data via our API, you will need to request a bearer
 token for authorization. You can get this authorization token using the
 following code snippet:
 
-``` python
+```python
 import impectPy as ip
 import pandas as pd
 
@@ -59,7 +64,7 @@ competition iterations that are enabled for your account.
 
 ### Retrieve Basic Information
 
-``` python
+```python
 # get list of iterations
 iterations = ip.getIterations(token=token)
 
@@ -72,7 +77,7 @@ your sales representative. Now let’s assume you are interested in data
 for 2022/23 season of the 1. Bundesliga (iteration = 518). The following
 snippet gets you a list of matches for this iteration:
 
-``` python
+```python
 # get matches for iteration
 matchplan = ip.getMatches(iteration=518, token=token)
 
@@ -91,7 +96,7 @@ as team formation, starting position and substitution data. As the functions all
 for multiple games to be requested at once, we need to wrap the matchId into a list. 
 Hence, to request data for this game, run the following code snippet:
 
-``` python
+```python
 # define matches to get event data for
 matches = [84344]
 
@@ -120,7 +125,7 @@ Scouting and Analysis portals. On player level, these are calculated across
 positions which is why you have to supply the function with a list of positions 
 your want to retrieve data for:
 
-``` python
+```python
 # define matches to get further data for
 matches = [84344]
 
@@ -152,7 +157,7 @@ the following method to do so in order to minimize the amount of
 requests sent to the API. Let’s also get the event data for the RB
 Leipzig vs FSV Mainz 05 game (matchId = 84350) from the same day:
 
-``` python
+```python
 # define list of matches
 matches = [84344, 84350]
 
@@ -179,8 +184,8 @@ positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
 # get player scores and ratios for match and positions per player
 playerMatchScores = ip.getPlayerMatchScores(
     matches=matches,
-    positions=positions,
-    token=token
+    token=token,
+    positions=positions  # optional
 )
 
 # get squad scores and ratios for match per squad
@@ -201,7 +206,7 @@ your want to retrieve data for.
 Let's assume you were interested in wing backs in the 2022/2023 Bundesliga season, 
 then you could use this code snippet:
 
-``` python
+```python
 # define iteration ID
 iteration = 518
 
@@ -223,8 +228,8 @@ squadIterationAverages = ip.getSquadIterationAverages(
 # get player scores and ratios for iteration and positions
 playerIterationScores = ip.getPlayerIterationScores(
     iteration=iteration,
-    positions=positions,
-    token=token
+    token=token,
+    positions=positions  # optional
 )
 
 # get squad scores and ratios for iteration
@@ -232,9 +237,19 @@ squadIterationScores = ip.getSquadIterationScores(
     iteration=iteration,
     token=token
 )
+```
 
+The squad rating values that you can find on the league ranking in the Scouting portal can 
+also be retrieved from the API. In addition, we also provide you with the more detailed squad 
+coefficients that can be used to make match predictions. See [this example script](https://github.com/ImpectAPI/impectPy/blob/release/examples/predict_matches.ipynb) 
+for further details. 
+
+```python
 # get squad rating for iteration
-squadRatings = ip.getSquadRatings(iteration=iteration, token=token
+squadRatings = ip.getSquadRatings(iteration=iteration, token=token)
+
+# get squad coefficients for iteration
+squadCoefficients = ip.getSquadCoefficients(iteration=iteration, token=token)
 ```
 
 You can now also retrieve the positional profile scores for players via our API. This 
@@ -243,7 +258,7 @@ positional input that determines which matchShares to consider when computing th
 In the below example, all matchShares that a player played as either a left back or a right 
 back are included for profile score calculation.
 
-``` python
+```python
 # define iteration ID
 iteration = 518
 
@@ -251,7 +266,11 @@ iteration = 518
 positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
 
 # get player profile scores
-playerProfileScores = getPlayerProfileScores(iteration, positions, token)
+playerProfileScores = ip.getPlayerProfileScores(
+    iteration=iteration,
+    positions=positions,
+    token=token
+)
 ```
 
 Please keep in mind that Impect enforces a rate limit of 10 requests per second
@@ -278,7 +297,7 @@ please see the beginning of the [function definition](https://github.com/ImpectA
 Please make sure to only retrieve event data for
 one game at a time. Let's use the Bayern vs Dortmund game from earlier as an example:
 
-``` python
+```python
 # define matchId
 matches = [84344]
 
@@ -360,51 +379,56 @@ positions = ["LEFT_WINGBACK_DEFENDER", "RIGHT_WINGBACK_DEFENDER"]
 iterations = api.getIterations()
 
 # get squad ratings
-ratings = api.getSquadRatings(iteration)
+ratings = api.getSquadRatings(iteration=iteration)
+
+# get squad coefficients
+coefficients = api.getSquadCoefficients(iteration=iteration)
 
 # get matches
-matchplan = api.getMatches(iteration)
+matchplan = api.getMatches(iteration=iteration)
 
 # get match info
-formations = api.getFormations(matches)
-substitutions = api.getSubstitutions(matches)
-startingPositions = api.getStartingPositions(matches)
+formations = api.getFormations(matches=matches)
+substitutions = api.getSubstitutions(matches=matches)
+startingPositions = api.getStartingPositions(matches=matches)
 
 # get match events
-events = api.getEvents(matches, include_kpis=True, include_set_pieces=True)
+events = api.getEvents(matches=matches, include_kpis=False, include_set_pieces=False)
 
 # get set pieces
-setPieces = api.getSetPieces(matches)
+set_pieces = api.getSetPieces(matches=matches)
 
 # get player iteration averages
-playerIterationAverages = api.getPlayerIterationAverages(iteration)
+playerIterationAverages = api.getPlayerIterationAverages(iteration=iteration)
 
 # get player matchsums
-playerMatchsums = api.getPlayerMatchsums(matches)
+playerMatchsums = api.getPlayerMatchsums(matches=matches)
 
 # get squad iteration averages
-squadIterationAverages = api.getSquadIterationAverages(iteration)
+squadIterationAverages = api.getSquadIterationAverages(iteration=iteration)
 
 # get squad matchsums
-squadMatchsums = api.getSquadMatchsums(matches)
+squadMatchsums = api.getSquadMatchsums(matches=matches)
 
 # get player match scores
-playerMatchScores = api.getPlayerMatchScores(matches, positions)
+playerMatchScores = api.getPlayerMatchScores(matches=matches, positions=positions)  # specific positions
+playerMatchScoresAll = api.getPlayerMatchScores(matches=matches)  # all positions
 
 # get squad match scores
-squadMatchScores = api.getSquadMatchScores(matches)
+squadMatchScores = api.getSquadMatchScores(matches=matches)
 
 # get player iteration scores
-playerIterationScores = api.getPlayerIterationScores(iteration, positions)
+playerIterationScores = api.getPlayerIterationScores(iteration=iteration, positions=positions)  # specific positions
+playerIterationScoresAll = api.getPlayerIterationScores(iteration=iteration)  # all positions
 
 # get squad iteration scores
-squadIterationScores = api.getSquadIterationScores(iteration)
+squadIterationScores = api.getSquadIterationScores(iteration=iteration)
 
 # get player profile scores
-playerProfileScores = api.getPlayerProfileScores(iteration, positions)
+playerProfileScores = api.getPlayerProfileScores(iteration=iteration, positions=positions)
 ```
 
 ## Final Notes
 
 Further documentation on the data and explanations of variables can be
-found in our [glossary](https://glossary.impect.com/).
+found in our [Glossary](https://glossary.impect.com/).

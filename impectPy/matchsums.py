@@ -30,18 +30,18 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         raise Exception("Argument 'matches' must be a list of integers.")
 
     # get match info
-    iterations = pd.concat(
+    match_data = pd.concat(
         map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}",
             method="GET"
         ).process_response(
-            endpoint="Iterations"
+            endpoint="Match Info"
         ),
             matches),
         ignore_index=True)
 
     # filter for matches that are unavailable
-    fail_matches = iterations[iterations.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    fail_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
     matches = [match for match in matches if match not in fail_matches]
@@ -54,7 +54,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
             print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
 
     # extract iterationIds
-    iterations = list(iterations[iterations.lastCalculationDate.notnull()].iterationId.unique())
+    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get player match sums
     matchsums_raw = pd.concat(
@@ -97,6 +97,18 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
             method="GET"
         ).process_response(
             endpoint="Squads"
+        ),
+            iterations),
+        ignore_index=True)[["id", "name"]].drop_duplicates()
+
+    # get coaches
+    coaches = pd.concat(
+        map(lambda iteration: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
+            method="GET"
+        ).process_response(
+            endpoint="Coaches",
+            raise_exception=False
         ),
             iterations),
         ignore_index=True)[["id", "name"]].drop_duplicates()
@@ -203,6 +215,15 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         how="left",
         suffixes=("", "_right")
     ).merge(
+        pd.concat([
+            match_data[["id","squadHomeId", "squadHomeCoachId"]].rename(columns={"squadHomeId": "squadId", "squadHomeCoachId": "coachId"}),
+            match_data[["id","squadAwayId", "squadAwayCoachId"]].rename(columns={"squadAwayId": "squadId", "squadAwayCoachId": "coachId"})
+        ], ignore_index=True),
+        left_on=["matchId", "squadId"],
+        right_on=["id", "squadId"],
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
@@ -225,6 +246,14 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         ),
         left_on="id",
         right_on="id",
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
+        coaches[["id", "name"]].rename(
+            columns={"id": "coachId", "name": "coachName"}
+        ),
+        left_on="coachId",
+        right_on="coachId",
         how="left",
         suffixes=("", "_right")
     ).merge(
@@ -254,6 +283,8 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         "matchDayName",
         "squadId",
         "squadName",
+        "coachId",
+        "coachName",
         "playerId",
         "wyscoutId",
         "heimSpielId",
@@ -313,18 +344,18 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         raise Exception("Input vor matches argument must be a list of integers")
 
     # get match info
-    iterations = pd.concat(
+    match_data = pd.concat(
         map(lambda match: connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/matches/{match}",
             method="GET"
         ).process_response(
-            endpoint="Iterations"
+            endpoint="Match Info"
         ),
             matches),
         ignore_index=True)
 
     # filter for matches that are unavailable
-    fail_matches = iterations[iterations.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    fail_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
     matches = [match for match in matches if match not in fail_matches]
@@ -337,7 +368,7 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
             print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
 
     # extract iterationIds
-    iterations = list(iterations[iterations.lastCalculationDate.notnull()].iterationId.unique())
+    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get squad match sums
     matchsums_raw = pd.concat(
@@ -362,6 +393,18 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         ),
             iterations),
         ignore_index=True)[["id", "name", "idMappings"]]
+
+    # get coaches
+    coaches = pd.concat(
+        map(lambda iteration: connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
+            method="GET"
+        ).process_response(
+            endpoint="Coaches",
+            raise_exception=False
+        ),
+            iterations),
+        ignore_index=True)[["id", "name"]].drop_duplicates()
 
     # unnest mappings
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
@@ -437,6 +480,15 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         how="left",
         suffixes=("", "_right")
     ).merge(
+        pd.concat([
+            match_data[["id","squadHomeId", "squadHomeCoachId"]].rename(columns={"squadHomeId": "squadId", "squadHomeCoachId": "coachId"}),
+            match_data[["id","squadAwayId", "squadAwayCoachId"]].rename(columns={"squadAwayId": "squadId", "squadAwayCoachId": "coachId"})
+        ], ignore_index=True),
+        left_on=["matchId", "squadId"],
+        right_on=["id", "squadId"],
+        how="left",
+        suffixes=("", "_right")
+    ).merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
@@ -450,6 +502,14 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         right_on="squadId",
         how="left",
         suffixes=("", "_home")
+    ).merge(
+        coaches[["id", "name"]].rename(
+            columns={"id": "coachId", "name": "coachName"}
+        ),
+        left_on="coachId",
+        right_on="coachId",
+        how="left",
+        suffixes=("", "_right")
     )
 
     # rename some columns
@@ -472,7 +532,9 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         "wyscoutId",
         "heimSpielId",
         "skillCornerId",
-        "squadName"
+        "squadName",
+        "coachId",
+        "coachName"
     ]
 
     # add kpiNames to order

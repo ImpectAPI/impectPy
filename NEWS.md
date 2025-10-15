@@ -1,11 +1,29 @@
+# impectPy 2.5.0
+
+## Major Changes
+* Use new endpoints to drastically improve performance of `getPlayerMatchScores()` and `getPlayerIterationScores()`. The argument `positions` is no longer required. If it is not spplied the function defaults to the new endpoints and returns all unique player-position-squad combinations.
+* Add coaches ot the following functions:
+  * `getEvents()`
+  * `getPlayerMatchSums()`
+  * `getSquadMatchSums()`
+  * `getPlayerMatchScores()`
+  * `getSquadMatchScores()`
+* Add function `getSquadCoefficients()` to retrieve detailed model coefficients to enable match predictions
+
+## Minor Changes
+* Fix error in `getPlayerIterationAverages()` regarding type conversions
+* Use `NA` as fill value instead of 0 for score related functions
+* Minor fixes to enable PyPi submission
+* Improve error handling
+
 # impectPy 2.4.5
 
-# Minor Changes
+## Minor Changes
 * fix bug in `getPlayerIterationAverages()`function
 
 # impectPy 2.4.4
 
-# Major Changes
+## Major Changes
 * Rename function `generateSportsCodeXML()` to `generateXML()`
 * Add proper xml structure to the `generateXML()` function for Python versions >= 3.9
 * Significantly improve customization options for new `generateXML()` function with new function arguments
@@ -14,7 +32,7 @@
   * `codeTag`: Customize code tag selection
   * `labelSorting`: Enable/Disable label sorting
 
-# Minor Changes
+## Minor Changes
 * fix bug in `getEvents()` that prevented the column `duelPlayerName`from being populated correctly
 
 # impectPy 2.4.3

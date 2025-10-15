@@ -114,10 +114,6 @@ def getPlayerIterationAveragesFromHost(
             suffixes=("", "_right")
         )
 
-        # get matchShares
-        match_shares_raw = averages_raw[
-            ["iterationId", "squadId", "playerId", "position", "playDuration", "matchShare"]].drop_duplicates()
-
         # fill missing values in the "name" column with a default value to ensure players without scorings don't get lost
         if len(averages_raw["name"][averages_raw["name"].isnull()]) > 0:
             averages_raw["name"] = averages_raw["name"].fillna("-1")
@@ -132,6 +128,10 @@ def getPlayerIterationAveragesFromHost(
 
         # fill join cols with placeholder
         averages_raw.loc[mask] = averages_raw.loc[mask].fillna(-1)
+
+        # get matchShares
+        match_shares_raw = averages_raw[
+            ["iterationId", "squadId", "playerId", "position", "playDuration", "matchShare"]].drop_duplicates()
 
         # pivot kpi values
         averages_raw = pd.pivot_table(
