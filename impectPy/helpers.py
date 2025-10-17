@@ -15,6 +15,11 @@ import math
 ######
 
 
+class ForbiddenError(Exception):
+    """Raised when the API returns a 403 Forbidden response."""
+    pass
+
+
 class RateLimitedAPI:
     def __init__(self, session: Optional[requests.Session] = None):
         """
@@ -115,10 +120,10 @@ class RateLimitedAPI:
                                 f"Request-ID: {response.headers['x-request-id']} "
                                 f"(Make sure to include this in any support request.)")
             elif response.status_code == 403:
-                raise Exception(f"Received status code {response.status_code} "
-                                f"(You do not have access to this resource.)\n"
-                                f"Request-ID: {response.headers['x-request-id']} "
-                                f"(Make sure to include this in any support request.)")
+                raise ForbiddenError(f"Received status code {response.status_code} "
+                                     f"(You do not have access to this resource.)\n"
+                                     f"Request-ID: {response.headers['x-request-id']} "
+                                     f"(Make sure to include this in any support request.)")
             # check status code and terminate if other error
             else:
                 raise Exception(f"Received status code {response.status_code} "
