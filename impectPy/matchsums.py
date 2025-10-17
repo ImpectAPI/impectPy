@@ -1,7 +1,7 @@
 # load packages
 import pandas as pd
 import requests
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df, ForbiddenError
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -102,16 +102,23 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         ignore_index=True)[["id", "name"]].drop_duplicates()
 
     # get coaches
-    coaches = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
-            method="GET"
-        ).process_response(
-            endpoint="Coaches",
-            raise_exception=False
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+    coaches_blacklisted = False
+    try:
+        coaches = pd.concat(
+            map(lambda iteration: connection.make_api_request_limited(
+                url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
+                method="GET"
+            ).process_response(
+                endpoint="Coaches",
+                raise_exception=False
+            ),
+                iterations),
+            ignore_index=True)[["id", "name"]].drop_duplicates()
+    except KeyError:
+        # no coaches found, create empty df
+        coaches = pd.DataFrame(columns=["id", "name"])
+    except ForbiddenError:
+        coaches_blacklisted = True
 
     # get kpis
     kpis = connection.make_api_request_limited(
@@ -249,20 +256,23 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         how="left",
         suffixes=("", "_right")
     ).merge(
-        coaches[["id", "name"]].rename(
-            columns={"id": "coachId", "name": "coachName"}
-        ),
-        left_on="coachId",
-        right_on="coachId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
         countries.rename(columns={"fifaName": "playerCountry"}),
         left_on="countryId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     )
+
+    if not coaches_blacklisted:
+        matchsums = matchsums.merge(
+            coaches[["id", "name"]].rename(
+                columns={"id": "coachId", "name": "coachName"}
+            ),
+            left_on="coachId",
+            right_on="coachId",
+            how="left",
+            suffixes=("", "_right")
+        )
 
     # rename some columns
     matchsums = matchsums.rename(columns={
@@ -303,6 +313,10 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
 
     # add kpiNames to order
     order += kpis['name'].to_list()
+
+    # check if coaches are blacklisted
+    if coaches_blacklisted:
+        order = [col for col in order if col not in ["coachId", "coachName"]]
 
     # select columns
     matchsums = matchsums[order]
@@ -395,16 +409,23 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         ignore_index=True)[["id", "name", "idMappings"]]
 
     # get coaches
-    coaches = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
-            method="GET"
-        ).process_response(
-            endpoint="Coaches",
-            raise_exception=False
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+    coaches_blacklisted = False
+    try:
+        coaches = pd.concat(
+            map(lambda iteration: connection.make_api_request_limited(
+                url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
+                method="GET"
+            ).process_response(
+                endpoint="Coaches",
+                raise_exception=False
+            ),
+                iterations),
+            ignore_index=True)[["id", "name"]].drop_duplicates()
+    except KeyError:
+        # no coaches found, create empty df
+        coaches = pd.DataFrame(columns=["id", "name"])
+    except ForbiddenError:
+        coaches_blacklisted = True
 
     # unnest mappings
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
@@ -502,15 +523,18 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         right_on="squadId",
         how="left",
         suffixes=("", "_home")
-    ).merge(
-        coaches[["id", "name"]].rename(
-            columns={"id": "coachId", "name": "coachName"}
-        ),
-        left_on="coachId",
-        right_on="coachId",
-        how="left",
-        suffixes=("", "_right")
     )
+
+    if not coaches_blacklisted:
+        matchsums = matchsums.merge(
+            coaches[["id", "name"]].rename(
+                columns={"id": "coachId", "name": "coachName"}
+            ),
+            left_on="coachId",
+            right_on="coachId",
+            how="left",
+            suffixes=("", "_right")
+        )
 
     # rename some columns
     matchsums = matchsums.rename(columns={
@@ -548,6 +572,10 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
 
     # reset index
     matchsums = matchsums.reset_index()
+
+    # check if coaches are blacklisted
+    if coaches_blacklisted:
+        order = [col for col in order if col not in ["coachId", "coachName"]]
 
     # select & order columns
     matchsums = matchsums[order]

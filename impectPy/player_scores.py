@@ -1,7 +1,7 @@
 # load packages
 import pandas as pd
 import requests
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df, ForbiddenError
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -151,16 +151,23 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         ignore_index=True)[["id", "name"]].drop_duplicates()
 
     # get coaches
-    coaches = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
-            method="GET"
-        ).process_response(
-            endpoint="Coaches",
-            raise_exception=False
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+    coaches_blacklisted = False
+    try:
+        coaches = pd.concat(
+            map(lambda iteration: connection.make_api_request_limited(
+                url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
+                method="GET"
+            ).process_response(
+                endpoint="Coaches",
+                raise_exception=False
+            ),
+                iterations),
+            ignore_index=True)[["id", "name"]].drop_duplicates()
+    except KeyError:
+        # no coaches found, create empty df
+        coaches = pd.DataFrame(columns=["id", "name"])
+    except ForbiddenError:
+        coaches_blacklisted = True
 
     # get player scores
     scores = connection.make_api_request_limited(
@@ -351,20 +358,23 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         how="left",
         suffixes=("", "_right")
     ).merge(
-        coaches[["id", "name"]].rename(
-            columns={"id": "coachId", "name": "coachName"}
-        ),
-        left_on="coachId",
-        right_on="coachId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
         countries.rename(columns={"fifaName": "playerCountry"}),
         left_on="countryId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     )
+
+    if not coaches_blacklisted:
+        player_scores = player_scores.merge(
+            coaches[["id", "name"]].rename(
+                columns={"id": "coachId", "name": "coachName"}
+            ),
+            left_on="coachId",
+            right_on="coachId",
+            how="left",
+            suffixes=("", "_right")
+        )
 
     # rename some columns
     player_scores = player_scores.rename(columns={
@@ -405,6 +415,10 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
 
     # add kpiNames to order
     order += scores["name"].to_list()
+
+    # check if coaches are blacklisted
+    if coaches_blacklisted:
+        order = [col for col in order if col not in ["coachId", "coachName"]]
 
     # select columns
     player_scores = player_scores[order]
