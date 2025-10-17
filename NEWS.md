@@ -1,3 +1,13 @@
+# impectPy 2.5.1
+
+## Minor Changes
+* fix bugs in the following functions that occured if either the coaches endpoint returned no coaches or the coaches endpoint being blacklisted for the user:
+  * `getEvents()`
+  * `getPlayerMatchSums()`
+  * `getSquadMatchSums()`
+  * `getPlayerMatchScores()`
+  * `getSquadMatchScores()`
+
 # impectPy 2.5.0
 
 ## Major Changes

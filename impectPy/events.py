@@ -2,10 +2,10 @@
 import numpy as np
 import pandas as pd
 import requests
-from impectPy.helpers import RateLimitedAPI
+import re
+from impectPy.helpers import RateLimitedAPI, ForbiddenError
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
-import re
 
 ######
 #
@@ -119,16 +119,23 @@ def getEventsFromHost(
         ignore_index=True)[["id", "name"]].drop_duplicates()
 
     # get coaches
-    coaches = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
-            method="GET"
-        ).process_response(
-            endpoint="Coaches",
-            raise_exception=False
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+    coaches_blacklisted = False
+    try:
+        coaches = pd.concat(
+            map(lambda iteration: connection.make_api_request_limited(
+                url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
+                method="GET"
+            ).process_response(
+                endpoint="Coaches",
+                raise_exception=False
+            ),
+                iterations),
+            ignore_index=True)[["id", "name"]].drop_duplicates()
+    except KeyError:
+        # no coaches found, create empty df
+        coaches = pd.DataFrame(columns=["id", "name"])
+    except ForbiddenError:
+        coaches_blacklisted = True
 
     # get matches
     matchplan = pd.concat(
@@ -266,24 +273,27 @@ def getEventsFromHost(
         how="left",
         suffixes=("", "_right")
     ).merge(
-        coaches[["id", "name"]].rename(columns={"id": "homeCoachId", "name": "homeCoachName"}),
-        left_on="homeSquadCoachId",
-        right_on="homeCoachId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        coaches[["id", "name"]].rename(columns={"id": "awayCoachId", "name": "awayCoachName"}),
-        left_on="awaySquadCoachId",
-        right_on="awayCoachId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
         iterations,
         left_on="iterationId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
     )
+
+    if not coaches_blacklisted:
+        events = events.merge(
+            coaches[["id", "name"]].rename(columns={"id": "homeCoachId", "name": "homeCoachName"}),
+            left_on="homeSquadCoachId",
+            right_on="homeCoachId",
+            how="left",
+            suffixes=("", "_right")
+        ).merge(
+            coaches[["id", "name"]].rename(columns={"id": "awayCoachId", "name": "awayCoachName"}),
+            left_on="awaySquadCoachId",
+            right_on="awayCoachId",
+            how="left",
+            suffixes=("", "_right")
+        )
 
     if include_kpis:
         # unnest scorings and full join with kpi list to ensure all kpis are present
@@ -531,6 +541,9 @@ def getEventsFromHost(
 
         # add kpis
         order = order + kpi_cols
+
+    if coaches_blacklisted:
+        order = [col for col in order if col not in ["homeCoachId", "homeCoachName", "awayCoachId", "awayCoachName"]]
 
     # reorder data
     events = events[order]
