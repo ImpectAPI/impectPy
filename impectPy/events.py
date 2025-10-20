@@ -281,6 +281,10 @@ def getEventsFromHost(
     )
 
     if not coaches_blacklisted:
+
+        # convert coachId to integer if it is None
+        events["homeSquadCoachId"] = events["homeSquadCoachId"].astype("Int64")
+        events["awaySquadCoachId"] = events["awaySquadCoachId"].astype("Int64")
         events = events.merge(
             coaches[["id", "name"]].rename(columns={"id": "homeCoachId", "name": "homeCoachName"}),
             left_on="homeSquadCoachId",
