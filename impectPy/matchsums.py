@@ -264,6 +264,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
     )
 
     if not coaches_blacklisted:
+        matchsums["coachId"] = matchsums["coachId"].astype("Int64")
         matchsums = matchsums.merge(
             coaches[["id", "name"]].rename(
                 columns={"id": "coachId", "name": "coachName"}
@@ -526,6 +527,7 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
     )
 
     if not coaches_blacklisted:
+        matchsums["coachId"] = matchsums["coachId"].astype("Int64")
         matchsums = matchsums.merge(
             coaches[["id", "name"]].rename(
                 columns={"id": "coachId", "name": "coachName"}

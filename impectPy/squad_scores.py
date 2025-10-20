@@ -199,6 +199,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     )
 
     if not coaches_blacklisted:
+        squad_scores["coachId"] = squad_scores["coachId"].astype("Int64")
         squad_scores = squad_scores.merge(
             coaches[["id", "name"]].rename(
                 columns={"id": "coachId", "name": "coachName"}
