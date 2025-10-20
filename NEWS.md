@@ -1,3 +1,13 @@
+# impectPy 2.5.2
+
+## Minor Changes
+* fix bugs in the following functions that occured if the coaches endpoint returned coaches for the iteration but the match does not have any coaches:
+  * `getEvents()`
+  * `getPlayerMatchSums()`
+  * `getSquadMatchSums()`
+  * `getPlayerMatchScores()`
+  * `getSquadMatchScores()`
+
 # impectPy 2.5.1
 
 ## Minor Changes
