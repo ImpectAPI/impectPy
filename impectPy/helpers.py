@@ -109,10 +109,16 @@ class RateLimitedAPI:
                 return response
             # check status code and retry if 429
             elif response.status_code == 429:
-                print(f"Received status code {response.status_code} "
-                      f"({response.json().get('message', 'Rate Limit Exceeded')})"
-                      f", retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
+                # check if last try
+                if i < max_retries - 1:
+                    print(f"Received status code {response.status_code} "
+                          f"({response.json().get('message', 'Rate Limit Exceeded')})"
+                          f", retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    raise Exception(f"Received status code {response.status_code} "
+                                    f"({response.json().get('message', 'Rate Limit Exceeded')})"
+                                    f", exceeded maximum number of {max_retries} retries.")
             # check status code and terminate if 401 or 403
             elif response.status_code == 401:
                 raise Exception(f"Received status code {response.status_code} "
