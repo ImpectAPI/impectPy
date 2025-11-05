@@ -9,7 +9,7 @@ from xml.etree import ElementTree as ET
 #
 ######
 
-#define allowed KPIs, labels and codes
+# define allowed KPIs, labels and codes
 allowed_labels = [
     {"order": "00 | ", "name": "eventId"},
     {"order": "01 | ", "name": "matchId"},
@@ -138,6 +138,25 @@ def generateXML(
         sequencing: bool = True,
         buckets: bool = True
 ) -> ET.ElementTree:
+    # periodId check
+    period_start_times = {
+        1: p1Start,
+        2: p2Start,
+        3: p3Start,
+        4: p4Start,
+        5: p5Start
+    }
+    existing_period_ids = events['periodId'].unique()
+    # Validate the start time for each period that exists in the data
+    for periodId in existing_period_ids:
+        if periodId in period_start_times:
+            start_time = period_start_times[periodId]
+            # Verify the start time is an integer and within the valid range
+            if not isinstance(start_time, int) or not start_time > 0:
+                raise ValueError(
+                    f"Invalid start time for periodId {periodId}. "
+                    f"A valid integer is required, but got: '{start_time}'."
+                )
 
     # handle kpis, labels, squad and perspective defaults
     if labels is None:
@@ -173,7 +192,8 @@ def generateXML(
     labels_and_kpis = []
     invalid_labels = []
     for label in allowed_labels:
-        if label.get("name") in labels and label.get("name") != codeTag: # ensure code attribute is not repeated as a label
+        if label.get("name") in labels and label.get(
+                "name") != codeTag:  # ensure code attribute is not repeated as a label
             if combinations.get(label.get("name")).get(codeTag):
                 labels_and_kpis.append(label)
             else:
@@ -190,7 +210,6 @@ def generateXML(
 
     if labelSorting:
         labels_and_kpis = sorted(labels_and_kpis, key=lambda x: x["order"])
-
 
     # compile periods start times into dict
     offsets = {
@@ -679,12 +698,12 @@ def generateXML(
     # filter for kick off events of each period
     kickoffs = events.copy()[
         (events.actionType == "KICK_OFF") & ((events.gameTimeInSec - (events.periodId - 1) * 10000) < 10)
-    ].reset_index()
+        ].reset_index()
 
     # check for penalty shootout
     penalty_shootout = events.copy()[
         events.periodId == 5
-    ]
+        ]
 
     # add row for start of penalty shootout
     if len(penalty_shootout) > 0:

@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.4.3
+Version: v2.4.4
 
-**Updated: May 6th 2025**
+**Updated: June 5th 2025**
 
 ---
 
@@ -30,7 +30,7 @@ You can install the latest version of impectPy from
 [GitHub](https://github.com/) with:
 
 ``` cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.4.3
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.4.4
 ```
 
 ## Usage
@@ -198,7 +198,7 @@ Also, we provide you with IMPECT scores and ratios that you might know from our
 Scouting and Analysis portals. On player level, these are calculated across 
 positions which is why you have to supply the function with a list of positions 
 your want to retrieve data for.
-Let's assume you were interested in wingbacks in the 2022/2023 Bundesliga season, 
+Let's assume you were interested in wing backs in the 2022/2023 Bundesliga season, 
 then you could use this code snippet:
 
 ``` python
@@ -263,7 +263,19 @@ act accordingly.
 ### SportsCodeXML
 
 It is also possible to convert a dataframe containing event data into an XML file,
-that can be imported into Sportscode. Please make sure to only retrieve event data for
+that can be imported into Videotools such as FOCUS. The XML can be customized to a certain
+degree using the following in put variables:
+* `codeTag`: Customize code tag selection (Choose what goes into the `code` tag)
+* `lables`: Customize labels included (provide a list of labels to be included)
+* `kpis`: Customize KPIs included (provide a list of KPIs to be included)
+* `labelSorting`: Enable/Disable label sorting (Labels and KPIs are usually prefixed with a sorting number (e.g. `01 | `) or the word `KPI: ` to enable easier filtering in your video tool.)
+* `sequencing`: Disable sequencing (A sequence of `RECEPTION > DRIBBLE > PASS` is split into 3 instances: `RECEPTION`, `DRIBBLE`, `PASS`)
+* `buckets`: Disable Label/KPI buckets (e.g. conversion from value `0.1` to bucket `[0,1[`)
+
+To see a full list of available codeTags, labels, KPIs and allowed combinations of these,
+please see the beginning of the [function definition](https://github.com/ImpectAPI/impectPy/blob/release/impectPy/xml.py).
+
+Please make sure to only retrieve event data for
 one game at a time. Let's use the Bayern vs Dortmund game from earlier as an example:
 
 ``` python
@@ -282,10 +294,10 @@ p1Start = 16 # first half kickoff happens after 16 seconds in your video file
 p2Start = 48 * 60 + 53 # first half kickoff happens after 48 minutes and 53 seconds in your video file
 p3Start = 0 # set to timestamp of the kickoff of the first half of extra time
 p4Start = 0 # set to timestamp of the kickoff of the second half of extra time
-p5Start = 0 # set to timestamp of the  of the penalty shootout
-kickoff
+p5Start = 0 # set to timestamp of the first penalty of the penalty shootout
+
 # generate xml
-xml_tree = ip.generateSportsCodeXML(
+xml_tree = ip.generateXML(
     events=events,
     lead=lead,
     lag=lag,
@@ -293,7 +305,13 @@ xml_tree = ip.generateSportsCodeXML(
     p2Start=p2Start,
     p3Start=p3Start,
     p4Start=p4Start,
-    p5Start=p5Start
+    p5Start=p5Start,
+    codeTag="playerName",  # Use the playerName for the Code Tag
+    labels=["action", "opponents"],  # defaults to None to inlcude all available labels
+    kpis=["BYPASSED_OPPONENTS", "BYPASSED_DEFENDERS"],  # defaults to None to inlcude all available KPIs
+    labelSorting=False,  # Disable sorting prefixes
+    sequencing=False,  # Disable merging of consecutive events by the same player into one sequence
+    buckets=False  # Use precise KPI and label values instead of predefined buckets
 )
 
 # write to xml file
