@@ -14,7 +14,7 @@ from .set_pieces import getSetPiecesFromHost
 from .squad_ratings import getSquadRatingsFromHost
 from .match_info import getFormationsFromHost, getSubstitutionsFromHost, getStartingPositionsFromHost
 import pandas as pd
-from generate_xml.etree import ElementTree as ET
+from xml.etree import ElementTree as ET
 
 
 class Impect:
