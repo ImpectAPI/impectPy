@@ -1,0 +1,62 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior when using impectPy
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the bug in detail.
+      placeholder: e.g., API call returns an error instead of expected data
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the bug.
+      placeholder: |
+        1. Install impectPy using `pip install impectPy`
+        2. Run the following code:
+           ```python
+           from impectPy import impect
+           api = impectPy.Impect(config=config)
+           api.login(username, password)
+           iterations = api.getIterations()
+           ```
+        3. Observe the error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+      placeholder: The API should return event data.
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: |
+        An error is raised: `HTTPError 404: Customer not found`.
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, impectPy version, and other dependencies.
+      placeholder: |
+        - OS: macOS 14.1
+        - Python: 3.11
+        - impectPy: 2.0.0
+        - requests: 2.31.0
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other info, logs, or screenshots.
