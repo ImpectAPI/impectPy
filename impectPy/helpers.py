@@ -4,9 +4,14 @@ import requests
 import time
 import pandas as pd
 import re
-from typing import Optional, Dict, Any
 import math
+import logging
+from typing import Optional, Dict, Any
 
+# create logger for this module
+logger = logging.getLogger("impectPy")
+# logger = logging.LoggerAdapter(logger, {"id": "-", "url": "-"})
+logger.addHandler(logging.NullHandler())
 
 ######
 #
@@ -15,7 +20,12 @@ import math
 ######
 
 
-class ForbiddenError(Exception):
+class HTTPError(Exception):
+    """Raised when the API returns status code other than 200 or 403."""
+    pass
+
+
+class ForbiddenError(HTTPError):
     """Raised when the API returns a 403 Forbidden response."""
     pass
 
@@ -116,24 +126,26 @@ class RateLimitedAPI:
                           f", retrying in {retry_delay} seconds...")
                     time.sleep(retry_delay)
                 else:
-                    raise Exception(f"Received status code {response.status_code} "
+                    raise HTTPError(f"Received status code {response.status_code} "
                                     f"({response.json().get('message', 'Rate Limit Exceeded')})"
                                     f", exceeded maximum number of {max_retries} retries.")
             # check status code and terminate if 401 or 403
             elif response.status_code == 401:
-                raise Exception(f"Received status code {response.status_code} "
-                                f"(You do not have API access.)\n"
-                                f"Request-ID: {response.headers['x-request-id']} "
-                                f"(Make sure to include this in any support request.)")
+                exception_message = f"Received status code {response.status_code} (Invalid User Credentials)."
+                if "x-request-id" in response.headers:
+                    exception_message += (f" Request-ID: {response.headers['x-request-id']} "
+                                          f"(Make sure to include this in any support request.)")
+
+                raise HTTPError(exception_message)
             elif response.status_code == 403:
                 raise ForbiddenError(f"Received status code {response.status_code} "
-                                     f"(You do not have access to this resource.)\n"
+                                     f"(You do not have access to this resource.). "
                                      f"Request-ID: {response.headers['x-request-id']} "
                                      f"(Make sure to include this in any support request.)")
             # check status code and terminate if other error
             else:
-                raise Exception(f"Received status code {response.status_code} "
-                                f"({response.json().get('message', 'Unknown error')})\n"
+                raise HTTPError(f"Received status code {response.status_code} "
+                                f"({response.json().get('message', 'Unknown error')}). "
                                 f"Request-ID: {response.headers['x-request-id']} "
                                 f"(Make sure to include this in any support request.)")
 
@@ -281,6 +293,13 @@ def unnest_mappings_df(df: pd.DataFrame, mapping_col: str) -> pd.DataFrame:
     return df
 
 
+######
+#
+# This function validates the response from an API call and returns the data
+#
+######
+
+
 # define function to validate JSON response and return data
 def validate_response(response: requests.Response, endpoint: str, raise_exception: bool = True) -> dict:
     # get data from response
@@ -293,3 +312,42 @@ def validate_response(response: requests.Response, endpoint: str, raise_exceptio
     else:
         # return data
         return data
+
+
+######
+#
+# This function wraps any function to safely execute it and return a fallback if it fails
+#
+######
+
+
+def safe_execute(func, *args, fallback=None, identifier: str, forbidden_list: list, **kwargs):
+    """
+    Executes a function safely. If an exception occurs, it logs the error
+    and returns a default fallback (empty DataFrame by default).
+
+    Args:
+        func (callable): The function to execute.
+        *args, **kwargs: Arguments for the function.
+        fallback: The fallback value to return if the function fails.
+        identifier: An identifier to identify the error.
+        forbidden_list: A list to store identifiers of forbidden requests.
+    Returns:
+        The function's result or an empty DataFrame if it fails.
+    """
+    if fallback is None:
+        fallback = pd.DataFrame()
+    try:
+        return func(*args, **kwargs)
+    except HTTPError as e:
+        logger.error(
+            f"Request failed: {e}",
+            extra={
+                "id": identifier,
+                "url": kwargs.get("url"),
+            },
+            # exc_info=not isinstance(e, HTTPError)
+        )
+        if isinstance(e, ForbiddenError):
+            forbidden_list.append(identifier)
+        return fallback
