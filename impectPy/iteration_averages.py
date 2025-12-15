@@ -127,7 +127,12 @@ def getPlayerIterationAveragesFromHost(
         )
 
         # fill join cols with placeholder
-        averages_raw.loc[mask] = averages_raw.loc[mask].fillna(-1)
+        filled = (
+            averages_raw.loc[mask]
+            .infer_objects(copy=False)
+            .fillna(-1)
+        )
+        averages_raw.loc[mask] = filled
 
         # get matchShares
         match_shares_raw = averages_raw[
