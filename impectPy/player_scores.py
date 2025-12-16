@@ -1,7 +1,8 @@
 # load packages
 import pandas as pd
 import requests
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_df, ForbiddenError
+import warnings
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -58,78 +59,109 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
                 f"\nChoose one or more of: {', '.join(allowed_positions)}"
             )
 
+    # create list to store matches that are forbidden (HTTP 403)
+    forbidden_matches = []
+
     # get match info
-    match_data = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}",
+    def fetch_match_info(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="Match Info"
-        ),
-            matches),
-        ignore_index=True)
+        ).process_response(endpoint="Match Info")
+
+    # create list to store dfs
+    match_data_list = []
+    for match in matches:
+        match_data = safe_execute(
+            fetch_match_info,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}",
+            identifier=match,
+            forbidden_list=forbidden_matches
+        )
+        match_data_list.append(match_data)
+    match_data = pd.concat(match_data_list)
 
     # filter for matches that are unavailable
-    fail_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
-    matches = [match for match in matches if match not in fail_matches]
+    matches = [match for match in matches if match not in unavailable_matches]
 
-    # raise warnings
-    if len(fail_matches) > 0:
-        if len(matches) == 0:
-            raise Exception("All supplied matches are unavailable. Execution stopped.")
-        else:
-            print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
+    # drop matches that are forbidden
+    matches = [match for match in matches if match not in forbidden_matches]
+
+    # configure warning format
+    def no_line_formatter(message, category, filename, lineno, line):
+        return f"Warning: {message}\n"
+    warnings.formatwarning = no_line_formatter
+
+    # raise exception if no matches remaining or report removed matches
+    if len(matches) == 0:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
+    if len(forbidden_matches) > 0:
+        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
+    if len(unavailable_matches) > 0:
+        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
 
     # extract iterationIds
     iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
+    # get player match sums
+    def fetch_player_match_scores(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
+            method="GET"
+        ).process_response(endpoint="Player Match Scores")
+
     # get player scores
     if positions is None:
-        # query positions at once
-        scores_raw = pd.concat(
-            map(lambda match: connection.make_api_request_limited(
+
+        # create list to store dfs
+        scores_list = []
+        for match in matches:
+            scores = safe_execute(
+                fetch_player_match_scores,
+                connection,
                 url=f"{host}/v5/customerapi/matches/{match}/player-scores",
-                method="GET"
-            ).process_response(
-                endpoint="PlayerMatchScores"
-            ).assign(
-                matchId=match,
-            ),
-                matches),
-            ignore_index=True)
+                identifier=f"{match}",
+                forbidden_list=forbidden_matches
+            ).assign(matchId=match)
+            scores_list.append(scores)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
+
     else:
 
         # compile list of positions
         position_string = ",".join(positions)
 
-        # query positions individually
-        scores_raw = pd.concat(
-            map(lambda match: connection.make_api_request_limited(
+        # create list to store dfs
+        scores_list = []
+        for match in matches:
+            scores = safe_execute(
+                fetch_player_match_scores,
+                connection,
                 url=f"{host}/v5/customerapi/matches/{match}/positions/{position_string}/player-scores",
-                method="GET"
-            ).process_response(
-                endpoint="PlayerMatchScores"
+                identifier=f"{match}",
+                forbidden_list=forbidden_matches
             ).assign(
                 matchId=match,
                 positions=position_string
-            ),
-                matches),
-            ignore_index=True)
+            )
+            scores_list.append(scores)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
 
     # get players
-    players = pd.concat(
-        map(
-            lambda iteration: connection.make_api_request_limited(
-                url=f"{host}/v5/customerapi/iterations/{iteration}/players",
-                method="GET"
-            ).process_response(
-                endpoint="Players"
-            ),
-            iterations),
-        ignore_index=True
-    )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "countryIds", "idMappings"]]
+    players_list = []
+    for iteration in iterations:
+        players = connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/players",
+            method="GET"
+        ).process_response(
+            endpoint="Players"
+        )[["id", "commonname", "firstname", "lastname", "birthdate", "birthplace", "leg", "countryIds", "idMappings"]]
+        players_list.append(players)
+    players = pd.concat(players_list).drop_duplicates("id").reset_index(drop=True)
 
     # only keep first country id for each player
     country_series = players["countryIds"].explode().groupby(level=0).first()
@@ -140,52 +172,56 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
     players = unnest_mappings_df(players, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get squads
-    squads = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    squads_list = []
+    for iteration in iterations:
+        squads = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET"
         ).process_response(
             endpoint="Squads"
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+        )[["id", "name"]]
+        squads_list.append(squads)
+    squads = pd.concat(squads_list).drop_duplicates()
+    squad_map = squads.set_index("id")["name"].to_dict()
 
     # get coaches
     coaches_blacklisted = False
-    try:
-        coaches = pd.concat(
-            map(lambda iteration: connection.make_api_request_limited(
+    coaches_list = []
+    for iteration in iterations:
+        try:
+            coaches = connection.make_api_request_limited(
                 url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
                 method="GET"
             ).process_response(
                 endpoint="Coaches",
                 raise_exception=False
-            ),
-                iterations),
-            ignore_index=True)[["id", "name"]].drop_duplicates()
-    except KeyError:
-        # no coaches found, create empty df
-        coaches = pd.DataFrame(columns=["id", "name"])
-    except ForbiddenError:
-        coaches_blacklisted = True
+            )[["id", "name"]]
+            coaches_list.append(coaches)
+        except KeyError:
+            # no coaches found, create empty df
+            coaches_list.append(pd.DataFrame(columns=["id", "name"]))
+        except ForbiddenError:
+            coaches_blacklisted = True
+    coaches = pd.concat(coaches_list).drop_duplicates()
 
     # get player scores
     scores = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/player-scores",
         method="GET"
     ).process_response(
-        endpoint="PlayerScores"
+        endpoint="Player Iteration Scores"
     )[["id", "name"]]
 
     # get matches
-    matchplan = pd.concat(
-        map(lambda iteration: getMatchesFromHost(
+    matchplan_list = []
+    for iteration in iterations:
+        matchplan = getMatchesFromHost(
             iteration=iteration,
             connection=connection,
             host=host
-        ),
-            iterations),
-        ignore_index=True)
+        )
+        matchplan_list.append(matchplan)
+    matchplan = pd.concat(matchplan_list)
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
@@ -197,6 +233,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
     ).process_response(
         endpoint="Countries"
     )
+    country_map = countries.set_index("id")["fifaName"].to_dict()
 
     # create empty df to store player scores
     player_scores = pd.DataFrame()
@@ -317,6 +354,8 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
             raise Exception("No players played at given positions for any given match. Execution stopped.")
 
     # merge with other data
+    player_scores["squadName"] = player_scores.squadId.map(squad_map)
+    player_scores["playerCountry"] = player_scores.squadId.map(country_map)
     player_scores = player_scores.merge(
         matchplan[["id", "scheduledDate", "matchDayIndex", "matchDayName", "iterationId"]],
         left_on="matchId",
@@ -339,14 +378,6 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         how="left",
         suffixes=("", "_right")
     ).merge(
-        squads[["id", "name"]].rename(
-            columns={"id": "squadId", "name": "squadName"}
-        ),
-        left_on="squadId",
-        right_on="squadId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
         players[[
             "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
             "firstname", "lastname", "birthdate", "birthplace", "countryId", "leg"
@@ -357,25 +388,16 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         right_on="id",
         how="left",
         suffixes=("", "_right")
-    ).merge(
-        countries.rename(columns={"fifaName": "playerCountry"}),
-        left_on="countryId",
-        right_on="id",
-        how="left",
-        suffixes=("", "_right")
     )
 
     if not coaches_blacklisted:
+
+        # create coaches map
+        coaches_map = coaches.set_index("id")["name"].to_dict()
+
+        # convert coachId to integer if it is None
         player_scores["coachId"] = player_scores["coachId"].astype("Int64")
-        player_scores = player_scores.merge(
-            coaches[["id", "name"]].rename(
-                columns={"id": "coachId", "name": "coachName"}
-            ),
-            left_on="coachId",
-            right_on="coachId",
-            how="left",
-            suffixes=("", "_right")
-        )
+        player_scores["coachName"] = player_scores.coachId.map(coaches_map)
 
     # rename some columns
     player_scores = player_scores.rename(columns={
@@ -468,6 +490,9 @@ def getPlayerIterationScoresFromHost(
     if not isinstance(positions, list) and positions is not None:
         raise Exception("Input for positions argument must be a list")
 
+    # create list to store matches that are forbidden (HTTP 403)
+    forbidden_matches = []
+
     # check if the input positions are valid
     if positions is not None:
         invalid_positions = [position for position in positions if position not in allowed_positions]
@@ -484,48 +509,59 @@ def getPlayerIterationScoresFromHost(
     ).process_response(
         endpoint="Squads"
     )
+    squad_map = squads.set_index("id")["name"].to_dict()
 
     # get squadIds
     squad_ids = squads[squads.access].id.to_list()
 
-    # get player iteration averages per squad
+    # get player match sums
+    def fetch_player_iteration_scores(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
+            method="GET"
+        ).process_response(endpoint="Player Match Scores")
+
+    # get player scores
     if positions is None:
 
-        scores_raw = pd.concat(
-            map(lambda squadId: connection.make_api_request_limited(
-                url=f"{host}/v5/customerapi/iterations/{iteration}/"
-                    f"squads/{squadId}/player-scores",
-                method="GET"
-            ).process_response(
-                endpoint="PlayerIterationScores",
-                raise_exception=False
+        # create list to store dfs
+        scores_list = []
+        for squad_id in squad_ids:
+            scores = safe_execute(
+                fetch_player_iteration_scores,
+                connection,
+                url=f"{host}/v5/customerapi/iterations/{iteration}/squads/{squad_id}/player-scores",
+                identifier=f"{squad_id}",
+                forbidden_list=[]
             ).assign(
                 iterationId=iteration,
-                squadId=squadId
-            ),
-                squad_ids),
-            ignore_index=True)
+                squadId=squad_id
+            )
+            scores_list.append(scores)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
 
     else:
 
         # compile position string
         position_string = ",".join(positions)
 
-        scores_raw = pd.concat(
-            map(lambda squadId: connection.make_api_request_limited(
+        # create list to store dfs
+        scores_list = []
+        for squad_id in squad_ids:
+            scores = safe_execute(
+                fetch_player_iteration_scores,
+                connection,
                 url=f"{host}/v5/customerapi/iterations/{iteration}/"
-                    f"squads/{squadId}/positions/{position_string}/player-scores",
-                method="GET"
-            ).process_response(
-                endpoint="PlayerIterationScores",
-                raise_exception=False
+                    f"squads/{squad_id}/positions/{position_string}/player-scores",
+                identifier=f"{squad_id}",
+                forbidden_list=[]
             ).assign(
                 iterationId=iteration,
-                squadId=squadId,
+                squadId=squad_id,
                 positions=position_string
-            ),
-                squad_ids),
-            ignore_index=True)
+            )
+            scores_list.append(scores)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
 
     # raise exception if no player played at given positions in entire iteration
     if len(scores_raw) == 0:
@@ -568,8 +604,9 @@ def getPlayerIterationScoresFromHost(
         url=f"{host}/v5/customerapi/countries",
         method="GET"
     ).process_response(
-        endpoint="KPIs"
+        endpoint="Countries"
     )
+    country_map = countries.set_index("id")["fifaName"].to_dict()
 
     # unnest scorings
     averages = scores_raw.explode("playerScores").reset_index(drop=True)
@@ -656,18 +693,12 @@ def getPlayerIterationScoresFromHost(
         )
 
     # merge with other data
+    averages["squadName"] = averages.squadId.map(squad_map)
+    averages["playerCountry"] = averages.squadId.map(country_map)
     averages = averages.merge(
         iterations[["id", "competitionName", "season"]],
         left_on="iterationId",
         right_on="id",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        squads[["id", "name"]].rename(
-            columns={"id": "squadId", "name": "squadName"}
-        ),
-        left_on="squadId",
-        right_on="squadId",
         how="left",
         suffixes=("", "_right")
     ).merge(
@@ -678,12 +709,6 @@ def getPlayerIterationScoresFromHost(
             columns={"commonname": "playerName"}
         ),
         left_on="playerId",
-        right_on="id",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        countries.rename(columns={"fifaName": "playerCountry"}),
-        left_on="countryId",
         right_on="id",
         how="left",
         suffixes=("", "_right")

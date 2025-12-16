@@ -1,7 +1,8 @@
 # load packages
 import pandas as pd
 import requests
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_df, ForbiddenError
+import warnings
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -29,78 +30,108 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
 
+    # create list to store matches that are forbidden (HTTP 403)
+    forbidden_matches = []
+
     # get match info
-    match_data = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}",
+    def fetch_match_info(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="Match Info"
-        ),
-            matches),
-        ignore_index=True)
+        ).process_response(endpoint="Match Info")
+
+    # create list to store dfs
+    match_data_list = []
+    for match in matches:
+        match_data = safe_execute(
+            fetch_match_info,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}",
+            identifier=match,
+            forbidden_list=forbidden_matches
+        )
+        match_data_list.append(match_data)
+    match_data = pd.concat(match_data_list)
 
     # filter for matches that are unavailable
-    fail_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
-    matches = [match for match in matches if match not in fail_matches]
+    matches = [match for match in matches if match not in unavailable_matches]
 
-    # raise warnings
-    if len(fail_matches) > 0:
-        if len(matches) == 0:
-            raise Exception("All supplied matches are unavailable. Execution stopped.")
-        else:
-            print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
+    # drop matches that are forbidden
+    matches = [match for match in matches if match not in forbidden_matches]
+
+    # configure warning format
+    def no_line_formatter(message, category, filename, lineno, line):
+        return f"Warning: {message}\n"
+    warnings.formatwarning = no_line_formatter
+
+    # raise exception if no matches remaining or report removed matches
+    if len(matches) == 0:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
+    if len(forbidden_matches) > 0:
+        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
+    if len(unavailable_matches) > 0:
+        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
 
     # extract iterationIds
     iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
-    # get squad scores
-    scores_raw = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}/squad-scores",
+    # get squad match scores
+    def fetch_squad_match_scores(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="SquadMatchScores"
-        ).assign(
-            matchId=match
-        ),
-            matches),
-        ignore_index=True)
+        ).process_response(endpoint="Player Match Sums")
+
+    # create list to store dfs
+    scores_list = []
+    for match in matches:
+        scores = safe_execute(
+            fetch_squad_match_scores,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}/squad-scores",
+            identifier=f"{match}",
+            forbidden_list=forbidden_matches
+        ).assign(matchId=match)
+        scores_list.append(scores)
+    scores_raw = pd.concat(scores_list).reset_index(drop=True)
 
     # get squads
-    squads = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    squads_list = []
+    for iteration in iterations:
+        squads = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET"
         ).process_response(
             endpoint="Squads"
-        ),
-            iterations),
-        ignore_index=True)[["id", "name", "idMappings"]]
+        )[["id", "name", "idMappings"]]
+        squads_list.append(squads)
+    squads = pd.concat(squads_list).drop_duplicates("id").reset_index(drop=True)
+
+    # unnest mappings
+    squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get coaches
     coaches_blacklisted = False
-    try:
-        coaches = pd.concat(
-            map(lambda iteration: connection.make_api_request_limited(
+    coaches_list = []
+    for iteration in iterations:
+        try:
+            coaches = connection.make_api_request_limited(
                 url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
                 method="GET"
             ).process_response(
                 endpoint="Coaches",
                 raise_exception=False
-            ),
-                iterations),
-            ignore_index=True)[["id", "name"]].drop_duplicates()
-    except KeyError:
-        # no coaches found, create empty df
-        coaches = pd.DataFrame(columns=["id", "name"])
-    except ForbiddenError:
-        coaches_blacklisted = True
-
-    # unnest mappings
-    squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
+            )[["id", "name"]]
+            coaches_list.append(coaches)
+        except KeyError:
+            # no coaches found, create empty df
+            coaches_list.append(pd.DataFrame(columns=["id", "name"]))
+        except ForbiddenError:
+            coaches_blacklisted = True
+    coaches = pd.concat(coaches_list).drop_duplicates()
 
     # get squad scores
     scores = connection.make_api_request_limited(
@@ -111,14 +142,15 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     )[["id", "name"]]
 
     # get matches
-    matchplan = pd.concat(
-        map(lambda iteration: getMatchesFromHost(
+    matchplan_list = []
+    for iteration in iterations:
+        matchplan = getMatchesFromHost(
             iteration=iteration,
             connection=connection,
             host=host
-        ),
-            iterations),
-        ignore_index=True)
+        )
+        matchplan_list.append(matchplan)
+    matchplan = pd.concat(matchplan_list)
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
@@ -199,16 +231,13 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     )
 
     if not coaches_blacklisted:
+
+        # create coaches map
+        coaches_map = coaches.set_index("id")["name"].to_dict()
+
+        # convert coachId to integer if it is None
         squad_scores["coachId"] = squad_scores["coachId"].astype("Int64")
-        squad_scores = squad_scores.merge(
-            coaches[["id", "name"]].rename(
-                columns={"id": "coachId", "name": "coachName"}
-            ),
-            left_on="coachId",
-            right_on="coachId",
-            how="left",
-            suffixes=("", "_right")
-        )
+        squad_scores["coachName"] = squad_scores.coachId.map(coaches_map)
 
     # rename some columns
     squad_scores = squad_scores.rename(columns={
