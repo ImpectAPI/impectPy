@@ -1,7 +1,8 @@
 # load packages
 import pandas as pd
 import requests
-from impectPy.helpers import RateLimitedAPI
+import warnings
+from impectPy.helpers import RateLimitedAPI, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 import re
@@ -31,81 +32,115 @@ def getSetPiecesFromHost(matches: list, connection: RateLimitedAPI, host: str) -
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
 
+    # create list to store matches that are forbidden (HTTP 403)
+    forbidden_matches = []
+
     # get match info
-    iterations = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}",
+    def fetch_match_info(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="Iterations"
-        ),
-            matches),
-        ignore_index=True)
+        ).process_response(endpoint="Match Info")
+
+    # create list to store dfs
+    match_data_list = []
+    for match in matches:
+        match_data = safe_execute(
+            fetch_match_info,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}",
+            identifier=match,
+            forbidden_list=forbidden_matches
+        )
+        match_data_list.append(match_data)
+    match_data = pd.concat(match_data_list)
 
     # filter for matches that are unavailable
-    fail_matches = iterations[iterations.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
-    matches = [match for match in matches if match not in fail_matches]
+    matches = [match for match in matches if match not in unavailable_matches]
+
+    # drop matches that are forbidden
+    matches = [match for match in matches if match not in forbidden_matches]
+
+    # configure warning format
+    def no_line_formatter(message, category, filename, lineno, line):
+        return f"Warning: {message}\n"
+    warnings.formatwarning = no_line_formatter
 
     # raise exception if no matches remaining or report removed matches
-    if len(fail_matches) > 0:
-        if len(matches) == 0:
-            raise Exception("All supplied matches are unavailable. Execution stopped.")
-        else:
-            print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
+    if len(matches) == 0:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
+    if len(forbidden_matches) > 0:
+        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
+    if len(unavailable_matches) > 0:
+        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
 
     # extract iterationIds
-    iterations = list(iterations[iterations.lastCalculationDate.notnull()].iterationId.unique())
+    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get players
-    players = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    players_list = []
+    for iteration in iterations:
+        players = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/players",
             method="GET"
         ).process_response(
             endpoint="Players"
-        ),
-            iterations),
-        ignore_index=True)[["id", "commonname"]].drop_duplicates()
+        )[["id", "commonname"]]
+        players_list.append(players)
+    players = pd.concat(players_list).drop_duplicates()
+    player_map = players.set_index("id")["commonname"].to_dict()
 
     # get squads
-    squads = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    squads_list = []
+    for iteration in iterations:
+        squads = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET"
         ).process_response(
             endpoint="Squads"
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+        )[["id", "name"]]
+        squads_list.append(squads)
+    squads = pd.concat(squads_list).drop_duplicates()
+    squad_map = squads.set_index("id")["name"].to_dict()
 
     # get matches
-    matchplan = pd.concat(
-        map(lambda iteration: getMatchesFromHost(
+    matchplan_list = []
+    for iteration in iterations:
+        matchplan = getMatchesFromHost(
             iteration=iteration,
             connection=connection,
             host=host
-        ),
-            iterations),
-        ignore_index=True)
+        )
+        matchplan_list.append(matchplan)
+    matchplan = pd.concat(matchplan_list)
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
     # get set piece data
-    set_pieces = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}/set-pieces",
+    def fetch_set_pieces(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="Set-Pieces"
-        ),
-            matches),
-        ignore_index=True
-    ).rename(
-        columns={"id": "setPieceId"}
-    ).explode("setPieceSubPhase", ignore_index=True)
+        ).process_response(endpoint="Set-Pieces")
+
+    # create list to store dfs
+    set_pieces_list = []
+    for match in matches:
+        set_pieces = safe_execute(
+            fetch_set_pieces,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}/set-pieces",
+            identifier=f"{match}",
+            forbidden_list=forbidden_matches
+        ).rename(
+            columns={"id": "setPieceId"}
+        ).explode("setPieceSubPhase", ignore_index=True)
+        set_pieces_list.append(set_pieces)
+    set_pieces = pd.concat(set_pieces_list).reset_index()
 
     # unpack setPieceSubPhase column
     set_pieces = pd.concat(

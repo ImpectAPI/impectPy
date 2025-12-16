@@ -1,7 +1,8 @@
 # load packages
 import pandas as pd
 import requests
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
+import warnings
+from impectPy.helpers import RateLimitedAPI, unnest_mappings_df, ForbiddenError, safe_execute
 from .iterations import getIterationsFromHost
 
 # define the allowed positions
@@ -72,22 +73,32 @@ def getPlayerProfileScoresFromHost(
     # compile position string
     position_string = ",".join(positions)
 
+    # create empty df to store averages
+    profile_scores_list = []
+
     # get player profile scores per squad
-    profile_scores_raw = pd.concat(
-        map(lambda squadId: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/iterations/{iteration}/"
-                f"squads/{squadId}/positions/{position_string}/player-profile-scores",
+    def fetch_player_profile_scores(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="PlayerIterationScores",
-            raise_exception=False
+        ).process_response(endpoint="Player Profile Scores")
+
+    # create list to store dfs
+    for squad_id in squad_ids:
+        profile_scores = safe_execute(
+            fetch_player_profile_scores,
+            connection,
+            url=f"{host}/v5/customerapi/iterations/{iteration}/"
+                f"squads/{squad_id}/positions/{position_string}/player-profile-scores",
+            identifier=f"{squad_id}",
+            forbidden_list=[]
         ).assign(
             iterationId=iteration,
-            squadId=squadId,
+            squadId=squad_id,
             positions=position_string
-        ),
-            squad_ids),
-        ignore_index=True)
+        )
+        profile_scores_list.append(profile_scores)
+    profile_scores_raw = pd.concat(profile_scores_list).reset_index(drop=True)
 
     # raise exception if no player played at given positions in entire iteration
     if len(profile_scores_raw) == 0:
@@ -132,6 +143,7 @@ def getPlayerProfileScoresFromHost(
     ).process_response(
         endpoint="KPIs"
     )
+    country_map = countries.set_index("id")["fifaName"].to_dict()
 
     # unnest scorings
     profile_scores = profile_scores_raw.explode("profileScores").reset_index(drop=True)
@@ -175,6 +187,7 @@ def getPlayerProfileScoresFromHost(
         profile_scores.drop(["-1"], inplace=True, axis=1)
 
     # merge with playDuration and matchShare
+    profile_scores["playerCountry"] = profile_scores.squadId.map(country_map)
     profile_scores = profile_scores.merge(
         match_shares,
         left_on=["iterationId", "squadId", "playerId", "positions"],
@@ -205,12 +218,6 @@ def getPlayerProfileScoresFromHost(
             columns={"commonname": "playerName"}
         ),
         left_on="playerId",
-        right_on="id",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        countries.rename(columns={"fifaName": "playerCountry"}),
-        left_on="countryId",
         right_on="id",
         how="left",
         suffixes=("", "_right")
