@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 import requests
 import re
-from impectPy.helpers import RateLimitedAPI, ForbiddenError
+import warnings
+from impectPy.helpers import RateLimitedAPI, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -37,45 +38,73 @@ def getEventsFromHost(
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
 
+    # create list to store matches that are forbidden (HTTP 403)
+    forbidden_matches = []
+
     # get match info
-    match_data = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}",
+    def fetch_match_info(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="Match Info"
-        ),
-            matches),
-        ignore_index=True)
+        ).process_response(endpoint="Match Info")
+
+    # create list to store dfs
+    match_data_list = []
+    for match in matches:
+        match_data = safe_execute(
+            fetch_match_info,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}",
+            identifier=match,
+            forbidden_list=forbidden_matches
+        )
+        match_data_list.append(match_data)
+    match_data = pd.concat(match_data_list)
 
     # filter for matches that are unavailable
-    fail_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
-    matches = [match for match in matches if match not in fail_matches]
+    matches = [match for match in matches if match not in unavailable_matches]
+
+    # drop matches that are forbidden
+    matches = [match for match in matches if match not in forbidden_matches]
+
+    # configure warning format
+    def no_line_formatter(message, category, filename, lineno, line):
+        return f"Warning: {message}\n"
+    warnings.formatwarning = no_line_formatter
 
     # raise exception if no matches remaining or report removed matches
-    if len(fail_matches) > 0:
-        if len(matches) == 0:
-            raise Exception("All supplied matches are unavailable. Execution stopped.")
-        else:
-            print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
+    if len(matches) == 0:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
+    if len(forbidden_matches) > 0:
+        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
+    if len(unavailable_matches) > 0:
+        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
 
     # extract iterationIds
     iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get match events
-    events = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}/events",
+    def fetch_match_events(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="Events"
-        ).assign(
-            matchId=match
-        ),
-            matches),
-        ignore_index=True)
+        ).process_response(endpoint="Match Events")
+
+    # create list to store dfs
+    events_list = []
+    for match in matches:
+        events = safe_execute(
+            fetch_match_events,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}/events",
+            identifier=f"{match}",
+            forbidden_list=forbidden_matches
+        ).assign(matchId=match)
+        events_list.append(events)
+    events = pd.concat(events_list)
 
     # account for matches without dribbles, duels or opponents tagged
     attributes = [
@@ -97,70 +126,86 @@ def getEventsFromHost(
             events[attribute] = np.nan
 
     # get players
-    players = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    players_list = []
+    for iteration in iterations:
+        players = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/players",
             method="GET"
         ).process_response(
             endpoint="Players"
-        ),
-            iterations),
-        ignore_index=True)[["id", "commonname"]].drop_duplicates()
+        )[["id", "commonname"]]
+        players_list.append(players)
+    players = pd.concat(players_list).drop_duplicates()
+    player_map = players.set_index("id")["commonname"].to_dict()
 
     # get squads
-    squads = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    squads_list = []
+    for iteration in iterations:
+        squads = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET"
         ).process_response(
             endpoint="Squads"
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+        )[["id", "name"]]
+        squads_list.append(squads)
+    squads = pd.concat(squads_list).drop_duplicates()
+    squad_map = squads.set_index("id")["name"].to_dict()
 
     # get coaches
     coaches_blacklisted = False
-    try:
-        coaches = pd.concat(
-            map(lambda iteration: connection.make_api_request_limited(
+    coaches_list = []
+    for iteration in iterations:
+        try:
+            coaches = connection.make_api_request_limited(
                 url=f"{host}/v5/customerapi/iterations/{iteration}/coaches",
                 method="GET"
             ).process_response(
                 endpoint="Coaches",
                 raise_exception=False
-            ),
-                iterations),
-            ignore_index=True)[["id", "name"]].drop_duplicates()
-    except KeyError:
-        # no coaches found, create empty df
-        coaches = pd.DataFrame(columns=["id", "name"])
-    except ForbiddenError:
-        coaches_blacklisted = True
+            )[["id", "name"]]
+            coaches_list.append(coaches)
+        except KeyError:
+            # no coaches found, create empty df
+            coaches_list.append(pd.DataFrame(columns=["id", "name"]))
+        except ForbiddenError:
+            coaches_blacklisted = True
+    coaches = pd.concat(coaches_list).drop_duplicates()
 
     # get matches
-    matchplan = pd.concat(
-        map(lambda iteration: getMatchesFromHost(
+    matchplan_list = []
+    for iteration in iterations:
+        matchplan = getMatchesFromHost(
             iteration=iteration,
             connection=connection,
             host=host
-        ),
-            iterations),
-        ignore_index=True)
+        )
+        matchplan_list.append(matchplan)
+    matchplan = pd.concat(matchplan_list)
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
     if include_kpis:
-        # get event scorings
-        scorings = pd.concat(
-            map(lambda match: connection.make_api_request_limited(
-                url=f"{host}/v5/customerapi/matches/{match}/event-kpis",
+
+        # get event kpis
+        def fetch_event_kpis(connection, url):
+            return connection.make_api_request_limited(
+                url=url,
                 method="GET"
-            ).process_response(
-                endpoint="Scorings"
-            ),
-                matches),
-            ignore_index=True)
+            ).process_response(endpoint="Scorings")
+
+        # create list to store dfs
+        scorings_list = []
+        for match in matches:
+            scorings = safe_execute(
+                fetch_event_kpis,
+                connection,
+                url=f"{host}/v5/customerapi/matches/{match}/event-kpis",
+                identifier=f"{match}",
+                forbidden_list=forbidden_matches
+            )
+            scorings_list.append(scorings)
+        scorings = pd.concat(scorings_list)
 
         # get kpis
         kpis = connection.make_api_request_limited(
@@ -171,19 +216,28 @@ def getEventsFromHost(
         )[["id", "name"]]
 
     if include_set_pieces:
+
         # get set piece data
-        set_pieces = pd.concat(
-            map(lambda match: connection.make_api_request_limited(
-                url=f"{host}/v5/customerapi/matches/{match}/set-pieces",
+        def fetch_set_pieces(connection, url):
+            return connection.make_api_request_limited(
+                url=url,
                 method="GET"
-            ).process_response(
-                endpoint="Set-Pieces"
-            ),
-                matches),
-            ignore_index=True
-        ).rename(
-            columns={"id": "setPieceId"}
-        ).explode("setPieceSubPhase", ignore_index=True)
+            ).process_response(endpoint="Set-Pieces")
+
+        # create list to store dfs
+        set_pieces_list = []
+        for match in matches:
+            set_pieces = safe_execute(
+                fetch_set_pieces,
+                connection,
+                url=f"{host}/v5/customerapi/matches/{match}/set-pieces",
+                identifier=f"{match}",
+                forbidden_list=forbidden_matches
+            ).rename(
+                columns={"id": "setPieceId"}
+            ).explode("setPieceSubPhase", ignore_index=True)
+            set_pieces_list.append(set_pieces)
+        set_pieces = pd.concat(set_pieces_list).reset_index()
 
         # unpack setPieceSubPhase column
         set_pieces = pd.concat(
@@ -207,59 +261,16 @@ def getEventsFromHost(
 
     # start merging dfs
 
-    # merge events with secondary data
+    # merge events with master data
+    events["squadName"] = events.squadId.map(squad_map)
+    events["currentAttackingSquadName"] = events.currentAttackingSquadId.map(squad_map)
+    events["playerName"] = events.playerId.map(player_map)
+    events["pressingPlayerName"] = events.pressingPlayerId.map(player_map)
+    events["fouledPlayerName"] = events.fouledPlayerId.map(player_map)
+    events["duelPlayerName"] = events.duelPlayerId.map(player_map)
+    events["passReceiverPlayerName"] = events.passReceiverPlayerId.map(player_map)
+    events["dribbleOpponentPlayerName"] = events.dribblePlayerId.map(player_map)
     events = events.merge(
-        squads[["id", "name"]].rename(columns={"id": "squadId", "name": "squadName"}),
-        left_on="squadId",
-        right_on="squadId",
-        how="left",
-        suffixes=("", "_home")
-    ).merge(
-        squads[["id", "name"]].rename(columns={"id": "squadId", "name": "currentAttackingSquadName"}),
-        left_on="currentAttackingSquadId",
-        right_on="squadId",
-        how="left",
-        suffixes=("", "_away")
-    ).merge(
-        players[["id", "commonname"]].rename(columns={"id": "playerId", "commonname": "playerName"}),
-        left_on="playerId",
-        right_on="playerId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        players[["id", "commonname"]].rename(
-            columns={"id": "pressingPlayerId", "commonname": "pressingPlayerName"}),
-        left_on="pressingPlayerId",
-        right_on="pressingPlayerId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        players[["id", "commonname"]].rename(columns={"id": "fouledPlayerId", "commonname": "fouledPlayerName"}),
-        left_on="fouledPlayerId",
-        right_on="fouledPlayerId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        players[["id", "commonname"]].rename(columns={"id": "duelPlayerId", "commonname": "duelPlayerName"}),
-        left_on="duelPlayerId",
-        right_on="duelPlayerId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        players[["id", "commonname"]].rename(
-            columns={"id": "passReceiverPlayerId", "commonname": "passReceiverPlayerName"}),
-        left_on="passReceiverPlayerId",
-        right_on="passReceiverPlayerId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        players[["id", "commonname"]].rename(
-            columns={"id": "dribbleOpponentPlayerId", "commonname": "dribbleOpponentPlayerName"}),
-        left_on="dribblePlayerId",
-        right_on="dribbleOpponentPlayerId",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
         matchplan,
         left_on="matchId",
         right_on="id",
@@ -282,22 +293,14 @@ def getEventsFromHost(
 
     if not coaches_blacklisted:
 
+        # create coaches map
+        coaches_map = coaches.set_index("id")["name"].to_dict()
+
         # convert coachId to integer if it is None
         events["homeSquadCoachId"] = events["homeSquadCoachId"].astype("Int64")
         events["awaySquadCoachId"] = events["awaySquadCoachId"].astype("Int64")
-        events = events.merge(
-            coaches[["id", "name"]].rename(columns={"id": "homeCoachId", "name": "homeCoachName"}),
-            left_on="homeSquadCoachId",
-            right_on="homeCoachId",
-            how="left",
-            suffixes=("", "_right")
-        ).merge(
-            coaches[["id", "name"]].rename(columns={"id": "awayCoachId", "name": "awayCoachName"}),
-            left_on="awaySquadCoachId",
-            right_on="awayCoachId",
-            how="left",
-            suffixes=("", "_right")
-        )
+        events["homeSquadCoachName"] = events.homeSquadCoachId.map(coaches_map)
+        events["awaySquadCoachName"] = events.awaySquadCoachId.map(coaches_map)
 
     if include_kpis:
         # unnest scorings and full join with kpi list to ensure all kpis are present
@@ -328,57 +331,18 @@ def getEventsFromHost(
                               suffixes=("", "_scorings"))
 
     if include_set_pieces:
+
         events = events.merge(
             set_pieces,
             left_on=["setPieceId", "setPieceSubPhaseId"],
             right_on=["setPieceId", "setPieceSubPhaseId"],
             how="left",
             suffixes=("", "_right")
-        ).merge(
-            players[["id", "commonname"]].rename(
-                columns={
-                    "id": "setPieceSubPhaseMainEventPlayerId",
-                    "commonname": "setPieceSubPhaseMainEventPlayerName"
-                }
-            ),
-            left_on="setPieceSubPhaseMainEventPlayerId",
-            right_on="setPieceSubPhaseMainEventPlayerId",
-            how="left",
-            suffixes=("", "_right")
-        ).merge(
-            players[["id", "commonname"]].rename(
-                columns={
-                    "id": "setPieceSubPhasePassReceiverId",
-                    "commonname": "setPieceSubPhasePassReceiverName"
-                }
-            ),
-            left_on="setPieceSubPhasePassReceiverId",
-            right_on="setPieceSubPhasePassReceiverId",
-            how="left",
-            suffixes=("", "_right")
-        ).merge(
-            players[["id", "commonname"]].rename(
-                columns={
-                    "id": "setPieceSubPhaseFirstTouchPlayerId",
-                    "commonname": "setPieceSubPhaseFirstTouchPlayerName"
-                }
-            ),
-            left_on="setPieceSubPhaseFirstTouchPlayerId",
-            right_on="setPieceSubPhaseFirstTouchPlayerId",
-            how="left",
-            suffixes=("", "_right")
-        ).merge(
-            players[["id", "commonname"]].rename(
-                columns={
-                    "id": "setPieceSubPhaseSecondTouchPlayerId",
-                    "commonname": "setPieceSubPhaseSecondTouchPlayerName"
-                }
-            ),
-            left_on="setPieceSubPhaseSecondTouchPlayerId",
-            right_on="setPieceSubPhaseSecondTouchPlayerId",
-            how="left",
-            suffixes=("", "_right")
         )
+        events["setPieceSubPhaseMainEventPlayerName"] = events.setPieceSubPhaseMainEventPlayerId.map(player_map)
+        events["setPieceSubPhasePassReceiverName"] = events.setPieceSubPhasePassReceiverId.map(player_map)
+        events["setPieceSubPhaseFirstTouchPlayerName"] = events.setPieceSubPhaseFirstTouchPlayerId.map(player_map)
+        events["setPieceSubPhaseSecondTouchPlayerName"] = events.setPieceSubPhaseSecondTouchPlayerId.map(player_map)
 
     # rename some columns
     events = events.rename(columns={
@@ -392,6 +356,7 @@ def getEventsFromHost(
         "id": "eventId",
         "index": "eventNumber",
         "phaseIndex": "setPiecePhaseIndex",
+        "dribblePlayerId": "dribbleOpponentPlayerId",
         "setPieceMainEvent": "setPieceSubPhaseMainEvent",
     })
 

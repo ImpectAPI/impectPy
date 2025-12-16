@@ -79,7 +79,7 @@ def getPlayerIterationAveragesFromHost(
     )
 
     # create empty df to store averages
-    averages = pd.DataFrame()
+    averages_list = []
 
     # iterate over squads
     for squad_id in squad_ids:
@@ -127,7 +127,13 @@ def getPlayerIterationAveragesFromHost(
         )
 
         # fill join cols with placeholder
-        averages_raw.loc[mask] = averages_raw.loc[mask].fillna(-1)
+        filled = (
+            averages_raw.loc[mask]
+            .infer_objects(copy=False)
+            .fillna(-1)
+        )
+
+        averages_raw.loc[mask] = filled
 
         # get matchShares
         match_shares_raw = averages_raw[
@@ -166,7 +172,10 @@ def getPlayerIterationAveragesFromHost(
             suffixes=("", "_right")
         )
 
-        averages = pd.concat([averages, averages_raw], axis=0)
+        averages_list.append(averages_raw)
+
+    # compile into df
+    averages = pd.concat(averages_list)
 
     # merge with other data
     averages = averages.merge(

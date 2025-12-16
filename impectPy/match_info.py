@@ -2,10 +2,10 @@
 import numpy as np
 import pandas as pd
 import requests
-from impectPy.helpers import RateLimitedAPI
+import warnings
+from impectPy.helpers import RateLimitedAPI, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
-import re
 
 
 ######
@@ -32,62 +32,86 @@ def getFormationsFromHost(matches: list, connection: RateLimitedAPI, host: str) 
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
 
+    # create list to store matches that are forbidden (HTTP 403)
+    forbidden_matches = []
+
     # get match info
-    matches = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}",
+    def fetch_match_info(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="Iterations"
-        ),
-            matches),
-        ignore_index=True)
+        ).process_response(endpoint="Match Info")
+
+    # create list to store dfs
+    match_data_list = []
+    for match in matches:
+        match_data = safe_execute(
+            fetch_match_info,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}",
+            identifier=match,
+            forbidden_list=forbidden_matches
+        )
+        match_data_list.append(match_data)
+    match_data = pd.concat(match_data_list)
 
     # filter for matches that are unavailable
-    fail_matches = matches[matches.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
-    matches = matches[~matches.id.isin(fail_matches)]
+    matches = [match for match in matches if match not in unavailable_matches]
+
+    # drop matches that are forbidden
+    matches = [match for match in matches if match not in forbidden_matches]
+
+    # configure warning format
+    def no_line_formatter(message, category, filename, lineno, line):
+        return f"Warning: {message}\n"
+    warnings.formatwarning = no_line_formatter
 
     # raise exception if no matches remaining or report removed matches
-    if len(fail_matches) > 0:
-        if len(matches) == 0:
-            raise Exception("All supplied matches are unavailable. Execution stopped.")
-        else:
-            print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
+    if len(matches) == 0:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
+    if len(forbidden_matches) > 0:
+        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
+    if len(unavailable_matches) > 0:
+        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
 
     # extract iterationIds
-    iterations = list(matches[matches.lastCalculationDate.notnull()].iterationId.unique())
+    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get squads
-    squads = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    squads_list = []
+    for iteration in iterations:
+        squads = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET"
         ).process_response(
             endpoint="Squads"
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+        )[["id", "name"]]
+        squads_list.append(squads)
+    squads = pd.concat(squads_list).drop_duplicates()
+    squad_map = squads.set_index("id")["name"].to_dict()
 
     # get matches
-    matchplan = pd.concat(
-        map(lambda iteration: getMatchesFromHost(
+    matchplan_list = []
+    for iteration in iterations:
+        matchplan = getMatchesFromHost(
             iteration=iteration,
             connection=connection,
             host=host
-        ),
-            iterations),
-        ignore_index=True)
+        )
+        matchplan_list.append(matchplan)
+    matchplan = pd.concat(matchplan_list)
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
     # extract formations
-    formations_home = matches[["id", "squadHomeId", "squadHomeFormations"]].rename(
+    formations_home = match_data[["id", "squadHomeId", "squadHomeFormations"]].rename(
         columns={"squadHomeFormations": "squadFormations", "squadHomeId": "squadId"}
     )
-    formations_away = matches[["id", "squadAwayId", "squadAwayFormations"]].rename(
+    formations_away = match_data[["id", "squadAwayId", "squadAwayFormations"]].rename(
         columns={"squadAwayFormations": "squadFormations", "squadAwayId": "squadId"}
     )
 
@@ -105,14 +129,8 @@ def getFormationsFromHost(matches: list, connection: RateLimitedAPI, host: str) 
 
     # start merging dfs
 
-    # merge formations with squads
-    formations = formations.merge(
-        squads[["id", "name"]].rename(columns={"id": "squadId", "name": "squadName"}),
-        left_on="squadId",
-        right_on="squadId",
-        how="left",
-        suffixes=("", "_home")
-    )
+    # merge formations with squad data
+    formations["squadName"] = formations.squadId.map(squad_map)
 
     # merge with matches info
     formations = formations.merge(
@@ -193,73 +211,99 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
 
+    # create list to store matches that are forbidden (HTTP 403)
+    forbidden_matches = []
+
     # get match info
-    matches = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}",
+    def fetch_match_info(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="Iterations"
-        ),
-            matches),
-        ignore_index=True)
+        ).process_response(endpoint="Match Info")
+
+    # create list to store dfs
+    match_data_list = []
+    for match in matches:
+        match_data = safe_execute(
+            fetch_match_info,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}",
+            identifier=match,
+            forbidden_list=forbidden_matches
+        )
+        match_data_list.append(match_data)
+    match_data = pd.concat(match_data_list)
 
     # filter for matches that are unavailable
-    fail_matches = matches[matches.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
-    matches = matches[~matches.id.isin(fail_matches)]
+    matches = [match for match in matches if match not in unavailable_matches]
+
+    # drop matches that are forbidden
+    matches = [match for match in matches if match not in forbidden_matches]
+
+    # configure warning format
+    def no_line_formatter(message, category, filename, lineno, line):
+        return f"Warning: {message}\n"
+    warnings.formatwarning = no_line_formatter
 
     # raise exception if no matches remaining or report removed matches
-    if len(fail_matches) > 0:
-        if len(matches) == 0:
-            raise Exception("All supplied matches are unavailable. Execution stopped.")
-        else:
-            print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
+    if len(matches) == 0:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
+    if len(forbidden_matches) > 0:
+        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
+    if len(unavailable_matches) > 0:
+        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
 
     # extract iterationIds
-    iterations = list(matches[matches.lastCalculationDate.notnull()].iterationId.unique())
+    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get squads
-    squads = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    squads_list = []
+    for iteration in iterations:
+        squads = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
             method="GET"
         ).process_response(
             endpoint="Squads"
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+        )[["id", "name"]]
+        squads_list.append(squads)
+    squads = pd.concat(squads_list).drop_duplicates()
+    squad_map = squads.set_index("id")["name"].to_dict()
 
     # get players
-    players = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    players_list = []
+    for iteration in iterations:
+        players = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/players",
             method="GET"
         ).process_response(
             endpoint="Players"
-        ),
-            iterations),
-        ignore_index=True)[["id", "commonname"]].drop_duplicates()
+        )[["id", "commonname"]]
+        players_list.append(players)
+    players = pd.concat(players_list).drop_duplicates()
+    player_map = players.set_index("id")["commonname"].to_dict()
 
     # get matches
-    matchplan = pd.concat(
-        map(lambda iteration: getMatchesFromHost(
+    matchplan_list = []
+    for iteration in iterations:
+        matchplan = getMatchesFromHost(
             iteration=iteration,
             connection=connection,
             host=host
-        ),
-            iterations),
-        ignore_index=True)
+        )
+        matchplan_list.append(matchplan)
+    matchplan = pd.concat(matchplan_list)
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
     # extract shirt numbers
-    shirt_numbers_home = matches[["id", "squadHomeId", "squadHomePlayers"]].rename(
+    shirt_numbers_home = match_data[["id", "squadHomeId", "squadHomePlayers"]].rename(
         columns={"squadHomePlayers": "players", "squadHomeId": "squadId"}
     )
-    shirt_numbers_away = matches[["id", "squadAwayId", "squadAwayPlayers"]].rename(
+    shirt_numbers_away = match_data[["id", "squadAwayId", "squadAwayPlayers"]].rename(
         columns={"squadAwayPlayers": "players", "squadAwayId": "squadId"}
     )
 
@@ -279,10 +323,10 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     )
 
     # extract substitutions
-    substitutions_home = matches[["id", "squadHomeId", "squadHomeSubstitutions"]].rename(
+    substitutions_home = match_data[["id", "squadHomeId", "squadHomeSubstitutions"]].rename(
         columns={"squadHomeSubstitutions": "squadSubstitutions", "squadHomeId": "squadId"}
     )
-    substitutions_away = matches[["id", "squadAwayId", "squadAwaySubstitutions"]].rename(
+    substitutions_away = match_data[["id", "squadAwayId", "squadAwaySubstitutions"]].rename(
         columns={"squadAwaySubstitutions": "squadSubstitutions", "squadAwayId": "squadId"}
     )
 
@@ -306,14 +350,10 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
 
     # start merging dfs
 
-    # merge substitutions with squads
-    substitutions = substitutions.merge(
-        squads[["id", "name"]].rename(columns={"id": "squadId", "name": "squadName"}),
-        left_on="squadId",
-        right_on="squadId",
-        how="left",
-        suffixes=("", "_x")
-    )
+    # merge substitutions with master data
+    substitutions["squadName"] = substitutions.squadId.map(squad_map)
+    substitutions["playerName"] = substitutions.playerId.map(player_map)
+    substitutions["exchangedPlayerName"] = substitutions.exchangedPlayerId.map(player_map)
 
     # merge substitutions with shirt numbers
     substitutions = substitutions.merge(
@@ -330,25 +370,6 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
         right_on=["exchangedPlayerId", "squadId", "id"],
         how="left",
         suffixes=("", "_x")
-    )
-
-    # merge substitutions with players
-    substitutions = substitutions.merge(
-        players[["id", "commonname"]].rename(
-            columns={"commonname": "playerName"}
-        ),
-        left_on="playerId",
-        right_on="id",
-        how="left",
-        suffixes=("", "_right")
-    ).merge(
-        players[["id", "commonname"]].rename(
-            columns={"commonname": "exchangedPlayerName"}
-        ),
-        left_on="exchangedPlayerId",
-        right_on="id",
-        how="left",
-        suffixes=("", "_right")
     )
 
     # merge with matches info
@@ -447,73 +468,99 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
 
+    # create list to store matches that are forbidden (HTTP 403)
+    forbidden_matches = []
+
     # get match info
-    matches = pd.concat(
-        map(lambda match: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/matches/{match}",
+    def fetch_match_info(connection, url):
+        return connection.make_api_request_limited(
+            url=url,
             method="GET"
-        ).process_response(
-            endpoint="Iterations"
-        ),
-            matches),
-        ignore_index=True)
+        ).process_response(endpoint="Match Info")
+
+    # create list to store dfs
+    match_data_list = []
+    for match in matches:
+        match_data = safe_execute(
+            fetch_match_info,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}",
+            identifier=match,
+            forbidden_list=forbidden_matches
+        )
+        match_data_list.append(match_data)
+    match_data = pd.concat(match_data_list)
 
     # filter for matches that are unavailable
-    fail_matches = matches[matches.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
 
     # drop matches that are unavailable from list of matches
-    matches = matches[~matches.id.isin(fail_matches)]
+    matches = [match for match in matches if match not in unavailable_matches]
+
+    # drop matches that are forbidden
+    matches = [match for match in matches if match not in forbidden_matches]
+
+    # configure warning format
+    def no_line_formatter(message, category, filename, lineno, line):
+        return f"Warning: {message}\n"
+    warnings.formatwarning = no_line_formatter
 
     # raise exception if no matches remaining or report removed matches
-    if len(fail_matches) > 0:
-        if len(matches) == 0:
-            raise Exception("All supplied matches are unavailable. Execution stopped.")
-        else:
-            print(f"The following matches are not available yet and were ignored:\n{fail_matches}")
+    if len(matches) == 0:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
+    if len(forbidden_matches) > 0:
+        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
+    if len(unavailable_matches) > 0:
+        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
 
     # extract iterationIds
-    iterations = list(matches[matches.lastCalculationDate.notnull()].iterationId.unique())
-
-    # get squads
-    squads = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
-            method="GET"
-        ).process_response(
-            endpoint="Squads"
-        ),
-            iterations),
-        ignore_index=True)[["id", "name"]].drop_duplicates()
+    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get players
-    players = pd.concat(
-        map(lambda iteration: connection.make_api_request_limited(
+    players_list = []
+    for iteration in iterations:
+        players = connection.make_api_request_limited(
             url=f"{host}/v5/customerapi/iterations/{iteration}/players",
             method="GET"
         ).process_response(
             endpoint="Players"
-        ),
-            iterations),
-        ignore_index=True)[["id", "commonname"]].drop_duplicates()
+        )[["id", "commonname"]]
+        players_list.append(players)
+    players = pd.concat(players_list).drop_duplicates()
+    player_map = players.set_index("id")["commonname"].to_dict()
+
+    # get squads
+    squads_list = []
+    for iteration in iterations:
+        squads = connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
+            method="GET"
+        ).process_response(
+            endpoint="Squads"
+        )[["id", "name"]]
+        squads_list.append(squads)
+    squads = pd.concat(squads_list).drop_duplicates()
+    squad_map = squads.set_index("id")["name"].to_dict()
 
     # get matches
-    matchplan = pd.concat(
-        map(lambda iteration: getMatchesFromHost(
+    matchplan_list = []
+    for iteration in iterations:
+        matchplan = getMatchesFromHost(
             iteration=iteration,
             connection=connection,
             host=host
-        ),
-            iterations),
-        ignore_index=True)
+        )
+        matchplan_list.append(matchplan)
+    matchplan = pd.concat(matchplan_list)
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
     # extract shirt numbers
-    shirt_numbers_home = matches[["id", "squadHomeId", "squadHomePlayers"]].rename(
+    shirt_numbers_home = match_data[["id", "squadHomeId", "squadHomePlayers"]].rename(
         columns={"squadHomePlayers": "players", "squadHomeId": "squadId"}
     )
-    shirt_numbers_away = matches[["id", "squadAwayId", "squadAwayPlayers"]].rename(
+    shirt_numbers_away = match_data[["id", "squadAwayId", "squadAwayPlayers"]].rename(
         columns={"squadAwayPlayers": "players", "squadAwayId": "squadId"}
     )
 
@@ -533,10 +580,10 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
     )
 
     # extract starting_positions
-    starting_positions_home = matches[["id", "squadHomeId", "squadHomeStartingPositions"]].rename(
+    starting_positions_home = match_data[["id", "squadHomeId", "squadHomeStartingPositions"]].rename(
         columns={"squadHomeStartingPositions": "squadStartingPositions", "squadHomeId": "squadId"}
     )
-    starting_positions_away = matches[["id", "squadAwayId", "squadAwayStartingPositions"]].rename(
+    starting_positions_away = match_data[["id", "squadAwayId", "squadAwayStartingPositions"]].rename(
         columns={"squadAwayStartingPositions": "squadStartingPositions", "squadAwayId": "squadId"}
     )
 
@@ -564,24 +611,8 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
     )
 
     # merge substitutions with squads
-    starting_positions = starting_positions.merge(
-        squads[["id", "name"]].rename(columns={"id": "squadId", "name": "squadName"}),
-        left_on="squadId",
-        right_on="squadId",
-        how="left",
-        suffixes=("", "_x")
-    )
-
-    # merge substitutions with players
-    starting_positions = starting_positions.merge(
-        players[["id", "commonname"]].rename(
-            columns={"commonname": "playerName"}
-        ),
-        left_on="playerId",
-        right_on="id",
-        how="left",
-        suffixes=("", "_right")
-    )
+    starting_positions["squadName"] = starting_positions.squadId.map(squad_map)
+    starting_positions["playerName"] = starting_positions.playerId.map(player_map)
 
     # merge with matches info
     starting_positions = starting_positions.merge(
