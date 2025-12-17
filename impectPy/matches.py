@@ -102,34 +102,34 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
     matches = matches.rename(columns={"fifaName": "awaySquadCountryName"})
 
     # reorder columns
-    matches = matches.loc[:, [
-                                 'id',
-                                 'skillCornerId',
-                                 'heimSpielId',
-                                 'wyscoutId',
-                                 'iterationId',
-                                 'matchDayIndex',
-                                 'matchDayName',
-                                 'homeSquadId',
-                                 'homeSquadName',
-                                 'homeSquadType',
-                                 'homeSquadCountryId',
-                                 'homeSquadCountryName',
-                                 'homeSquadSkillCornerId',
-                                 'homeSquadHeimSpielId',
-                                 'homeSquadWyscoutId',
-                                 'awaySquadId',
-                                 'awaySquadName',
-                                 'awaySquadType',
-                                 'awaySquadCountryId',
-                                 'awaySquadCountryName',
-                                 'awaySquadSkillCornerId',
-                                 'awaySquadHeimSpielId',
-                                 'awaySquadWyscoutId',
-                                 'scheduledDate',
-                                 'lastCalculationDate',
-                                 'available'
-                             ]]
+    matches = matches[[
+        "id",
+        "skillCornerId",
+        "heimSpielId",
+        "wyscoutId",
+        "iterationId",
+        "matchDayIndex",
+        "matchDayName",
+        "homeSquadId",
+        "homeSquadName",
+        "homeSquadType",
+        "homeSquadCountryId",
+        "homeSquadCountryName",
+        "homeSquadSkillCornerId",
+        "homeSquadHeimSpielId",
+        "homeSquadWyscoutId",
+        "awaySquadId",
+        "awaySquadName",
+        "awaySquadType",
+        "awaySquadCountryId",
+        "awaySquadCountryName",
+        "awaySquadSkillCornerId",
+        "awaySquadHeimSpielId",
+        "awaySquadWyscoutId",
+        "scheduledDate",
+        "lastCalculationDate",
+        "available"
+    ]]
 
     # reorder matches
     matches = matches.sort_values(by=["matchDayIndex", "id"])
