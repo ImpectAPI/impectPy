@@ -10,8 +10,42 @@ from typing import Optional, Dict, Any
 
 # create logger for this module
 logger = logging.getLogger("impectPy")
-# logger = logging.LoggerAdapter(logger, {"id": "-", "url": "-"})
 logger.addHandler(logging.NullHandler())
+
+
+######
+#
+# This class inherits from Response and adds a function converts the response from an API call to a pandas dataframe, flattens it and fixes the column names
+#
+######
+
+class ImpectResponse(requests.Response):
+    def process_response(self, endpoint: str, raise_exception: bool = True) -> pd.DataFrame:
+        # validate and get data from response
+        result = validate_response(response=self, endpoint=endpoint, raise_exception=raise_exception)
+
+        # convert to df
+        result = pd.json_normalize(result)
+
+        # fix column names using regex
+        result = result.rename(columns=lambda x: re.sub(r"\.(.)", lambda y: y.group(1).upper(), x))
+
+        # return result
+        return result
+
+
+######
+#
+# This class inherits from Session and ensure the response is of type ImpectResponse
+#
+######
+
+class ImpectSession(requests.Session):
+    def request(self, *args, **kwargs) -> ImpectResponse:
+        response = super().request(*args, **kwargs)
+        response.__class__ = ImpectResponse
+        return response
+
 
 ######
 #
@@ -31,25 +65,25 @@ class ForbiddenError(HTTPError):
 
 
 class RateLimitedAPI:
-    def __init__(self, session: Optional[requests.Session] = None):
+    def __init__(self, session: Optional[ImpectSession] = None):
         """
         Initializes a RateLimitedAPI object.
 
         Args:
-            session (requests.Session): The session object to use for the API calls.
+            session (ImpectSession): The session object to use for the API calls.
         """
-        self.session = session or requests.Session()  # use the provided session or create a new session
+        self.session = session or ImpectSession()  # use the provided session or create a new session
         self.bucket = None  # TokenBucket object to manage rate limit tokens
 
     # make a rate-limited API request
     def make_api_request_limited(
             self, url: str, method: str, data: Optional[Dict[str, str]] = None
-    ) -> requests.Response:
+    ) -> ImpectResponse:
         """
         Executes an API call while applying the rate limit.
 
         Returns:
-            requests.Response: The response returned by the API.
+            ImpectResponse: The response returned by the API.
         """
 
         # check if bucket is not initialized
@@ -73,7 +107,6 @@ class RateLimitedAPI:
                 remaining=int(response.headers["RateLimit-Remaining"])
             )
 
-            # return response
             return response
 
         # check if a token is available
@@ -102,12 +135,12 @@ class RateLimitedAPI:
     def make_api_request(
             self, url: str, method: str, data: Optional[Dict[str, Any]] = None,
             max_retries: int = 3, retry_delay: int = 1
-    ) -> requests.Response:
+    ) -> ImpectResponse:
         """
         Executes an API call.
 
         Returns:
-            requests.Response: The response returned by the API.
+            ImpectResponse: The response returned by the API.
         """
         # try API call
         for i in range(max_retries):
@@ -207,31 +240,6 @@ class TokenBucket:
 
 ######
 #
-# This function converts the response from an API call to a pandas dataframe, flattens it and fixes the column names
-#
-######
-
-
-def process_response(self: requests.Response, endpoint: str, raise_exception: bool = True) -> pd.DataFrame:
-    # validate and get data from response
-    result = validate_response(response=self, endpoint=endpoint, raise_exception=raise_exception)
-
-    # convert to df
-    result = pd.json_normalize(result)
-
-    # fix column names using regex
-    result = result.rename(columns=lambda x: re.sub(r"\.(.)", lambda y: y.group(1).upper(), x))
-
-    # return result
-    return result
-
-
-# attach method to requests module
-requests.Response.process_response = process_response
-
-
-######
-#
 # This function unnests the idMappings key from an API response
 #
 ######
@@ -301,7 +309,7 @@ def unnest_mappings_df(df: pd.DataFrame, mapping_col: str) -> pd.DataFrame:
 
 
 # define function to validate JSON response and return data
-def validate_response(response: requests.Response, endpoint: str, raise_exception: bool = True) -> dict:
+def validate_response(response: ImpectResponse, endpoint: str, raise_exception: bool = True) -> dict:
     # get data from response
     data = response.json()["data"]
 
