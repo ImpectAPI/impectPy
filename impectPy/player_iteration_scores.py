@@ -81,7 +81,7 @@ def getPlayerIterationScoresFromHost(
         return connection.make_api_request_limited(
             url=url,
             method="GET"
-        ).process_response(endpoint="Player Match Scores")
+        ).process_response(endpoint="Player Match Scores", raise_exception=False)
 
     # get player scores
     if positions is None:
@@ -99,7 +99,10 @@ def getPlayerIterationScoresFromHost(
                 iterationId=iteration,
                 squadId=squad_id
             )
-            scores_list.append(scores)
+
+            # check if response is empty
+            if len(scores) > 0:
+                scores_list.append(scores)
         scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
 
     else:
@@ -122,7 +125,10 @@ def getPlayerIterationScoresFromHost(
                 squadId=squad_id,
                 positions=position_string
             )
-            scores_list.append(scores)
+
+            # check if resonse is empty
+            if len(scores) > 0:
+                scores_list.append(scores)
         scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
 
     # raise exception if no player played at given positions in entire iteration
@@ -130,9 +136,10 @@ def getPlayerIterationScoresFromHost(
         raise Exception(f"No players played at given position in iteration {iteration}.")
 
     # print squads without players at given position
-    error_list = [str(squadId) for squadId in squad_ids if squadId not in scores_raw.squadId.to_list()]
-    if len(error_list) > 0:
-        print(f"No players played at positions {positions} for iteration {iteration} for following squads:\n\t{', '.join(error_list)}")
+    if positions is not None:
+        error_list = [str(squadId) for squadId in squad_ids if squadId not in scores_raw.squadId.to_list()]
+        if len(error_list) > 0:
+            print(f"No players played at positions {positions} for iteration {iteration} for following squads:\n\t{', '.join(error_list)}")
 
     # get players
     players = connection.make_api_request_limited(

@@ -90,11 +90,16 @@ def getPlayerIterationAveragesFromHost(
                     f"squads/{squad_id}/player-kpis",
                 method="GET"
             ).process_response(
-                endpoint="PlayerAverages"
+                endpoint="PlayerAverages",
+                raise_exception=False
             ).assign(
                 iterationId=iteration,
                 squadId=squad_id
             )
+
+        # skip if empty repsonse
+        if len(averages_raw) == 0:
+            continue
 
         # unnest scorings
         averages_raw = averages_raw.explode("kpis").reset_index(drop=True)
