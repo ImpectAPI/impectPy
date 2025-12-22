@@ -4,8 +4,47 @@ import requests
 import time
 import pandas as pd
 import re
-from typing import Optional, Dict, Any
 import math
+import logging
+from typing import Optional, Dict, Any
+
+# create logger for this module
+logger = logging.getLogger("impectPy")
+logger.addHandler(logging.NullHandler())
+
+
+######
+#
+# This class inherits from Response and adds a function converts the response from an API call to a pandas dataframe, flattens it and fixes the column names
+#
+######
+
+class ImpectResponse(requests.Response):
+    def process_response(self, endpoint: str, raise_exception: bool = True) -> pd.DataFrame:
+        # validate and get data from response
+        result = validate_response(response=self, endpoint=endpoint, raise_exception=raise_exception)
+
+        # convert to df
+        result = pd.json_normalize(result)
+
+        # fix column names using regex
+        result = result.rename(columns=lambda x: re.sub(r"\.(.)", lambda y: y.group(1).upper(), x))
+
+        # return result
+        return result
+
+
+######
+#
+# This class inherits from Session and ensure the response is of type ImpectResponse
+#
+######
+
+class ImpectSession(requests.Session):
+    def request(self, *args, **kwargs) -> ImpectResponse:
+        response = super().request(*args, **kwargs)
+        response.__class__ = ImpectResponse
+        return response
 
 
 ######
@@ -15,31 +54,36 @@ import math
 ######
 
 
-class ForbiddenError(Exception):
+class HTTPError(Exception):
+    """Raised when the API returns status code other than 200 or 403."""
+    pass
+
+
+class ForbiddenError(HTTPError):
     """Raised when the API returns a 403 Forbidden response."""
     pass
 
 
 class RateLimitedAPI:
-    def __init__(self, session: Optional[requests.Session] = None):
+    def __init__(self, session: Optional[ImpectSession] = None):
         """
         Initializes a RateLimitedAPI object.
 
         Args:
-            session (requests.Session): The session object to use for the API calls.
+            session (ImpectSession): The session object to use for the API calls.
         """
-        self.session = session or requests.Session()  # use the provided session or create a new session
+        self.session = session or ImpectSession()  # use the provided session or create a new session
         self.bucket = None  # TokenBucket object to manage rate limit tokens
 
     # make a rate-limited API request
     def make_api_request_limited(
             self, url: str, method: str, data: Optional[Dict[str, str]] = None
-    ) -> requests.Response:
+    ) -> ImpectResponse:
         """
         Executes an API call while applying the rate limit.
 
         Returns:
-            requests.Response: The response returned by the API.
+            ImpectResponse: The response returned by the API.
         """
 
         # check if bucket is not initialized
@@ -63,7 +107,6 @@ class RateLimitedAPI:
                 remaining=int(response.headers["RateLimit-Remaining"])
             )
 
-            # return response
             return response
 
         # check if a token is available
@@ -92,12 +135,12 @@ class RateLimitedAPI:
     def make_api_request(
             self, url: str, method: str, data: Optional[Dict[str, Any]] = None,
             max_retries: int = 3, retry_delay: int = 1
-    ) -> requests.Response:
+    ) -> ImpectResponse:
         """
         Executes an API call.
 
         Returns:
-            requests.Response: The response returned by the API.
+            ImpectResponse: The response returned by the API.
         """
         # try API call
         for i in range(max_retries):
@@ -109,25 +152,33 @@ class RateLimitedAPI:
                 return response
             # check status code and retry if 429
             elif response.status_code == 429:
-                print(f"Received status code {response.status_code} "
-                      f"({response.json().get('message', 'Rate Limit Exceeded')})"
-                      f", retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
+                # check if last try
+                if i < max_retries - 1:
+                    print(f"Received status code {response.status_code} "
+                          f"({response.json().get('message', 'Rate Limit Exceeded')})"
+                          f", retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    raise HTTPError(f"Received status code {response.status_code} "
+                                    f"({response.json().get('message', 'Rate Limit Exceeded')})"
+                                    f", exceeded maximum number of {max_retries} retries.")
             # check status code and terminate if 401 or 403
             elif response.status_code == 401:
-                raise Exception(f"Received status code {response.status_code} "
-                                f"(You do not have API access.)\n"
-                                f"Request-ID: {response.headers['x-request-id']} "
-                                f"(Make sure to include this in any support request.)")
+                exception_message = f"Received status code {response.status_code} (Invalid User Credentials)."
+                if "x-request-id" in response.headers:
+                    exception_message += (f" Request-ID: {response.headers['x-request-id']} "
+                                          f"(Make sure to include this in any support request.)")
+
+                raise HTTPError(exception_message)
             elif response.status_code == 403:
                 raise ForbiddenError(f"Received status code {response.status_code} "
-                                     f"(You do not have access to this resource.)\n"
+                                     f"(You do not have access to this resource.). "
                                      f"Request-ID: {response.headers['x-request-id']} "
                                      f"(Make sure to include this in any support request.)")
             # check status code and terminate if other error
             else:
-                raise Exception(f"Received status code {response.status_code} "
-                                f"({response.json().get('message', 'Unknown error')})\n"
+                raise HTTPError(f"Received status code {response.status_code} "
+                                f"({response.json().get('message', 'Unknown error')}). "
                                 f"Request-ID: {response.headers['x-request-id']} "
                                 f"(Make sure to include this in any support request.)")
 
@@ -185,31 +236,6 @@ class TokenBucket:
             return False
         self.tokens -= 1  # decrement the token count by 1
         return True  # return True to indicate successful token consumption
-
-
-######
-#
-# This function converts the response from an API call to a pandas dataframe, flattens it and fixes the column names
-#
-######
-
-
-def process_response(self: requests.Response, endpoint: str, raise_exception: bool = True) -> pd.DataFrame:
-    # validate and get data from response
-    result = validate_response(response=self, endpoint=endpoint, raise_exception=raise_exception)
-
-    # convert to df
-    result = pd.json_normalize(result)
-
-    # fix column names using regex
-    result = result.rename(columns=lambda x: re.sub(r"\.(.)", lambda y: y.group(1).upper(), x))
-
-    # return result
-    return result
-
-
-# attach method to requests module
-requests.Response.process_response = process_response
 
 
 ######
@@ -275,8 +301,15 @@ def unnest_mappings_df(df: pd.DataFrame, mapping_col: str) -> pd.DataFrame:
     return df
 
 
+######
+#
+# This function validates the response from an API call and returns the data
+#
+######
+
+
 # define function to validate JSON response and return data
-def validate_response(response: requests.Response, endpoint: str, raise_exception: bool = True) -> dict:
+def validate_response(response: ImpectResponse, endpoint: str, raise_exception: bool = True) -> dict:
     # get data from response
     data = response.json()["data"]
 
@@ -287,3 +320,42 @@ def validate_response(response: requests.Response, endpoint: str, raise_exceptio
     else:
         # return data
         return data
+
+
+######
+#
+# This function wraps any function to safely execute it and return a fallback if it fails
+#
+######
+
+
+def safe_execute(func, *args, fallback=None, identifier: str, forbidden_list: list, **kwargs):
+    """
+    Executes a function safely. If an exception occurs, it logs the error
+    and returns a default fallback (empty DataFrame by default).
+
+    Args:
+        func (callable): The function to execute.
+        *args, **kwargs: Arguments for the function.
+        fallback: The fallback value to return if the function fails.
+        identifier: An identifier to identify the error.
+        forbidden_list: A list to store identifiers of forbidden requests.
+    Returns:
+        The function's result or an empty DataFrame if it fails.
+    """
+    if fallback is None:
+        fallback = pd.DataFrame()
+    try:
+        return func(*args, **kwargs)
+    except HTTPError as e:
+        logger.error(
+            f"Request failed: {e}",
+            extra={
+                "id": identifier,
+                "url": kwargs.get("url"),
+            },
+            # exc_info=not isinstance(e, HTTPError)
+        )
+        if isinstance(e, ForbiddenError):
+            forbidden_list.append(identifier)
+        return fallback

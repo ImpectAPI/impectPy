@@ -4,16 +4,22 @@ from .access_token import getAccessTokenFromUrl
 from .iterations import getIterationsFromHost
 from .matches import getMatchesFromHost
 from .events import getEventsFromHost
-from .matchsums import getPlayerMatchsumsFromHost, getSquadMatchsumsFromHost
-from .iteration_averages import getPlayerIterationAveragesFromHost, getSquadIterationAveragesFromHost
-from .player_scores import getPlayerMatchScoresFromHost, getPlayerIterationScoresFromHost
-from .squad_scores import getSquadMatchScoresFromHost, getSquadIterationScoresFromHost
+from .player_matchsums import getPlayerMatchsumsFromHost
+from .squad_matchsums import getSquadMatchsumsFromHost
+from .player_iteration_averages import getPlayerIterationAveragesFromHost
+from .squad_iteration_averages import getSquadIterationAveragesFromHost
+from .player_match_scores import getPlayerMatchScoresFromHost
+from .player_iteration_scores import getPlayerIterationScoresFromHost
+from .squad_match_scores import getSquadMatchScoresFromHost
+from .squad_iteration_scores import getSquadIterationScoresFromHost
 from .player_profile_scores import getPlayerProfileScoresFromHost
-from .xml import generateXML
+from .generate_xml import generateXML
 from .set_pieces import getSetPiecesFromHost
 from .squad_ratings import getSquadRatingsFromHost
 from .squad_coefficients import getSquadCoefficientsFromHost
-from .match_info import getFormationsFromHost, getSubstitutionsFromHost, getStartingPositionsFromHost
+from .formations import getFormationsFromHost
+from .substitutions import getSubstitutionsFromHost
+from .starting_positions import getStartingPositionsFromHost
 import pandas as pd
 from xml.etree import ElementTree as ET
 
@@ -133,6 +139,17 @@ class Impect:
             p2Start: int,
             p3Start: int,
             p4Start: int,
-            p5Start: int
+            p5Start: int,
+            codeTag: str,
+            squad: None,
+            perspective: None,
+            labels=None,
+            kpis=None,
+            labelSorting: bool = True,
+            sequencing: bool = True,
+            buckets: bool = True
     ) -> ET.ElementTree:
-        return generateXML(events, lead, lag, p1Start, p2Start, p3Start, p4Start, p5Start)
+        return generateXML(
+            events, lead, lag, p1Start, p2Start, p3Start, p4Start, p5Start, codeTag, squad,
+            perspective, labels, kpis, labelSorting, sequencing, buckets
+        )

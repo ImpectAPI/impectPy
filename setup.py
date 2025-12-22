@@ -14,10 +14,10 @@ setup(
     packages=["impectPy"],
     # Needed for dependencies
     install_requires=["requests>=2.24.0",
-                      "pandas>=2.0.0",
-                      "numpy>=1.24.2,<2.0"],
+                      "pandas>=2.2.0",
+                      "numpy>=1.24.2"],
     # *strongly* suggested for sharing
-    version="2.5.2",
+    version="2.5.3",
     # The license can be anything you like
     license="MIT",
     description="A Python package to facilitate interaction with the Impect customer API",

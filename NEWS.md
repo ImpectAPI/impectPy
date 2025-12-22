@@ -1,3 +1,24 @@
+# impectPy 2.5.3
+
+## Major Changes
+* Addition of several new arguments and minor bug fixes to the XML generation
+
+## Minor Changes
+* Improved error handling
+* Addition of issue templates
+* Addition of a logger
+* Remove numpy restriction
+* Refactor batch calls to the IMPECT API
+* Bug fixes
+
+## Minor Changes
+* fix bugs in the following functions that occured if the coaches endpoint returned coaches for the iteration but the match does not have any coaches:
+  * `getEvents()`
+  * `getPlayerMatchSums()`
+  * `getSquadMatchSums()`
+  * `getPlayerMatchScores()`
+  * `getSquadMatchScores()`
+
 # impectPy 2.5.2
 
 ## Minor Changes
