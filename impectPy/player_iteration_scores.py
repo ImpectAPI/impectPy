@@ -2,7 +2,7 @@
 import pandas as pd
 import requests
 import warnings
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_df, ForbiddenError, safe_execute
+from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -29,7 +29,7 @@ allowed_positions = [
 
 
 def getPlayerIterationScores(
-        iteration: int, token: str, positions: list = None, session: requests.Session = requests.Session()
+        iteration: int, token: str, positions: list = None, session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
 
     # create an instance of RateLimitedAPI
