@@ -1,3 +1,8 @@
+# impectPy 2.5.4
+
+## Major Changes
+* Fix issue with direct function usage
+ 
 # impectPy 2.5.3
 
 ## Major Changes
