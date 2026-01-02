@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 import requests
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_dict, validate_response
+from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_dict, validate_response
 
 ######
 #
@@ -11,7 +11,7 @@ from impectPy.helpers import RateLimitedAPI, unnest_mappings_dict, validate_resp
 ######
 
 
-def getMatches(iteration: int, token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
+def getMatches(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
 
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)

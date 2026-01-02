@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 import re
 import warnings
-from impectPy.helpers import RateLimitedAPI, ForbiddenError, safe_execute
+from impectPy.helpers import RateLimitedAPI, ImpectSession, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -18,7 +18,7 @@ from .iterations import getIterationsFromHost
 
 def getEvents(
         matches: list, token: str, include_kpis: bool = True,
-        include_set_pieces: bool = True, session: requests.Session = requests.Session()
+        include_set_pieces: bool = True, session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
 
     # create an instance of RateLimitedAPI

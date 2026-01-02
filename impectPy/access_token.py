@@ -1,7 +1,7 @@
 # load packages
 import urllib
 import requests
-from impectPy.helpers import RateLimitedAPI
+from impectPy.helpers import RateLimitedAPI, ImpectSession
 
 ######
 #
@@ -11,7 +11,7 @@ from impectPy.helpers import RateLimitedAPI
 
 
 # define function
-def getAccessToken(username: str, password: str, session: requests.Session = requests.Session()) -> str:
+def getAccessToken(username: str, password: str, session: ImpectSession = ImpectSession()) -> str:
 
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
