@@ -1,7 +1,6 @@
 # load packages
 import pandas as pd
-import requests
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_df
+from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df
 from .iterations import getIterationsFromHost
 
 ######
@@ -13,7 +12,7 @@ from .iterations import getIterationsFromHost
 
 
 def getPlayerIterationAverages(
-        iteration: int, token: str, session: requests.Session = requests.Session()
+        iteration: int, token: str, session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
 
     # create an instance of RateLimitedAPI

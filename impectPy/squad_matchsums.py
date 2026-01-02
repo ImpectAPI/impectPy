@@ -2,7 +2,7 @@
 import pandas as pd
 import requests
 import warnings
-from impectPy.helpers import RateLimitedAPI, unnest_mappings_df, ForbiddenError, safe_execute
+from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -15,7 +15,7 @@ from .iterations import getIterationsFromHost
 ######
 
 
-def getSquadMatchsums(matches: list, token: str, session: requests.Session = requests.Session()) -> pd.DataFrame:
+def getSquadMatchsums(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
 
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
