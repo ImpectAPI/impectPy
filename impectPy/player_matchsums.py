@@ -249,7 +249,6 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
 
     # merge with other data
     matchsums["squadName"] = matchsums.squadId.map(squad_map)
-    matchsums["playerCountry"] = matchsums.squadId.map(country_map)
     matchsums = matchsums.merge(
         matchplan[["id", "scheduledDate", "matchDayIndex", "matchDayName", "iterationId"]],
         left_on="matchId",
@@ -283,6 +282,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         how="left",
         suffixes=("", "_right")
     )
+    matchsums["playerCountry"] = matchsums.countryId.map(country_map)
 
     if not coaches_blacklisted:
 
