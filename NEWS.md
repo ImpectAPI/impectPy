@@ -1,3 +1,12 @@
+# impectPy 2.5.5
+
+## Minor Changes
+* Fix issue column `playerCountry` in the following functions:
+  * `getPlayerMatchsums()`
+  * `getPlayerMatchScores()`
+  * `getPlayerIterationScores()`
+  * `getPlayerProfileScores()`
+
 # impectPy 2.5.4
 
 ## Major Changes
