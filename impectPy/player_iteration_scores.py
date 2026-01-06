@@ -263,7 +263,6 @@ def getPlayerIterationScoresFromHost(
 
     # merge with other data
     averages["squadName"] = averages.squadId.map(squad_map)
-    averages["playerCountry"] = averages.squadId.map(country_map)
     averages = averages.merge(
         iterations[["id", "competitionName", "season"]],
         left_on="iterationId",
@@ -282,6 +281,7 @@ def getPlayerIterationScoresFromHost(
         how="left",
         suffixes=("", "_right")
     )
+    averages["playerCountry"] = averages.countryId.map(country_map)
 
     # remove NA rows
     averages = averages[averages.iterationId.notnull()]
