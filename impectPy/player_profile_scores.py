@@ -187,7 +187,6 @@ def getPlayerProfileScoresFromHost(
         profile_scores.drop(["-1"], inplace=True, axis=1)
 
     # merge with playDuration and matchShare
-    profile_scores["playerCountry"] = profile_scores.squadId.map(country_map)
     profile_scores = profile_scores.merge(
         match_shares,
         left_on=["iterationId", "squadId", "playerId", "positions"],
@@ -222,6 +221,7 @@ def getPlayerProfileScoresFromHost(
         how="left",
         suffixes=("", "_right")
     )
+    profile_scores["playerCountry"] = profile_scores.countryId.map(country_map)
 
     # remove NA rows
     profile_scores = profile_scores[profile_scores.iterationId.notnull()]
