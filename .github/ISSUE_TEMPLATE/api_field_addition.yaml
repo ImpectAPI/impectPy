@@ -1,0 +1,99 @@
+name: 🔌 API Field/Endpoint Addition
+description: Request support for new API endpoints or fields in impectPy
+labels: [enhancement, api]
+body:
+  - type: dropdown
+    id: addition_type
+    attributes:
+      label: Type of Addition
+      description: What type of API addition are you requesting?
+      options:
+        - Single new field within an endpoint
+        - Multiple new fields within an endpoint
+        - Entirely new endpoint
+    validations:
+      required: true
+
+  - type: input
+    id: endpoint_name
+    attributes:
+      label: Endpoint Name/Path
+      description: The API endpoint this relates to (e.g., `/matches`, `/events`, `/players`)
+      placeholder: e.g., /matches or getMatches()
+    validations:
+      required: true
+
+  - type: textarea
+    id: field_details
+    attributes:
+      label: Field Details
+      description: |
+        List the field(s) you want added. Include field name, data type, and description.
+        **For new endpoints:** Describe the expected response structure.
+      placeholder: |
+        - Field name: `stadium`
+          - Type: string
+          - Description: Name of the stadium where the match is played
+          - Example value: "Old Trafford"
+
+        - Field name: `attendance`
+          - Type: integer
+          - Description: Number of spectators at the match
+          - Example value: 74879
+    validations:
+      required: true
+
+  - type: textarea
+    id: new_endpoint_details
+    attributes:
+      label: New Endpoint Details (if applicable)
+      description: |
+        **Only for new endpoints:** Provide HTTP method, purpose, parameters, and expected response structure.
+      placeholder: |
+        - HTTP Method: GET
+        - Purpose: Retrieve detailed player statistics for a specific season
+        - Parameters:
+          - playerId (required): integer
+          - seasonId (optional): integer
+        - Expected response: JSON object with player stats
+        - Proposed Python method name: `getPlayerSeasonStats()`
+
+  - type: input
+    id: api_documentation
+    attributes:
+      label: API Documentation Reference
+      description: Link to official Impect API documentation for this field/endpoint (if available)
+      placeholder: https://docs.impect.com/api/...
+
+  - type: textarea
+    id: example_response
+    attributes:
+      label: Example API Response
+      description: |
+        If possible, provide an example of the raw API response showing this field/endpoint.
+      placeholder: |
+        ```json
+        {
+          "matchId": 12345,
+          "homeTeam": "Manchester United",
+          "awayTeam": "Liverpool",
+          "stadium": "Old Trafford",
+          "attendance": 74879
+        }
+        ```
+
+  - type: textarea
+    id: proposed_implementation
+    attributes:
+      label: Proposed Implementation (Optional)
+      description: |
+        If you have ideas on how to implement this in impectPy, share them here.
+      placeholder: |
+        Add 'stadium' column to the DataFrame returned by getMatches().
+        Map from API field 'venue.name' to 'stadium' in the response.
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any other information, screenshots, or examples that might be helpful.
