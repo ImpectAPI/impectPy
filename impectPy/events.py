@@ -477,12 +477,19 @@ def getEventsFromHost(
         "setPieceSubPhaseCornerType",
         "setPieceSubPhaseFreeKickEndZone",
         "setPieceSubPhaseFreeKickType",
+        "setPieceSubPhaseGoalKickEndZone",
+        "setPieceSubPhaseGoalKickType",
+        "setPieceSubPhaseThrowInEndZone",
+        "setPieceSubPhaseThrowInType",
+        "setPieceSubPhaseSecondDeliveryEndZone",
+        "setPieceSubPhaseSecondDeliveryType",
         "setPieceSubPhaseMainEvent",
         "setPieceSubPhaseMainEventPlayerId",
         "setPieceSubPhaseMainEventPlayerName",
         "setPieceSubPhaseMainEventOutcome",
         "setPieceSubPhasePassReceiverId",
         "setPieceSubPhasePassReceiverName",
+        "setPieceSubPhaseBallTrajectory",
         "setPieceSubPhaseFirstTouchPlayerId",
         "setPieceSubPhaseFirstTouchPlayerName",
         "setPieceSubPhaseFirstTouchWon",
@@ -490,6 +497,7 @@ def getEventsFromHost(
         "setPieceSubPhaseSecondTouchPlayerId",
         "setPieceSubPhaseSecondTouchPlayerName",
         "setPieceSubPhaseSecondTouchWon",
+        "setPieceSubPhaseSecondTouchEndZone",
     ]
 
     # add columns that might not exist in previous data versions
