@@ -1,3 +1,16 @@
+# impectPy 2.5.6
+
+## Minor Changes
+* Add new columns to `getEvents()` and `getSetPieces()` functions:
+  * `setPieceSubPhaseGoalKickEndZone`
+  * `setPieceSubPhaseGoalKickType`
+  * `setPieceSubPhaseThrowInEndZone`
+  * `setPieceSubPhaseThrowInType`
+  * `setPieceSubPhaseSecondDeliveryEndZone`
+  * `setPieceSubPhaseSecondDeliveryType`
+  * `setPieceSubPhaseBallTrajectory`
+  * `setPieceSubPhaseSecondTouchEndZone`
+
 # impectPy 2.5.5
 
 ## Minor Changes

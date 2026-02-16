@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.5.5
+Version: v2.5.6
 
-**Updated: January 6th 2025**
+**Updated: February 16th 2026**
 
 ---
 
