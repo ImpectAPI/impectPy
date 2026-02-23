@@ -134,7 +134,7 @@ class RateLimitedAPI:
 
     def make_api_request(
             self, url: str, method: str, data: Optional[Dict[str, Any]] = None,
-            max_retries: int = 3, retry_delay: int = 1
+            max_retries: int = 3, retry_delay: Optional[int] = None
     ) -> ImpectResponse:
         """
         Executes an API call.
@@ -154,10 +154,20 @@ class RateLimitedAPI:
             elif response.status_code == 429:
                 # check if last try
                 if i < max_retries - 1:
+                    # calculate exact wait time based on token bucket refill time
+                    if self.bucket and retry_delay is None:
+                        wait_time = math.ceil(
+                            self.bucket.refill_after * 100 - (
+                                    time.time() - self.bucket.last_refill_time
+                            ) * 100
+                        ) / 100
+                    else:
+                        wait_time = retry_delay if retry_delay is not None else 1
+
                     print(f"Received status code {response.status_code} "
                           f"({response.json().get('message', 'Rate Limit Exceeded')})"
-                          f", retrying in {retry_delay} seconds...")
-                    time.sleep(retry_delay)
+                          f", retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
                 else:
                     raise HTTPError(f"Received status code {response.status_code} "
                                     f"({response.json().get('message', 'Rate Limit Exceeded')})"
