@@ -164,7 +164,7 @@ def getSetPiecesFromHost(matches: list, connection: RateLimitedAPI, host: str) -
         left_on="matchId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchplan")
     )
 
     # merge with competition info
@@ -173,7 +173,7 @@ def getSetPiecesFromHost(matches: list, connection: RateLimitedAPI, host: str) -
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     )
 
     # determine defending squad
@@ -208,7 +208,7 @@ def getSetPiecesFromHost(matches: list, connection: RateLimitedAPI, host: str) -
         left_on="setPieceSubPhaseMainEventPlayerId",
         right_on="setPieceSubPhaseMainEventPlayerId",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_main")
     ).merge(
         players[["id", "commonname"]].rename(
             columns={
@@ -219,7 +219,7 @@ def getSetPiecesFromHost(matches: list, connection: RateLimitedAPI, host: str) -
         left_on="setPieceSubPhasePassReceiverId",
         right_on="setPieceSubPhasePassReceiverId",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_receiver")
     ).merge(
         players[["id", "commonname"]].rename(
             columns={
@@ -230,7 +230,7 @@ def getSetPiecesFromHost(matches: list, connection: RateLimitedAPI, host: str) -
         left_on="setPieceSubPhaseFirstTouchPlayerId",
         right_on="setPieceSubPhaseFirstTouchPlayerId",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_first")
     ).merge(
         players[["id", "commonname"]].rename(
             columns={
@@ -241,7 +241,7 @@ def getSetPiecesFromHost(matches: list, connection: RateLimitedAPI, host: str) -
         left_on="setPieceSubPhaseSecondTouchPlayerId",
         right_on="setPieceSubPhaseSecondTouchPlayerId",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_second")
     )
 
     # rename some columns

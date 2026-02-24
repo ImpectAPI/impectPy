@@ -78,7 +78,7 @@ def getSquadIterationAveragesFromHost(iteration: int, connection: RateLimitedAPI
         left_on="kpiId",
         right_on="id",
         how="outer",
-        suffixes=("", "_right")
+        suffixes=("", "_kpis")
     )
 
     # pivot kpi values
@@ -99,7 +99,7 @@ def getSquadIterationAveragesFromHost(iteration: int, connection: RateLimitedAPI
         left_on="squadId",
         right_on="squadId",
         how="inner",
-        suffixes=("", "_right")
+        suffixes=("", "_matches")
     )
 
     # merge with other data
@@ -108,7 +108,7 @@ def getSquadIterationAveragesFromHost(iteration: int, connection: RateLimitedAPI
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     ).merge(
         squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
@@ -116,7 +116,7 @@ def getSquadIterationAveragesFromHost(iteration: int, connection: RateLimitedAPI
         left_on="squadId",
         right_on="squadId",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_squads")
     )
 
     # remove NA rows

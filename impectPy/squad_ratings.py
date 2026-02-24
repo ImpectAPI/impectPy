@@ -80,7 +80,7 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     )
 
     # merge events with squads

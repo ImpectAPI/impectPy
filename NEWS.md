@@ -1,3 +1,9 @@
+# impectPy 2.5.7
+
+## Minor Changes
+* Fix compatibility issues with pandas version >= 3.0.0
+* Improve rate limit handling
+
 # impectPy 2.5.6
 
 ## Minor Changes

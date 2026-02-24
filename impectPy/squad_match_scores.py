@@ -181,7 +181,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
                 left_on="squadScoreId",
                 right_on="id",
                 how="outer",
-                suffixes=("", "_right")
+                suffixes=("", "_scores")
             )
 
             # pivot data
@@ -204,7 +204,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         left_on="matchId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchplan")
     ).merge(
         pd.concat([
             match_data[["id","squadHomeId", "squadHomeCoachId"]].rename(columns={"squadHomeId": "squadId", "squadHomeCoachId": "coachId"}),
@@ -213,13 +213,13 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         left_on=["matchId", "squadId"],
         right_on=["id", "squadId"],
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchData")
     ).merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     ).merge(
         squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
@@ -227,7 +227,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         left_on="squadId",
         right_on="squadId",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_squads")
     )
 
     if not coaches_blacklisted:

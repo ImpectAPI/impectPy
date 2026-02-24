@@ -220,7 +220,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
                 left_on="kpiId",
                 right_on="id",
                 how="outer",
-                suffixes=("", "_right")
+                suffixes=("", "_kpis")
             )
 
             # pivot data
@@ -241,7 +241,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
                 left_on=["matchId", "squadId", "id", "position"],
                 right_on=["matchId", "squadId", "id", "position"],
                 how="inner",
-                suffixes=("", "_right")
+                suffixes=("", "_matchShares")
             )
 
             # append to matchsums
@@ -254,7 +254,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         left_on="matchId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchplan")
     ).merge(
         pd.concat([
             match_data[["id","squadHomeId", "squadHomeCoachId"]].rename(columns={"squadHomeId": "squadId", "squadHomeCoachId": "coachId"}),
@@ -263,13 +263,13 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         left_on=["matchId", "squadId"],
         right_on=["id", "squadId"],
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchData")
     ).merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     ).merge(
         players[[
             "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
@@ -280,7 +280,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         left_on="id",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_players")
     )
     matchsums["playerCountry"] = matchsums.countryId.map(country_map)
 

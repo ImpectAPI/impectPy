@@ -82,7 +82,7 @@ def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, hos
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     )
 
     # merge events with squads

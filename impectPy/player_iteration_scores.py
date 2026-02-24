@@ -192,7 +192,7 @@ def getPlayerIterationScoresFromHost(
         left_on="playerScoreId",
         right_on="id",
         how="outer",
-        suffixes=("", "_right")
+        suffixes=("", "_scores")
     )
 
     # get matchShares
@@ -226,7 +226,7 @@ def getPlayerIterationScoresFromHost(
             left_on=["iterationId", "squadId", "playerId", "position"],
             right_on=["iterationId", "squadId", "playerId", "position"],
             how="inner",
-            suffixes=("", "_right")
+            suffixes=("", "_matchShares")
         )
     else:
         match_shares = averages[
@@ -258,7 +258,7 @@ def getPlayerIterationScoresFromHost(
             left_on=["iterationId", "squadId", "playerId", "positions"],
             right_on=["iterationId", "squadId", "playerId", "positions"],
             how="inner",
-            suffixes=("", "_right")
+            suffixes=("", "_matchShares")
         )
 
     # merge with other data
@@ -268,7 +268,7 @@ def getPlayerIterationScoresFromHost(
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     ).merge(
         players[[
             "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
@@ -279,7 +279,7 @@ def getPlayerIterationScoresFromHost(
         left_on="playerId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_players")
     )
     averages["playerCountry"] = averages.countryId.map(country_map)
 

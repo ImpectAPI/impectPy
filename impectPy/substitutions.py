@@ -200,7 +200,7 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
         left_on="id",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchplan")
     )
 
     # merge with competition info
@@ -209,7 +209,7 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     )
 
     # rename some columns
