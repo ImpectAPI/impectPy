@@ -204,7 +204,7 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         left_on="matchId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchplan")
     ).merge(
         pd.concat([
             match_data[["id","squadHomeId", "squadHomeCoachId"]].rename(columns={"squadHomeId": "squadId", "squadHomeCoachId": "coachId"}),
@@ -213,13 +213,13 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         left_on=["matchId", "squadId"],
         right_on=["id", "squadId"],
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchData")
     ).merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     ).merge(
         squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}

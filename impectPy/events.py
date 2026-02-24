@@ -275,20 +275,20 @@ def getEventsFromHost(
         left_on="matchId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchplan")
     ).merge(
         match_data[["id", "squadHomeCoachId", "squadAwayCoachId"]].rename(
             columns={"squadHomeCoachId": "homeSquadCoachId", "squadAwayCoachId": "awaySquadCoachId"}),
         left_on="matchId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchData")
     ).merge(
         iterations,
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     )
 
     if not coaches_blacklisted:
@@ -337,7 +337,7 @@ def getEventsFromHost(
             left_on=["setPieceId", "setPieceSubPhaseId"],
             right_on=["setPieceId", "setPieceSubPhaseId"],
             how="left",
-            suffixes=("", "_right")
+            suffixes=("", "_setPieces")
         )
         events["setPieceSubPhaseMainEventPlayerName"] = events.setPieceSubPhaseMainEventPlayerId.map(player_map)
         events["setPieceSubPhasePassReceiverName"] = events.setPieceSubPhasePassReceiverId.map(player_map)

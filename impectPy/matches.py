@@ -89,7 +89,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         countries,
         left_on="homeSquadCountryId",
         right_on="id",
-        suffixes=("", "_right")
+        suffixes=("", "_homeSquadCountry")
     )
     matches = matches.rename(columns={"fifaName": "homeSquadCountryName"})
 
@@ -97,7 +97,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         countries,
         left_on="awaySquadCountryId",
         right_on="id",
-        suffixes=("", "_right")
+        suffixes=("", "_awaySquadCountry")
     )
     matches = matches.rename(columns={"fifaName": "awaySquadCountryName"})
 

@@ -115,7 +115,7 @@ def getPlayerIterationAveragesFromHost(
             left_on="kpiId",
             right_on="id",
             how="outer",
-            suffixes=("", "_right")
+            suffixes=("", "_kpis")
         )
 
         # fill missing values in the "name" column with a default value to ensure players without scorings don't get lost
@@ -173,7 +173,7 @@ def getPlayerIterationAveragesFromHost(
             left_on=["iterationId", "squadId", "playerId", "position"],
             right_on=["iterationId", "squadId", "playerId", "position"],
             how="inner",
-            suffixes=("", "_right")
+            suffixes=("", "_matchShares")
         )
 
         averages_list.append(averages_raw)
@@ -187,7 +187,7 @@ def getPlayerIterationAveragesFromHost(
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     ).merge(
         squads[["id", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
@@ -195,7 +195,7 @@ def getPlayerIterationAveragesFromHost(
         left_on="squadId",
         right_on="squadId",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_squads")
     ).merge(
         players[[
             "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
@@ -206,13 +206,13 @@ def getPlayerIterationAveragesFromHost(
         left_on="playerId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_players")
     ).merge(
         countries.rename(columns={"fifaName": "playerCountry"}),
         left_on="countryId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_countries")
     )
 
     # remove NA rows

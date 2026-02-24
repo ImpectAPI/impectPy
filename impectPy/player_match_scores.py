@@ -294,7 +294,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
                 left_on="playerScoreId",
                 right_on="id",
                 how="outer",
-                suffixes=("", "_right")
+                suffixes=("", "_scores")
             )
 
             # pivot data
@@ -316,7 +316,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
                     left_on=["matchId", "squadId", "id", "position"],
                     right_on=["matchId", "squadId", "id", "position"],
                     how="inner",
-                    suffixes=("", "_right")
+                    suffixes=("", "_matchShares")
                 )
             else:
                 temp = pd.pivot_table(
@@ -336,7 +336,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
                     left_on=["matchId", "squadId", "id", "positions"],
                     right_on=["matchId", "squadId", "id", "positions"],
                     how="inner",
-                    suffixes=("", "_right")
+                    suffixes=("", "_matchShares")
                 )
 
             # append to match_player_scores
@@ -360,7 +360,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         left_on="matchId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchplan")
     ).merge(
         pd.concat([
             match_data[["id","squadHomeId", "squadHomeCoachId"]].rename(columns={"squadHomeId": "squadId", "squadHomeCoachId": "coachId"}),
@@ -369,13 +369,13 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         left_on=["matchId", "squadId"],
         right_on=["id", "squadId"],
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_matchData")
     ).merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     ).merge(
         players[[
             "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
@@ -386,7 +386,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
         left_on="id",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_players")
     )
     player_scores["playerCountry"] = player_scores.countryId.map(country_map)
 
