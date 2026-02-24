@@ -160,7 +160,7 @@ def getPlayerProfileScoresFromHost(
         left_on="profileName",
         right_on="name",
         how="outer",
-        suffixes=("", "_right")
+        suffixes=("", "_scores")
     )
 
     # get matchShares
@@ -192,7 +192,7 @@ def getPlayerProfileScoresFromHost(
         left_on=["iterationId", "squadId", "playerId", "positions"],
         right_on=["iterationId", "squadId", "playerId", "positions"],
         how="inner",
-        suffixes=("", "_right")
+        suffixes=("", "_matchShares")
     )
     # merge with other data
     profile_scores = profile_scores.merge(
@@ -200,7 +200,7 @@ def getPlayerProfileScoresFromHost(
         left_on="iterationId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_iterations")
     ).merge(
         squads[["id", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
@@ -208,7 +208,7 @@ def getPlayerProfileScoresFromHost(
         left_on="squadId",
         right_on="squadId",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_squads")
     ).merge(
         players[[
             "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
@@ -219,7 +219,7 @@ def getPlayerProfileScoresFromHost(
         left_on="playerId",
         right_on="id",
         how="left",
-        suffixes=("", "_right")
+        suffixes=("", "_players")
     )
     profile_scores["playerCountry"] = profile_scores.countryId.map(country_map)
 
