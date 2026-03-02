@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 import re
 import warnings
-from impectPy.helpers import RateLimitedAPI, ImpectSession, ForbiddenError, safe_execute
+from impectPyRSCA.helpers import RateLimitedAPI, ImpectSession, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 

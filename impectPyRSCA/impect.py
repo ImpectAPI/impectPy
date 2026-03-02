@@ -1,4 +1,4 @@
-from impectPy.config import Config
+from impectPyRSCA.config import Config
 from .helpers import RateLimitedAPI
 from .access_token import getAccessTokenFromUrl
 from .iterations import getIterationsFromHost

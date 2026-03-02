@@ -1,7 +1,7 @@
 # load packages
 import urllib
 import requests
-from impectPy.helpers import RateLimitedAPI, ImpectSession
+from impectPyRSCA.helpers import RateLimitedAPI, ImpectSession
 
 ######
 #
