@@ -2,30 +2,30 @@
 import pandas as pd
 import requests
 import warnings
-from impectPy.helpers import RateLimitedAPI, ImpectSession, safe_execute
+from impectPyRSCA.helpers import RateLimitedAPI, ImpectSession, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
 ######
 #
-# This function returns a pandas dataframe that contains all substitutions for a
+# This function returns a pandas dataframe that contains the starting formations for a
 # given match
 #
 ######
 
 
-def getSubstitutions(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
+def getStartingPositions(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
     # construct header with access token
     connection.session.headers.update({"Authorization": f"Bearer {token}"})
 
-    return getSubstitutionsFromHost(matches, connection, "https://api.impect.com")
+    return getStartingPositionsFromHost(matches, connection, "https://api.impect.com")
 
 
 # define function
-def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
     # check input for matches argument
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")
@@ -78,19 +78,6 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     # extract iterationIds
     iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
-    # get squads
-    squads_list = []
-    for iteration in iterations:
-        squads = connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
-            method="GET"
-        ).process_response(
-            endpoint="Squads"
-        )[["id", "name"]]
-        squads_list.append(squads)
-    squads = pd.concat(squads_list).drop_duplicates()
-    squad_map = squads.set_index("id")["name"].to_dict()
-
     # get players
     players_list = []
     for iteration in iterations:
@@ -103,6 +90,19 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
         players_list.append(players)
     players = pd.concat(players_list).drop_duplicates()
     player_map = players.set_index("id")["commonname"].to_dict()
+
+    # get squads
+    squads_list = []
+    for iteration in iterations:
+        squads = connection.make_api_request_limited(
+            url=f"{host}/v5/customerapi/iterations/{iteration}/squads",
+            method="GET"
+        ).process_response(
+            endpoint="Squads"
+        )[["id", "name"]]
+        squads_list.append(squads)
+    squads = pd.concat(squads_list).drop_duplicates()
+    squad_map = squads.set_index("id")["name"].to_dict()
 
     # get matches
     matchplan_list = []
@@ -141,58 +141,43 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
         axis=1
     )
 
-    # extract substitutions
-    substitutions_home = match_data[["id", "squadHomeId", "squadHomeSubstitutions"]].rename(
-        columns={"squadHomeSubstitutions": "squadSubstitutions", "squadHomeId": "squadId"}
+    # extract starting_positions
+    starting_positions_home = match_data[["id", "squadHomeId", "squadHomeStartingPositions"]].rename(
+        columns={"squadHomeStartingPositions": "squadStartingPositions", "squadHomeId": "squadId"}
     )
-    substitutions_away = match_data[["id", "squadAwayId", "squadAwaySubstitutions"]].rename(
-        columns={"squadAwaySubstitutions": "squadSubstitutions", "squadAwayId": "squadId"}
+    starting_positions_away = match_data[["id", "squadAwayId", "squadAwayStartingPositions"]].rename(
+        columns={"squadAwayStartingPositions": "squadStartingPositions", "squadAwayId": "squadId"}
     )
 
     # concat dfs
-    substitutions = pd.concat([substitutions_home, substitutions_away], axis=0).reset_index(drop=True)
+    starting_positions = pd.concat([starting_positions_home, starting_positions_away], axis=0).reset_index(drop=True)
 
     # unnest formations column
-    substitutions = substitutions.explode("squadSubstitutions").reset_index(drop=True)
-
-    # drop emtpy row that occurs if one team did not substitute
-    substitutions = substitutions[substitutions.squadSubstitutions.notnull()].reset_index(drop=True)
+    starting_positions = starting_positions.explode("squadStartingPositions").reset_index(drop=True)
 
     # normalize the JSON structure into separate columns
-    substitutions = substitutions.join(pd.json_normalize(substitutions["squadSubstitutions"]))
+    starting_positions = starting_positions.join(pd.json_normalize(starting_positions["squadStartingPositions"]))
 
     # drop the original column
-    substitutions.drop(columns=["squadSubstitutions"], inplace=True)
-
-    # fix potential typing issues
-    substitutions.exchangedPlayerId = substitutions.exchangedPlayerId.astype("Int64")
+    starting_positions.drop(columns=["squadStartingPositions"], inplace=True)
 
     # start merging dfs
 
-    # merge substitutions with master data
-    substitutions["squadName"] = substitutions.squadId.map(squad_map)
-    substitutions["playerName"] = substitutions.playerId.map(player_map)
-    substitutions["exchangedPlayerName"] = substitutions.exchangedPlayerId.map(player_map)
-
     # merge substitutions with shirt numbers
-    substitutions = substitutions.merge(
+    starting_positions = starting_positions.merge(
         shirt_numbers,
         left_on=["playerId", "squadId", "id"],
         right_on=["playerId", "squadId", "id"],
         how="left",
         suffixes=("", "_x")
-    ).merge(
-        shirt_numbers.rename(
-            columns={"playerId": "exchangedPlayerId", "shirtNumber": "exchangedShirtNumber"}
-        ),
-        left_on=["exchangedPlayerId", "squadId", "id"],
-        right_on=["exchangedPlayerId", "squadId", "id"],
-        how="left",
-        suffixes=("", "_x")
     )
 
+    # merge substitutions with squads
+    starting_positions["squadName"] = starting_positions.squadId.map(squad_map)
+    starting_positions["playerName"] = starting_positions.playerId.map(player_map)
+
     # merge with matches info
-    substitutions = substitutions.merge(
+    starting_positions = starting_positions.merge(
         matchplan[[
             "id", "skillCornerId", "heimSpielId", "wyscoutId", "matchDayIndex",
             "matchDayName", "scheduledDate", "lastCalculationDate", "iterationId"
@@ -204,7 +189,7 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     )
 
     # merge with competition info
-    substitutions = substitutions.merge(
+    starting_positions = starting_positions.merge(
         iterations[["id", "competitionName", "competitionId", "competitionType", "season"]],
         left_on="iterationId",
         right_on="id",
@@ -213,17 +198,17 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     )
 
     # rename some columns
-    substitutions = substitutions.rename(columns={
+    starting_positions = starting_positions.rename(columns={
         "id": "matchId",
-        "positionSide": "toPositionSide",
         "scheduledDate": "dateTime",
-        "gameTime.gameTime": "gameTime",
-        "gameTime.gameTimeInSec": "gameTimeInSec"
     })
 
     # fix column types
-    substitutions["shirtNumber"] = substitutions["shirtNumber"].astype("Int64")
-    substitutions["exchangedShirtNumber"] = substitutions["exchangedShirtNumber"].astype("Int64")
+    missing_shirt_numbers = starting_positions["shirtNumber"].isnull()
+    if missing_shirt_numbers.any():
+        print("Warning: The following players are missing a shirt number and will be set to None:")
+        print(starting_positions[missing_shirt_numbers][["matchId", "squadName", "playerName"]].to_string(index=False))
+    starting_positions["shirtNumber"] = starting_positions["shirtNumber"].astype("Int64")
 
     # define desired column order
     cols = [
@@ -238,26 +223,18 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
         "matchDayName",
         "squadId",
         "squadName",
-        "gameTime",
-        "gameTimeInSec",
-        "substitutionType",
         "playerId",
         "playerName",
         "shirtNumber",
-        "fromPosition",
-        "fromPositionSide",
-        "toPosition",
-        "toPositionSide",
-        "exchangedPlayerId",
-        "exchangedPlayerName",
-        "exchangedShirtNumber",
+        "position",
+        "positionSide"
     ]
 
     # reorder data
-    substitutions = substitutions[cols]
+    starting_positions = starting_positions[cols]
 
     # reorder rows
-    substitutions = substitutions.sort_values(["matchId", "squadId", "gameTimeInSec", "playerId"])
+    starting_positions = starting_positions.sort_values(["matchId", "squadId", "playerId"])
 
     # return events
-    return substitutions
+    return starting_positions

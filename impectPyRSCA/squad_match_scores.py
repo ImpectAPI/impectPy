@@ -2,20 +2,19 @@
 import pandas as pd
 import requests
 import warnings
-from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
+from impectPyRSCA.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
-
 ######
 #
-# This function returns a pandas dataframe that contains all kpis for a
+# This function returns a pandas dataframe that contains all scores for a
 # given match aggregated per squad
 #
 ######
 
 
-def getSquadMatchsums(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
+def getSquadMatchScores(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
 
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
@@ -23,13 +22,13 @@ def getSquadMatchsums(matches: list, token: str, session: ImpectSession = Impect
     # construct header with access token
     connection.session.headers.update({"Authorization": f"Bearer {token}"})
 
-    return getSquadMatchsumsFromHost(matches, connection, "https://api.impect.com")
+    return getSquadMatchScoresFromHost(matches, connection, "https://api.impect.com")
 
-def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(matches, list):
-        raise Exception("Input vor matches argument must be a list of integers")
+        raise Exception("Argument 'matches' must be a list of integers.")
 
     # create list to store matches that are forbidden (HTTP 403)
     forbidden_matches = []
@@ -79,25 +78,25 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
     # extract iterationIds
     iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
-    # get squad match sums
-    def fetch_squad_match_sums(connection, url):
+    # get squad match scores
+    def fetch_squad_match_scores(connection, url):
         return connection.make_api_request_limited(
             url=url,
             method="GET"
-        ).process_response(endpoint="Squad Match Sums")
+        ).process_response(endpoint="Player Match Sums")
 
     # create list to store dfs
-    matchsums_list = []
+    scores_list = []
     for match in matches:
-        matchsums = safe_execute(
-            fetch_squad_match_sums,
+        scores = safe_execute(
+            fetch_squad_match_scores,
             connection,
-            url=f"{host}/v5/customerapi/matches/{match}/squad-kpis",
+            url=f"{host}/v5/customerapi/matches/{match}/squad-scores",
             identifier=f"{match}",
             forbidden_list=forbidden_matches
         ).assign(matchId=match)
-        matchsums_list.append(matchsums)
-    matchsums_raw = pd.concat(matchsums_list).reset_index(drop=True)
+        scores_list.append(scores)
+    scores_raw = pd.concat(scores_list).reset_index(drop=True)
 
     # get squads
     squads_list = []
@@ -110,6 +109,9 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         )[["id", "name", "idMappings"]]
         squads_list.append(squads)
     squads = pd.concat(squads_list).drop_duplicates("id").reset_index(drop=True)
+
+    # unnest mappings
+    squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
     # get coaches
     coaches_blacklisted = False
@@ -131,15 +133,12 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
             coaches_blacklisted = True
     coaches = pd.concat(coaches_list).drop_duplicates()
 
-    # unnest mappings
-    squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
-
-    # get kpis
-    kpis = connection.make_api_request_limited(
-        url=f"{host}/v5/customerapi/kpis",
+    # get squad scores
+    scores = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/squad-scores",
         method="GET"
     ).process_response(
-        endpoint="KPIs"
+        endpoint="PlayerScores"
     )[["id", "name"]]
 
     # get matches
@@ -156,32 +155,33 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
-    # create empty df to store matchsums
-    matchsums = pd.DataFrame()
+    # create empty df to store squad scores
+    squad_scores = pd.DataFrame()
 
-    # manipulate matchsums
+    # manipulate squad scores
 
     # iterate over matches
-    for i in range(len(matchsums_raw)):
+    for i in range(len(scores_raw)):
 
         # iterate over sides
-        for side in ["squadHomeKpis", "squadAwayKpis"]:
+        for side in ["squadHomeSquadScores", "squadAwaySquadScores"]:
             # get data for index
-            temp = matchsums_raw[side].loc[i]
+            temp = scores_raw[side].loc[i]
 
             # convert to pandas df
             temp = pd.DataFrame(temp).assign(
-                matchId=matchsums_raw.matchId.loc[i],
-                squadId=matchsums_raw[side.replace("Kpis", "Id")].loc[i]
+                matchId=scores_raw.matchId.loc[i],
+                squadId=scores_raw[side.replace("SquadScores", "Id")].loc[i]
             )
 
-            # merge with kpis to ensure all kpis are present
-            temp = temp.merge(
-                kpis,
-                left_on="kpiId",
+            # merge with squad scores to ensure all scores are present
+            temp = pd.merge(
+                temp,
+                scores,
+                left_on="squadScoreId",
                 right_on="id",
                 how="outer",
-                suffixes=("", "right")
+                suffixes=("", "_scores")
             )
 
             # pivot data
@@ -195,11 +195,11 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
                 dropna=False
             ).reset_index()
 
-            # append to matchsums
-            matchsums = pd.concat([matchsums, temp])
+            # append to player_scores
+            squad_scores = pd.concat([squad_scores, temp])
 
     # merge with other data
-    matchsums = matchsums.merge(
+    squad_scores = squad_scores.merge(
         matchplan[["id", "scheduledDate", "matchDayIndex", "matchDayName", "iterationId"]],
         left_on="matchId",
         right_on="id",
@@ -227,7 +227,7 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         left_on="squadId",
         right_on="squadId",
         how="left",
-        suffixes=("", "_home")
+        suffixes=("", "_squads")
     )
 
     if not coaches_blacklisted:
@@ -236,11 +236,11 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         coaches_map = coaches.set_index("id")["name"].to_dict()
 
         # convert coachId to integer if it is None
-        matchsums["coachId"] = matchsums["coachId"].astype("Int64")
-        matchsums["coachName"] = matchsums.coachId.map(coaches_map)
+        squad_scores["coachId"] = squad_scores["coachId"].astype("Int64")
+        squad_scores["coachName"] = squad_scores.coachId.map(coaches_map)
 
     # rename some columns
-    matchsums = matchsums.rename(columns={
+    squad_scores = squad_scores.rename(columns={
         "scheduledDate": "dateTime"
     })
 
@@ -264,34 +264,25 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
         "coachName"
     ]
 
-    # add kpiNames to order
-    order += kpis['name'].to_list()
-
-    # filter for non-NA columns only
-    matchsums = matchsums[
-        (matchsums.matchId.notnull()) &
-        (matchsums.squadId.notnull())
-    ]
-
-    # reset index
-    matchsums = matchsums.reset_index()
-
     # check if coaches are blacklisted
     if coaches_blacklisted:
         order = [col for col in order if col not in ["coachId", "coachName"]]
 
-    # select & order columns
-    matchsums = matchsums[order]
+    # add scoreNames to order
+    order += scores["name"].to_list()
+
+    # select columns
+    squad_scores = squad_scores[order]
 
     # fix some column types
-    matchsums["matchId"] = matchsums["matchId"].astype("Int64")
-    matchsums["competitionId"] = matchsums["competitionId"].astype("Int64")
-    matchsums["iterationId"] = matchsums["iterationId"].astype("Int64")
-    matchsums["matchDayIndex"] = matchsums["matchDayIndex"].astype("Int64")
-    matchsums["squadId"] = matchsums["squadId"].astype("Int64")
-    matchsums["wyscoutId"] = matchsums["wyscoutId"].astype("Int64")
-    matchsums["heimSpielId"] = matchsums["heimSpielId"].astype("Int64")
-    matchsums["skillCornerId"] = matchsums["skillCornerId"].astype("Int64")
+    squad_scores["matchId"] = squad_scores["matchId"].astype("Int64")
+    squad_scores["competitionId"] = squad_scores["competitionId"].astype("Int64")
+    squad_scores["iterationId"] = squad_scores["iterationId"].astype("Int64")
+    squad_scores["matchDayIndex"] = squad_scores["matchDayIndex"].astype("Int64")
+    squad_scores["squadId"] = squad_scores["squadId"].astype("Int64")
+    squad_scores["wyscoutId"] = squad_scores["wyscoutId"].astype("Int64")
+    squad_scores["heimSpielId"] = squad_scores["heimSpielId"].astype("Int64")
+    squad_scores["skillCornerId"] = squad_scores["skillCornerId"].astype("Int64")
 
     # return data
-    return matchsums
+    return squad_scores

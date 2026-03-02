@@ -1,6 +1,6 @@
 # load packages
 import pandas as pd
-from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df
+from impectPyRSCA.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df
 from .iterations import getIterationsFromHost
 
 ######

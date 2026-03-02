@@ -1,7 +1,7 @@
 # load packages
 import pandas as pd
 import requests
-from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df
+from impectPyRSCA.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df
 from .iterations import getIterationsFromHost
 
 ######
@@ -12,7 +12,7 @@ from .iterations import getIterationsFromHost
 
 
 # define function
-def getSquadRatings(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
+def getSquadCoefficients(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
 
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
@@ -20,9 +20,9 @@ def getSquadRatings(iteration: int, token: str, session: ImpectSession = ImpectS
     # construct header with access token
     connection.session.headers.update({"Authorization": f"Bearer {token}"})
 
-    return getSquadRatingsFromHost(iteration, connection, "https://api.impect.com")
+    return getSquadCoefficientsFromHost(iteration, connection, "https://api.impect.com")
 
-def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
 
     # check input for matches argument
     if not isinstance(iteration, int):
@@ -46,36 +46,38 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
     # unnest mappings
     squads = unnest_mappings_df(squads, "idMappings").drop(["idMappings"], axis=1).drop_duplicates()
 
-    # get squad ratings
-    ratings_raw = connection.make_api_request_limited(
-            url=f"{host}/v5/customerapi/iterations/{iteration}/squads/ratings",
-            method="GET"
-        ).process_response(
-            endpoint="Squad Ratings"
-        )
+    # get squad coefficients
+    coefficients_raw = connection.make_api_request_limited(
+        url=f"{host}/v5/customerapi/iterations/{iteration}/predictions/model-coefficients",
+        method="GET"
+    ).process_response(
+        endpoint="Squad Coefficients"
+    )
 
     # extract JSON from the column
-    nested_data = ratings_raw["squadRatingsEntries"][0]
+    nested_data = coefficients_raw["entries"][0]
 
-    # flatten ratings df
-    ratings = []
+    # flatten coefficients df
+    coefficients = []
     for entry in nested_data:
         date = entry["date"]
-        for squad in entry["squadRatings"]:
-            ratings.append({
+        for squad in entry["squads"]:
+            coefficients.append({
+                "iterationId": iteration,
                 "date": date,
-                "squadId": squad["squadId"],
-                "value": squad["value"]
+                "interceptCoefficient": entry["competition"]["intercept"],
+                "homeCoefficient": entry["competition"]["home"],
+                "competitionCoefficient": entry["competition"]["comp"],
+                "squadId": squad["id"],
+                "attackCoefficient": squad["att"],
+                "defenseCoefficient": squad["def"]
             })
 
     # convert to df
-    ratings = pd.DataFrame(ratings)
-
-    # add iteration id
-    ratings["iterationId"] = iteration
+    coefficients = pd.DataFrame(coefficients)
 
     # merge with competition info
-    ratings = ratings.merge(
+    coefficients = coefficients.merge(
         iterations[["id", "competitionId", "competitionName", "competitionType", "season", "competitionGender"]],
         left_on="iterationId",
         right_on="id",
@@ -84,7 +86,7 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
     )
 
     # merge events with squads
-    ratings = ratings.merge(
+    coefficients = coefficients.merge(
         squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
         ),
@@ -95,12 +97,12 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
     )
 
     # fix some column types
-    ratings["iterationId"] = ratings["iterationId"].astype("Int64")
-    ratings["competitionId"] = ratings["competitionId"].astype("Int64")
-    ratings["squadId"] = ratings["squadId"].astype("Int64")
-    ratings["wyscoutId"] = ratings["wyscoutId"].astype("Int64")
-    ratings["heimSpielId"] = ratings["heimSpielId"].astype("Int64")
-    ratings["skillCornerId"] = ratings["skillCornerId"].astype("Int64")
+    coefficients["iterationId"] = coefficients["iterationId"].astype("Int64")
+    coefficients["competitionId"] = coefficients["competitionId"].astype("Int64")
+    coefficients["squadId"] = coefficients["squadId"].astype("Int64")
+    coefficients["wyscoutId"] = coefficients["wyscoutId"].astype("Int64")
+    coefficients["heimSpielId"] = coefficients["heimSpielId"].astype("Int64")
+    coefficients["skillCornerId"] = coefficients["skillCornerId"].astype("Int64")
 
     # define desired column order
     order = [
@@ -110,20 +112,24 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
         "competitionType",
         "season",
         "competitionGender",
+        "interceptCoefficient",
+        "homeCoefficient",
+        "competitionCoefficient",
         "date",
         "squadId",
         "wyscoutId",
         "heimSpielId",
         "skillCornerId",
         "squadName",
-        "value"
+        "attackCoefficient",
+        "defenseCoefficient",
     ]
 
     # reorder data
-    ratings = ratings[order]
+    coefficients = coefficients[order]
 
     # reorder rows
-    ratings = ratings.sort_values(["date", "squadId"])
+    coefficients = coefficients.sort_values(["date", "squadId"])
 
     # return events
-    return ratings
+    return coefficients

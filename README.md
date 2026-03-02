@@ -1,6 +1,6 @@
-# impectPy <picture><source media="(prefers-color-scheme: dark)" srcset="https://github.com/ImpectAPI/logos/blob/main/impectPy_white.svg"><source media="(prefers-color-scheme: light)" srcset="https://github.com/ImpectAPI/logos/blob/main/impectPy_black.svg"><img alt="ImpectPy Logo" src="https://github.com/ImpectAPI/logos/blob/main/impectPy_black.svg" align="right" height="40"></picture>
+# impectPyRSCA
 
-A package provided by: Impect GmbH
+RSCA Intelligence fork of [impectPy](https://github.com/ImpectAPI/impectPy)
 
 Version: v2.5.7
 
@@ -26,16 +26,10 @@ match and season level.
 
 ## Installation
 
-You can install the latest version of impectPy from PyPi with:
+You can install the latest version of impectPyRSCA from [GitHub](https://github.com/) with:
 
 ```cmd
-pip install impectPy
-```
-
-You can also install it from [GitHub](https://github.com/) with:
-
-```cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.5.7
+pip install git+https://github.com/rsca-intelligence/impectPyRSCA.git
 ```
 
 ## Usage
@@ -47,7 +41,7 @@ token for authorization. You can get this authorization token using the
 following code snippet:
 
 ```python
-import impectPy as ip
+import impectPyRSCA as ip
 import pandas as pd
 
 # define login credentials
@@ -241,7 +235,7 @@ squadIterationScores = ip.getSquadIterationScores(
 
 The squad rating values that you can find on the league ranking in the Scouting portal can 
 also be retrieved from the API. In addition, we also provide you with the more detailed squad 
-coefficients that can be used to make match predictions. See [this example script](https://github.com/ImpectAPI/impectPy/blob/release/examples/predict_matches.ipynb) 
+coefficients that can be used to make match predictions. See [this example script](https://github.com/rsca-intelligence/impectPyRSCA/blob/main/examples/predict_matches.ipynb) 
 for further details. 
 
 ```python
@@ -292,7 +286,7 @@ degree using the following in put variables:
 * `buckets`: Disable Label/KPI buckets (e.g. conversion from value `0.1` to bucket `[0,1[`)
 
 To see a full list of available codeTags, labels, KPIs and allowed combinations of these,
-please see the beginning of the [function definition](https://github.com/ImpectAPI/impectPy/blob/release/impectPy/xml.py).
+please see the beginning of the [function definition](https://github.com/rsca-intelligence/impectPyRSCA/blob/main/impectPyRSCA/generate_xml.py).
 
 Please make sure to only retrieve event data for
 one game at a time. Let's use the Bayern vs Dortmund game from earlier as an example:
@@ -356,7 +350,7 @@ performance and stores your token as an object attribute. This means you no long
 every function call. This new IMPECT object can be used as shown in the example below:
 
 ```python
-from impectPy import Impect
+from impectPyRSCA import Impect
 
 # define login credentials
 username = "yourUsername"

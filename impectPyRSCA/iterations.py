@@ -2,7 +2,7 @@
 import pandas as pd
 import re
 import requests
-from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_dict, validate_response
+from impectPyRSCA.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_dict, validate_response
 
 ######
 #
