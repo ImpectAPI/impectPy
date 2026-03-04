@@ -111,11 +111,8 @@ class RateLimitedAPI:
 
         # check if a token is available
         if self.bucket.isTokenAvailable():
-            # get API response
+            # get API response (bucket is synced from response headers inside make_api_request)
             response = self.make_api_request(url=url, method=method, data=data)
-
-            # consume a token
-            self.bucket.consumeToken()
         else:
             # wait for refill
             time.sleep(
@@ -134,7 +131,7 @@ class RateLimitedAPI:
 
     def make_api_request(
             self, url: str, method: str, data: Optional[Dict[str, Any]] = None,
-            max_retries: int = 3, retry_delay: Optional[int] = None
+            max_retries: int = 10, retry_delay: Optional[int] = None
     ) -> ImpectResponse:
         """
         Executes an API call.
@@ -148,26 +145,43 @@ class RateLimitedAPI:
 
             # check status code and return if 200
             if response.status_code == 200:
+                # sync bucket from response headers to stay in sync with server
+                if self.bucket and "RateLimit-Remaining" in response.headers:
+                    self.bucket.syncRemaining(int(response.headers["RateLimit-Remaining"]))
+                elif self.bucket:
+                    self.bucket.consumeToken()
                 # return response
                 return response
             # check status code and retry if 429
             elif response.status_code == 429:
+                # reset bucket tokens since server says we're rate limited
+                if self.bucket:
+                    self.bucket.tokens = 0
+
                 # check if last try
                 if i < max_retries - 1:
-                    # calculate exact wait time based on token bucket refill time
-                    if self.bucket and retry_delay is None:
-                        wait_time = max(0, math.ceil(
-                            self.bucket.refill_after * 100 - (
-                                    time.time() - self.bucket.last_refill_time
-                            ) * 100
-                        ) / 100)
+                    # calculate wait time from server headers or bucket refill window
+                    if retry_delay is not None:
+                        wait_time = retry_delay
+                    elif "Retry-After" in response.headers:
+                        wait_time = int(response.headers["Retry-After"])
+                    elif "RateLimit-Reset" in response.headers:
+                        wait_time = int(response.headers["RateLimit-Reset"])
+                    elif self.bucket:
+                        elapsed = time.time() - self.bucket.last_refill_time
+                        remaining_wait = self.bucket.refill_after - elapsed
+                        wait_time = max(remaining_wait, 1)
                     else:
-                        wait_time = retry_delay if retry_delay is not None else 1
+                        wait_time = min(2 ** i, 60)
 
-                    print(f"Received status code {response.status_code} "
-                          f"({response.json().get('message', 'Rate Limit Exceeded')})"
-                          f", retrying in {wait_time} seconds...")
+                    logger.info(f"Received status code {response.status_code} "
+                                f"({response.json().get('message', 'Rate Limit Exceeded')})"
+                                f", retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
+
+                    # refill bucket after waiting
+                    if self.bucket:
+                        self.bucket.addTokens()
                 else:
                     raise HTTPError(f"Received status code {response.status_code} "
                                     f"({response.json().get('message', 'Rate Limit Exceeded')})"
@@ -246,6 +260,13 @@ class TokenBucket:
             return False
         self.tokens -= 1  # decrement the token count by 1
         return True  # return True to indicate successful token consumption
+
+    def syncRemaining(self, remaining: int):
+        """
+        Syncs the remaining token count from the server's RateLimit-Remaining header.
+        This keeps the bucket in sync with the server's actual quota.
+        """
+        self.tokens = remaining
 
 
 ######
