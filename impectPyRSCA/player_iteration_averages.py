@@ -131,11 +131,12 @@ def getPlayerIterationAveragesFromHost(
         )
 
         # fill join cols with placeholder
-        filled = (
-            averages_raw.loc[mask]
-            .infer_objects(copy=False)
-            .fillna(-1)
-        )
+        subset = averages_raw.loc[mask].infer_objects(copy=False)
+        fill_values = {
+            col: "-1" if pd.api.types.is_string_dtype(subset[col]) else -1
+            for col in subset.columns
+        }
+        filled = subset.fillna(fill_values)
 
         averages_raw.loc[mask] = filled
 
