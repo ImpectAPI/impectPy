@@ -119,11 +119,11 @@ class RateLimitedAPI:
         else:
             # wait for refill
             time.sleep(
-                math.ceil(
+                max(0, math.ceil(
                     self.bucket.refill_after * 100 - (
                             time.time() - self.bucket.last_refill_time
                     ) * 100
-                ) / 100
+                ) / 100)
             )
 
             # call function again
@@ -156,11 +156,11 @@ class RateLimitedAPI:
                 if i < max_retries - 1:
                     # calculate exact wait time based on token bucket refill time
                     if self.bucket and retry_delay is None:
-                        wait_time = math.ceil(
+                        wait_time = max(0, math.ceil(
                             self.bucket.refill_after * 100 - (
                                     time.time() - self.bucket.last_refill_time
                             ) * 100
-                        ) / 100
+                        ) / 100)
                     else:
                         wait_time = retry_delay if retry_delay is not None else 1
 
