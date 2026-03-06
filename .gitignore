@@ -415,3 +415,6 @@ tests/
 
 # Maintenance checklist
 maintenance_checklist.md
+
+.claude/
+.claude/*
