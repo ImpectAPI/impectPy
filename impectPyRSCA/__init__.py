@@ -5,6 +5,7 @@ __version__ = "2.5.7"
 from .access_token import getAccessToken
 from .iterations import getIterations
 from .matches import getMatches
+from .players import getPlayers
 from .events import getEvents
 from .player_matchsums import getPlayerMatchsums
 from .squad_matchsums import getSquadMatchsums

@@ -3,6 +3,7 @@ from .helpers import RateLimitedAPI
 from .access_token import getAccessTokenFromUrl
 from .iterations import getIterationsFromHost
 from .matches import getMatchesFromHost
+from .players import getPlayersFromHost
 from .events import getEventsFromHost
 from .player_matchsums import getPlayerMatchsumsFromHost
 from .squad_matchsums import getSquadMatchsumsFromHost
@@ -47,6 +48,11 @@ class Impect:
 
     def getMatches(self, iteration: int) -> pd.DataFrame:
         return getMatchesFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
+
+    def getPlayers(self, iteration: int) -> pd.DataFrame:
+        return getPlayersFromHost(
             iteration, self.connection, self.__config.HOST
         )
 
