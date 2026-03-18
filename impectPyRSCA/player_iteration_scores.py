@@ -103,7 +103,7 @@ def getPlayerIterationScoresFromHost(
             # check if response is empty
             if len(scores) > 0:
                 scores_list.append(scores)
-        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True) if scores_list else pd.DataFrame()
 
     else:
 
@@ -129,7 +129,7 @@ def getPlayerIterationScoresFromHost(
             # check if resonse is empty
             if len(scores) > 0:
                 scores_list.append(scores)
-        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True) if scores_list else pd.DataFrame()
 
     # raise exception if no player played at given positions in entire iteration
     if len(scores_raw) == 0:
