@@ -1,3 +1,10 @@
+# impectPy 2.5.8
+
+## Minor Changes
+* Fix bug with columns `homeCoachId`, `homeCoachName`, `awayCoachId` and `awayCoachName` in `getEvents()`
+* Fix bug with typings in `getPlayerIterationAverages()`
+* Fix bug with potentially negative `wait_time` when retrying after HTTP Error 429
+
 # impectPy 2.5.7
 
 ## Minor Changes

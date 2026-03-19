@@ -297,10 +297,10 @@ def getEventsFromHost(
         coaches_map = coaches.set_index("id")["name"].to_dict()
 
         # convert coachId to integer if it is None
-        events["homeSquadCoachId"] = events["homeSquadCoachId"].astype("Int64")
-        events["awaySquadCoachId"] = events["awaySquadCoachId"].astype("Int64")
-        events["homeSquadCoachName"] = events.homeSquadCoachId.map(coaches_map)
-        events["awaySquadCoachName"] = events.awaySquadCoachId.map(coaches_map)
+        events["homeCoachId"] = events["homeSquadCoachId"].astype("Int64")
+        events["awayCoachId"] = events["awaySquadCoachId"].astype("Int64")
+        events["homeCoachName"] = events.homeSquadCoachId.map(coaches_map)
+        events["awayCoachName"] = events.awaySquadCoachId.map(coaches_map)
 
     if include_kpis:
         # unnest scorings and full join with kpi list to ensure all kpis are present
