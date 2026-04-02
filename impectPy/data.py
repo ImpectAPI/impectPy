@@ -12,7 +12,8 @@ from impectPy.helpers import RateLimitedAPI, ImpectSession
 
 
 def getData(
-        url: str, token: str, method: str = "GET", data: Optional[Dict[str, Any]] = None
+        url: str, token: str, method: str = "GET", data: Optional[Dict[str, Any]] = None,
+        session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
     """Returns a processed DataFrame from any Impect API endpoint.
 
@@ -21,12 +22,13 @@ def getData(
         token (str): Bearer token for authentication.
         method (str): HTTP method. Defaults to "GET".
         data (Optional[Dict[str, Any]]): Optional request body. Defaults to None.
+        session (ImpectSession): The session object to use for the API calls.
 
     Returns:
         pd.DataFrame: Processed response data.
     """
     # create an instance of RateLimitedAPI
-    connection = RateLimitedAPI(ImpectSession())
+    connection = RateLimitedAPI(session)
 
     # set auth header
     connection.session.headers.update({"Authorization": f"Bearer {token}"})
