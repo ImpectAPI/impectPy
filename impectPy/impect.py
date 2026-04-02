@@ -1,4 +1,10 @@
+from typing import Optional, Dict, Any
+from xml.etree import ElementTree as ET
+
+import pandas as pd
+
 from impectPy.config import Config
+
 from .helpers import RateLimitedAPI
 from .access_token import getAccessTokenFromUrl
 from .iterations import getIterationsFromHost
@@ -21,9 +27,6 @@ from .formations import getFormationsFromHost
 from .substitutions import getSubstitutionsFromHost
 from .starting_positions import getStartingPositionsFromHost
 from .data import getDataFromHost
-from typing import Optional, Dict, Any
-import pandas as pd
-from xml.etree import ElementTree as ET
 
 
 class Impect:
