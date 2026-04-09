@@ -278,7 +278,7 @@ def unnest_mappings_dict(mapping_dict: dict) -> dict:
 
 def unnest_mappings_df(df: pd.DataFrame, mapping_col: str) -> pd.DataFrame:
     # create empty df to store mappings
-    df_mappings = pd.DataFrame(columns=["wyscoutId", "heimSpielId", "skillCornerId"])
+    df_mappings = pd.DataFrame(columns=["wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId"])
 
     # iterate over entry and unnest idMappings
     for index, entry in df.iterrows():
@@ -291,7 +291,9 @@ def unnest_mappings_df(df: pd.DataFrame, mapping_col: str) -> pd.DataFrame:
                     provider = "heimSpiel"
                 elif provider == "skill_corner":
                     provider = "skillCorner"
-                elif provider == "wyscout":
+                elif provider == "stats_perform":
+                    provider = "statsPerform"
+                elif provider in ("wyscout", "opta", "transfermarkt", "soccerdonna"):
                     pass
                 else:
                     raise Exception(f"Unknown provider: {provider}")

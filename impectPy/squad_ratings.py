@@ -85,7 +85,7 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
 
     # merge events with squads
     ratings = ratings.merge(
-        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
+        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
         ),
         left_on="squadId",
@@ -101,6 +101,10 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
     ratings["wyscoutId"] = ratings["wyscoutId"].astype("Int64")
     ratings["heimSpielId"] = ratings["heimSpielId"].astype("Int64")
     ratings["skillCornerId"] = ratings["skillCornerId"].astype("Int64")
+    ratings["optaId"] = ratings["optaId"].astype("Int64")
+    ratings["statsPerformId"] = ratings["statsPerformId"].astype("Int64")
+    ratings["transfermarktId"] = ratings["transfermarktId"].astype("Int64")
+    ratings["soccerdonnaId"] = ratings["soccerdonnaId"].astype("Int64")
 
     # define desired column order
     order = [
@@ -115,6 +119,10 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
         "wyscoutId",
         "heimSpielId",
         "skillCornerId",
+        "optaId",
+        "statsPerformId",
+        "transfermarktId",
+        "soccerdonnaId",
         "squadName",
         "value"
     ]

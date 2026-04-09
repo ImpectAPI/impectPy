@@ -221,7 +221,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         how="left",
         suffixes=("", "_iterations")
     ).merge(
-        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
+        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
         ),
         left_on="squadId",
@@ -259,6 +259,10 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         "wyscoutId",
         "heimSpielId",
         "skillCornerId",
+        "optaId",
+        "statsPerformId",
+        "transfermarktId",
+        "soccerdonnaId",
         "squadName",
         "coachId",
         "coachName"
@@ -283,6 +287,10 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     squad_scores["wyscoutId"] = squad_scores["wyscoutId"].astype("Int64")
     squad_scores["heimSpielId"] = squad_scores["heimSpielId"].astype("Int64")
     squad_scores["skillCornerId"] = squad_scores["skillCornerId"].astype("Int64")
+    squad_scores["optaId"] = squad_scores["optaId"].astype("Int64")
+    squad_scores["statsPerformId"] = squad_scores["statsPerformId"].astype("Int64")
+    squad_scores["transfermarktId"] = squad_scores["transfermarktId"].astype("Int64")
+    squad_scores["soccerdonnaId"] = squad_scores["soccerdonnaId"].astype("Int64")
 
     # return data
     return squad_scores

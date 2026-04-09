@@ -194,7 +194,7 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     # merge with matches info
     substitutions = substitutions.merge(
         matchplan[[
-            "id", "skillCornerId", "heimSpielId", "wyscoutId", "matchDayIndex",
+            "id", "skillCornerId", "heimSpielId", "wyscoutId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "matchDayIndex",
             "matchDayName", "scheduledDate", "lastCalculationDate", "iterationId"
         ]],
         left_on="id",

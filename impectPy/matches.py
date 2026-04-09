@@ -69,6 +69,10 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "skillCornerId_home": "homeSquadSkillCornerId",
         "heimSpielId_home": "homeSquadHeimSpielId",
         "wyscoutId_home": "homeSquadWyscoutId",
+        "optaId_home": "homeSquadOptaId",
+        "statsPerformId_home": "homeSquadStatsPerformId",
+        "transfermarktId_home": "homeSquadTransfermarktId",
+        "soccerdonnaId_home": "homeSquadSoccerdonnaId",
         "countryId": "homeSquadCountryId"
     })
     matches = matches.merge(squads,
@@ -81,6 +85,10 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "skillCornerId_away": "awaySquadSkillCornerId",
         "heimSpielId_away": "awaySquadHeimSpielId",
         "wyscoutId_away": "awaySquadWyscoutId",
+        "optaId_away": "awaySquadOptaId",
+        "statsPerformId_away": "awaySquadStatsPerformId",
+        "transfermarktId_away": "awaySquadTransfermarktId",
+        "soccerdonnaId_away": "awaySquadSoccerdonnaId",
         "countryId": "awaySquadCountryId"
     })
 
@@ -107,6 +115,10 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "skillCornerId",
         "heimSpielId",
         "wyscoutId",
+        "optaId",
+        "statsPerformId",
+        "transfermarktId",
+        "soccerdonnaId",
         "iterationId",
         "matchDayIndex",
         "matchDayName",
@@ -118,6 +130,10 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "homeSquadSkillCornerId",
         "homeSquadHeimSpielId",
         "homeSquadWyscoutId",
+        "homeSquadOptaId",
+        "homeSquadStatsPerformId",
+        "homeSquadTransfermarktId",
+        "homeSquadSoccerdonnaId",
         "awaySquadId",
         "awaySquadName",
         "awaySquadType",
@@ -126,6 +142,10 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "awaySquadSkillCornerId",
         "awaySquadHeimSpielId",
         "awaySquadWyscoutId",
+        "awaySquadOptaId",
+        "awaySquadStatsPerformId",
+        "awaySquadTransfermarktId",
+        "awaySquadSoccerdonnaId",
         "scheduledDate",
         "lastCalculationDate",
         "available"
@@ -156,9 +176,13 @@ def clean_df(data: dict) -> pd.DataFrame:
     # drop idMappings column
     df = df.drop("idMappings", axis=1)
 
-    # keep first entry for skillcorner and heimspiel data
+    # keep first entry for skillcorner, heimspiel, wyscout, opta, statsperform, transfermarkt and soccerdonna data
     df.skillCornerId = df.skillCornerId.apply(lambda x: x[0] if x else None)
     df.heimSpielId = df.heimSpielId.apply(lambda x: x[0] if x else None)
     df.wyscoutId = df.wyscoutId.apply(lambda x: x[0] if x else None)
+    df.optaId = df.optaId.apply(lambda x: x[0] if x else None)
+    df.statsPerformId = df.statsPerformId.apply(lambda x: x[0] if x else None)
+    df.transfermarktId = df.transfermarktId.apply(lambda x: x[0] if x else None)
+    df.soccerdonnaId = df.soccerdonnaId.apply(lambda x: x[0] if x else None)
 
     return df

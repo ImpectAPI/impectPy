@@ -271,7 +271,7 @@ def getPlayerIterationScoresFromHost(
         suffixes=("", "_iterations")
     ).merge(
         players[[
-            "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
+            "id", "wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "commonname",
             "firstname", "lastname", "birthdate", "birthplace", "countryId", "leg"
         ]].rename(
             columns={"commonname": "playerName"}
@@ -302,6 +302,10 @@ def getPlayerIterationScoresFromHost(
         "wyscoutId",
         "heimSpielId",
         "skillCornerId",
+        "optaId",
+        "statsPerformId",
+        "transfermarktId",
+        "soccerdonnaId",
         "playerName",
         "firstname",
         "lastname",
@@ -326,6 +330,10 @@ def getPlayerIterationScoresFromHost(
     averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
     averages["heimSpielId"] = averages["heimSpielId"].astype("Int64")
     averages["skillCornerId"] = averages["skillCornerId"].astype("Int64")
+    averages["optaId"] = averages["optaId"].astype("Int64")
+    averages["statsPerformId"] = averages["statsPerformId"].astype("Int64")
+    averages["transfermarktId"] = averages["transfermarktId"].astype("Int64")
+    averages["soccerdonnaId"] = averages["soccerdonnaId"].astype("Int64")
 
     # return result
     return averages
