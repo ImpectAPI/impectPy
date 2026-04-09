@@ -233,10 +233,6 @@ def getPlayerProfileScoresFromHost(
     profile_scores["wyscoutId"] = profile_scores["wyscoutId"].astype("Int64")
     profile_scores["heimSpielId"] = profile_scores["heimSpielId"].astype("Int64")
     profile_scores["skillCornerId"] = profile_scores["skillCornerId"].astype("Int64")
-    profile_scores["optaId"] = profile_scores["optaId"].astype("Int64")
-    profile_scores["statsPerformId"] = profile_scores["statsPerformId"].astype("Int64")
-    profile_scores["transfermarktId"] = profile_scores["transfermarktId"].astype("Int64")
-    profile_scores["soccerdonnaId"] = profile_scores["soccerdonnaId"].astype("Int64")
 
     # define column order
     order = [

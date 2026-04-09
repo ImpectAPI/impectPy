@@ -129,10 +129,6 @@ def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, 
     averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
     averages["heimSpielId"] = averages["heimSpielId"].astype("Int64")
     averages["skillCornerId"] = averages["skillCornerId"].astype("Int64")
-    averages["optaId"] = averages["optaId"].astype("Int64")
-    averages["statsPerformId"] = averages["statsPerformId"].astype("Int64")
-    averages["transfermarktId"] = averages["transfermarktId"].astype("Int64")
-    averages["soccerdonnaId"] = averages["soccerdonnaId"].astype("Int64")
 
     # define column order
     order = [
