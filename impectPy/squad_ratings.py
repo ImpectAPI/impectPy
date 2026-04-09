@@ -101,6 +101,10 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
     ratings["wyscoutId"] = ratings["wyscoutId"].astype("Int64")
     ratings["heimSpielId"] = ratings["heimSpielId"].astype("Int64")
     ratings["skillCornerId"] = ratings["skillCornerId"].astype("Int64")
+    ratings["optaId"] = ratings["optaId"].astype("string")
+    ratings["statsPerformId"] = ratings["statsPerformId"].astype("string")
+    ratings["transfermarktId"] = ratings["transfermarktId"].astype("string")
+    ratings["soccerdonnaId"] = ratings["soccerdonnaId"].astype("string")
 
     # define desired column order
     order = [

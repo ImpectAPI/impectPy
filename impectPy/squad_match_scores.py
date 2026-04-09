@@ -287,6 +287,10 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     squad_scores["wyscoutId"] = squad_scores["wyscoutId"].astype("Int64")
     squad_scores["heimSpielId"] = squad_scores["heimSpielId"].astype("Int64")
     squad_scores["skillCornerId"] = squad_scores["skillCornerId"].astype("Int64")
+    squad_scores["optaId"] = squad_scores["optaId"].astype("string")
+    squad_scores["statsPerformId"] = squad_scores["statsPerformId"].astype("string")
+    squad_scores["transfermarktId"] = squad_scores["transfermarktId"].astype("string")
+    squad_scores["soccerdonnaId"] = squad_scores["soccerdonnaId"].astype("string")
 
     # return data
     return squad_scores

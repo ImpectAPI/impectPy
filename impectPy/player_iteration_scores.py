@@ -330,6 +330,10 @@ def getPlayerIterationScoresFromHost(
     averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
     averages["heimSpielId"] = averages["heimSpielId"].astype("Int64")
     averages["skillCornerId"] = averages["skillCornerId"].astype("Int64")
+    averages["optaId"] = averages["optaId"].astype("string")
+    averages["statsPerformId"] = averages["statsPerformId"].astype("string")
+    averages["transfermarktId"] = averages["transfermarktId"].astype("string")
+    averages["soccerdonnaId"] = averages["soccerdonnaId"].astype("string")
 
     # return result
     return averages

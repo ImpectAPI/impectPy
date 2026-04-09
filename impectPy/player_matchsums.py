@@ -351,6 +351,10 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
     matchsums["wyscoutId"] = matchsums["wyscoutId"].astype("Int64")
     matchsums["heimSpielId"] = matchsums["heimSpielId"].astype("Int64")
     matchsums["skillCornerId"] = matchsums["skillCornerId"].astype("Int64")
+    matchsums["optaId"] = matchsums["optaId"].astype("string")
+    matchsums["statsPerformId"] = matchsums["statsPerformId"].astype("string")
+    matchsums["transfermarktId"] = matchsums["transfermarktId"].astype("string")
+    matchsums["soccerdonnaId"] = matchsums["soccerdonnaId"].astype("string")
 
     # return data
     return matchsums

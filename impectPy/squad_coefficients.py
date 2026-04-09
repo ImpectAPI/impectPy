@@ -103,6 +103,10 @@ def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, hos
     coefficients["wyscoutId"] = coefficients["wyscoutId"].astype("Int64")
     coefficients["heimSpielId"] = coefficients["heimSpielId"].astype("Int64")
     coefficients["skillCornerId"] = coefficients["skillCornerId"].astype("Int64")
+    coefficients["optaId"] = coefficients["optaId"].astype("string")
+    coefficients["statsPerformId"] = coefficients["statsPerformId"].astype("string")
+    coefficients["transfermarktId"] = coefficients["transfermarktId"].astype("string")
+    coefficients["soccerdonnaId"] = coefficients["soccerdonnaId"].astype("string")
 
     # define desired column order
     order = [
