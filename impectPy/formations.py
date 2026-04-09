@@ -134,7 +134,7 @@ def getFormationsFromHost(matches: list, connection: RateLimitedAPI, host: str) 
     # merge with matches info
     formations = formations.merge(
         matchplan[[
-            "id", "skillCornerId", "heimSpielId", "wyscoutId", "matchDayIndex",
+            "id", "skillCornerId", "heimSpielId", "wyscoutId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "matchDayIndex",
             "matchDayName", "scheduledDate", "lastCalculationDate", "iterationId"
         ]],
         left_on="id",
