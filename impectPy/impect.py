@@ -1,4 +1,10 @@
+from typing import Optional, Dict, Any
+from xml.etree import ElementTree as ET
+
+import pandas as pd
+
 from impectPy.config import Config
+
 from .helpers import RateLimitedAPI
 from .access_token import getAccessTokenFromUrl
 from .iterations import getIterationsFromHost
@@ -20,8 +26,7 @@ from .squad_coefficients import getSquadCoefficientsFromHost
 from .formations import getFormationsFromHost
 from .substitutions import getSubstitutionsFromHost
 from .starting_positions import getStartingPositionsFromHost
-import pandas as pd
-from xml.etree import ElementTree as ET
+from .data import getDataFromHost
 
 
 class Impect:
@@ -129,6 +134,26 @@ class Impect:
         return getStartingPositionsFromHost(
             matches, self.connection, self.__config.HOST
         )
+
+    def getData(
+            self, url: str, method: str = "GET", data: Optional[Dict[str, Any]] = None
+    ) -> pd.DataFrame:
+        """Returns a processed DataFrame from any Impect API endpoint.
+
+        Accepts a full URL or a path. If a path is provided (does not start
+        with 'http'), the configured host is prepended automatically.
+
+        Args:
+            url (str): Full URL or path of the API endpoint.
+            method (str): HTTP method. Defaults to "GET".
+            data (Optional[Dict[str, Any]]): Optional request body. Defaults to None.
+
+        Returns:
+            pd.DataFrame: Processed response data.
+        """
+        if not url.startswith("http"):
+            url = f"{self.__config.HOST}{url}"
+        return getDataFromHost(url=url, method=method, connection=self.connection, data=data)
 
     @staticmethod
     def generateXML(
