@@ -272,7 +272,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         suffixes=("", "_iterations")
     ).merge(
         players[[
-            "id", "wyscoutId", "heimSpielId", "skillCornerId", "commonname",
+            "id", "wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "commonname",
             "firstname", "lastname", "birthdate", "birthplace", "countryId", "leg"
         ]].rename(
             columns={"commonname": "playerName"}
@@ -318,6 +318,10 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
         "wyscoutId",
         "heimSpielId",
         "skillCornerId",
+        "optaId",
+        "statsPerformId",
+        "transfermarktId",
+        "soccerdonnaId",
         "playerName",
         "firstname",
         "lastname",
@@ -347,6 +351,10 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
     matchsums["wyscoutId"] = matchsums["wyscoutId"].astype("Int64")
     matchsums["heimSpielId"] = matchsums["heimSpielId"].astype("Int64")
     matchsums["skillCornerId"] = matchsums["skillCornerId"].astype("Int64")
+    matchsums["optaId"] = matchsums["optaId"].astype("string")
+    matchsums["statsPerformId"] = matchsums["statsPerformId"].astype("string")
+    matchsums["transfermarktId"] = matchsums["transfermarktId"].astype("string")
+    matchsums["soccerdonnaId"] = matchsums["soccerdonnaId"].astype("string")
 
     # return data
     return matchsums

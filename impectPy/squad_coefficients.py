@@ -87,7 +87,7 @@ def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, hos
 
     # merge events with squads
     coefficients = coefficients.merge(
-        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "name"]].rename(
+        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
         ),
         left_on="squadId",
@@ -103,6 +103,10 @@ def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, hos
     coefficients["wyscoutId"] = coefficients["wyscoutId"].astype("Int64")
     coefficients["heimSpielId"] = coefficients["heimSpielId"].astype("Int64")
     coefficients["skillCornerId"] = coefficients["skillCornerId"].astype("Int64")
+    coefficients["optaId"] = coefficients["optaId"].astype("string")
+    coefficients["statsPerformId"] = coefficients["statsPerformId"].astype("string")
+    coefficients["transfermarktId"] = coefficients["transfermarktId"].astype("string")
+    coefficients["soccerdonnaId"] = coefficients["soccerdonnaId"].astype("string")
 
     # define desired column order
     order = [
@@ -120,6 +124,10 @@ def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, hos
         "wyscoutId",
         "heimSpielId",
         "skillCornerId",
+        "optaId",
+        "statsPerformId",
+        "transfermarktId",
+        "soccerdonnaId",
         "squadName",
         "attackCoefficient",
         "defenseCoefficient",

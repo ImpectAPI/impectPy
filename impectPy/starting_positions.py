@@ -179,7 +179,7 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
     # merge with matches info
     starting_positions = starting_positions.merge(
         matchplan[[
-            "id", "skillCornerId", "heimSpielId", "wyscoutId", "matchDayIndex",
+            "id", "skillCornerId", "heimSpielId", "wyscoutId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "matchDayIndex",
             "matchDayName", "scheduledDate", "lastCalculationDate", "iterationId"
         ]],
         left_on="id",
