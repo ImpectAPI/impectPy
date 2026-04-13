@@ -1,3 +1,13 @@
+# impectPy 2.5.10
+
+## Minor Changes
+* Add function `getData()` to query individual customer API endpoints
+
+# impectPy 2.5.9
+
+## Minor Changes
+* Fix bug with new third party IDs provided
+
 # impectPy 2.5.8
 
 ## Minor Changes

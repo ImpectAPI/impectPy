@@ -1,5 +1,5 @@
 # define version attribute
-__version__ = "2.5.8"
+__version__ = "2.5.10"
 
 # import modules
 from .access_token import getAccessToken
