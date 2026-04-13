@@ -279,6 +279,15 @@ calls made on the client side already. The rate limit is read from the first lim
 policy sent back by the API, so if this limit increases over time, this package will
 act accordingly.
 
+### Generic API Call
+You can also use this package to make individual API calls querying a specific endpoint 
+such as the "squads" endpoint.
+
+```python
+# query any IMPECT customer API endpoint
+data = ip.getData(url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads", token=token)
+```
+
 ### SportsCodeXML
 
 It is also possible to convert a dataframe containing event data into an XML file,
@@ -426,6 +435,9 @@ squadIterationScores = api.getSquadIterationScores(iteration=iteration)
 
 # get player profile scores
 playerProfileScores = api.getPlayerProfileScores(iteration=iteration, positions=positions)
+
+# query single API endpoint (e.g. squads for iteration 518)
+data = api.getData(url=f"https://api.impect.com/v5/customerapi/iterations/{iteration}/squads")
 ```
 
 ## Final Notes
