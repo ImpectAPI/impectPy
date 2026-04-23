@@ -52,6 +52,11 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
             forbidden_list=forbidden_matches
         )
         match_data_list.append(match_data)
+
+    # drop empty responses and raise if none remain
+    match_data_list = [df for df in match_data_list if not df.empty]
+    if not match_data_list:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
     match_data = pd.concat(match_data_list)
 
     # filter for matches that are unavailable
