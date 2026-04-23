@@ -6,7 +6,8 @@ import pandas as pd
 import re
 import math
 import logging
-from typing import Optional, Dict, Any
+import warnings
+from typing import Optional, Dict, Any, NamedTuple
 
 # create logger for this module
 logger = logging.getLogger("impectPy")
@@ -371,3 +372,83 @@ def safe_execute(func, *args, fallback=None, identifier: str, forbidden_list: li
         if isinstance(e, ForbiddenError):
             forbidden_list.append(identifier)
         return fallback
+
+
+######
+#
+# This NamedTuple holds the result of resolving a list of match IDs
+#
+######
+
+
+class MatchResolution(NamedTuple):
+    match_data: pd.DataFrame  # full match info for all valid matches
+    matches: list             # filtered match IDs (forbidden + unavailable removed)
+    iterations: list          # unique iteration IDs from valid matches
+
+
+######
+#
+# This function validates a list of match IDs and returns match data, a
+# filtered match list, and the unique iteration IDs
+#
+######
+
+
+def resolve_matches(matches: list, connection: RateLimitedAPI, host: str) -> MatchResolution:
+    # check input for matches argument
+    if not isinstance(matches, list):
+        raise Exception("Argument 'matches' must be a list of integers.")
+
+    # create list to store matches that are forbidden (HTTP 403)
+    forbidden_matches = []
+
+    # create list to store dfs
+    def fetch_match_info(conn, url):
+        return conn.make_api_request_limited(
+            url=url, method="GET"
+        ).process_response(endpoint="Match Info")
+
+    match_data_list = []
+    for match in matches:
+        match_data = safe_execute(
+            fetch_match_info,
+            connection,
+            url=f"{host}/v5/customerapi/matches/{match}",
+            identifier=match,
+            forbidden_list=forbidden_matches
+        )
+        match_data_list.append(match_data)
+
+    # drop empty responses and raise if none remain
+    match_data_list = [df for df in match_data_list if not df.empty]
+    if not match_data_list:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
+    match_data = pd.concat(match_data_list)
+
+    # filter for matches that are unavailable
+    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
+
+    # drop matches that are unavailable from list of matches
+    matches = [match for match in matches if match not in unavailable_matches]
+
+    # drop matches that are forbidden
+    matches = [match for match in matches if match not in forbidden_matches]
+
+    # configure warning format
+    def no_line_formatter(message, category, filename, lineno, line):
+        return f"Warning: {message}\n"
+    warnings.formatwarning = no_line_formatter
+
+    # raise exception if no matches remaining or report removed matches
+    if len(matches) == 0:
+        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
+    if len(forbidden_matches) > 0:
+        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
+    if len(unavailable_matches) > 0:
+        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
+
+    # extract iterationIds
+    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
+
+    return MatchResolution(match_data=match_data, matches=matches, iterations=iterations)
