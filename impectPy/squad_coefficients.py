@@ -54,8 +54,12 @@ def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, hos
         endpoint="Squad Coefficients"
     )
 
+    # check if response is empty
+    if coefficients_raw.empty or not coefficients_raw["entries"].iloc[0]:
+        return pd.DataFrame()
+
     # extract JSON from the column
-    nested_data = coefficients_raw["entries"][0]
+    nested_data = coefficients_raw["entries"].iloc[0]
 
     # flatten coefficients df
     coefficients = []

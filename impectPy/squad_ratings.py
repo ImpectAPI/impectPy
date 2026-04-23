@@ -54,8 +54,12 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
             endpoint="Squad Ratings"
         )
 
+    # check if response is empty
+    if ratings_raw.empty or not ratings_raw["squadRatingsEntries"].iloc[0]:
+        return pd.DataFrame()
+
     # extract JSON from the column
-    nested_data = ratings_raw["squadRatingsEntries"][0]
+    nested_data = ratings_raw["squadRatingsEntries"].iloc[0]
 
     # flatten ratings df
     ratings = []
