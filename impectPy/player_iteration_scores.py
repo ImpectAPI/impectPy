@@ -286,11 +286,6 @@ def getPlayerIterationScoresFromHost(
     # remove NA rows
     averages = averages[averages.iterationId.notnull()]
 
-    # fix column types
-    averages["squadId"] = averages["squadId"].astype(int)
-    averages["playerId"] = averages["playerId"].astype(int)
-    averages["iterationId"] = averages["iterationId"].astype(int)
-
     # define column order
     order = [
         "iterationId",
@@ -325,6 +320,7 @@ def getPlayerIterationScoresFromHost(
     averages = averages[order]
 
     # fix some column types
+    averages["iterationId"] = averages["iterationId"].astype("Int64")
     averages["squadId"] = averages["squadId"].astype("Int64")
     averages["playerId"] = averages["playerId"].astype("Int64")
     averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")
