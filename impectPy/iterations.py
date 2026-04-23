@@ -46,13 +46,13 @@ def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame
     df = df.rename(columns=lambda x: re.sub("[\._](.)", lambda y: y.group(1).upper(), x))
 
     # keep first entry for skillcorner, heimspiel and wyscout data
-    df.skillCornerId = df.skillCornerId.apply(lambda x: x[0] if x else None)
-    df.heimSpielId = df.heimSpielId.apply(lambda x: x[0] if x else None)
-    df.wyscoutId = df.wyscoutId.apply(lambda x: x[0] if x else None)
-    df.optaId = df.optaId.apply(lambda x: x[0] if x else None)
-    df.statsPerformId = df.statsPerformId.apply(lambda x: x[0] if x else None)
-    df.transfermarktId = df.transfermarktId.apply(lambda x: x[0] if x else None)
-    df.soccerdonnaId = df.soccerdonnaId.apply(lambda x: x[0] if x else None)
+    df["skillCornerId"] = df["skillCornerId"].apply(lambda x: x[0] if x else None)
+    df["heimSpielId"] = df["heimSpielId"].apply(lambda x: x[0] if x else None)
+    df["wyscoutId"] = df["wyscoutId"].apply(lambda x: x[0] if x else None)
+    df["optaId"] = df["optaId"].apply(lambda x: x[0] if x else None)
+    df["statsPerformId"] = df["statsPerformId"].apply(lambda x: x[0] if x else None)
+    df["transfermarktId"] = df["transfermarktId"].apply(lambda x: x[0] if x else None)
+    df["soccerdonnaId"] = df["soccerdonnaId"].apply(lambda x: x[0] if x else None)
 
     # get country data
     countries = connection.make_api_request_limited(

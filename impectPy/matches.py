@@ -177,12 +177,12 @@ def clean_df(data: dict) -> pd.DataFrame:
     df = df.drop("idMappings", axis=1)
 
     # keep first entry for skillcorner, heimspiel, wyscout, opta, statsperform, transfermarkt and soccerdonna data
-    df.skillCornerId = df.skillCornerId.apply(lambda x: x[0] if x else None)
-    df.heimSpielId = df.heimSpielId.apply(lambda x: x[0] if x else None)
-    df.wyscoutId = df.wyscoutId.apply(lambda x: x[0] if x else None)
-    df.optaId = df.optaId.apply(lambda x: x[0] if x else None)
-    df.statsPerformId = df.statsPerformId.apply(lambda x: x[0] if x else None)
-    df.transfermarktId = df.transfermarktId.apply(lambda x: x[0] if x else None)
-    df.soccerdonnaId = df.soccerdonnaId.apply(lambda x: x[0] if x else None)
+    df["skillCornerId"] = df["skillCornerId"].apply(lambda x: x[0] if x else None)
+    df["heimSpielId"] = df["heimSpielId"].apply(lambda x: x[0] if x else None)
+    df["wyscoutId"] = df["wyscoutId"].apply(lambda x: x[0] if x else None)
+    df["optaId"] = df["optaId"].apply(lambda x: x[0] if x else None)
+    df["statsPerformId"] = df["statsPerformId"].apply(lambda x: x[0] if x else None)
+    df["transfermarktId"] = df["transfermarktId"].apply(lambda x: x[0] if x else None)
+    df["soccerdonnaId"] = df["soccerdonnaId"].apply(lambda x: x[0] if x else None)
 
     return df
