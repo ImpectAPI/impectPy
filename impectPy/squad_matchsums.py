@@ -30,6 +30,7 @@ def getSquadMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: s
     match_data = resolved.match_data
     matches = resolved.matches
     iterations = resolved.iterations
+    forbidden_matches = []
 
     # get squad match sums
     def fetch_squad_match_sums(connection, url):

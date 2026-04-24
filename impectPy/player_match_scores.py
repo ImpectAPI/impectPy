@@ -41,10 +41,6 @@ def getPlayerMatchScores(
 
 def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host: str, positions: list = None) -> pd.DataFrame:
 
-    # check input for matches argument
-    if not isinstance(matches, list):
-        raise Exception("Argument 'matches' must be a list of integers.")
-
     # check input for positions argument
     if not isinstance(positions, list) and positions is not None:
         raise Exception("Input for positions argument must be a list")
@@ -62,6 +58,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
     match_data = resolved.match_data
     matches = resolved.matches
     iterations = resolved.iterations
+    forbidden_matches = []
 
     # get player match sums
     def fetch_player_match_scores(connection, url):

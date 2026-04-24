@@ -29,6 +29,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     match_data = resolved.match_data
     matches = resolved.matches
     iterations = resolved.iterations
+    forbidden_matches = []
 
     # get squad match scores
     def fetch_squad_match_scores(connection, url):

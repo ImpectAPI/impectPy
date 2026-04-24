@@ -37,6 +37,7 @@ def getEventsFromHost(
     match_data = resolved.match_data
     matches = resolved.matches
     iterations = resolved.iterations
+    forbidden_matches = []
 
     # get match events
     def fetch_match_events(connection, url):

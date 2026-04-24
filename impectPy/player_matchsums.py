@@ -29,6 +29,7 @@ def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: 
     match_data = resolved.match_data
     matches = resolved.matches
     iterations = resolved.iterations
+    forbidden_matches = []
 
     # get player match sums
     def fetch_player_match_sums(connection, url):
