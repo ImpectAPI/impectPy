@@ -1,6 +1,5 @@
 # load packages
 import pandas as pd
-import requests
 from impectPy.helpers import RateLimitedAPI, ImpectSession, resolve_matches
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost

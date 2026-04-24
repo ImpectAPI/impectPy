@@ -1,6 +1,5 @@
 # load packages
 import pandas as pd
-import requests
 import warnings
 from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
 from .iterations import getIterationsFromHost

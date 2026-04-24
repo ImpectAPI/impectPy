@@ -1,7 +1,6 @@
 # load packages
 import numpy as np
 import pandas as pd
-import requests
 import re
 from impectPy.helpers import RateLimitedAPI, ImpectSession, ForbiddenError, safe_execute, resolve_matches
 from .matches import getMatchesFromHost
