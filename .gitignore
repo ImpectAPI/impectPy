@@ -410,11 +410,8 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,pycharm+all,python,flask
 
-# Tests (ignore ad-hoc scripts, track unit tests)
+# Tests
 tests/
-!tests/
-!tests/unit/
-!tests/unit/**
 
 # Maintenance checklist
 maintenance_checklist.md
