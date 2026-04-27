@@ -1,5 +1,6 @@
 # load packages
 import urllib
+from typing import Optional
 from impectPy.helpers import RateLimitedAPI, ImpectSession
 
 ######
@@ -10,10 +11,10 @@ from impectPy.helpers import RateLimitedAPI, ImpectSession
 
 
 # define function
-def getAccessToken(username: str, password: str, session: ImpectSession = ImpectSession()) -> str:
+def getAccessToken(username: str, password: str, session: Optional[ImpectSession] = None) -> str:
 
     # create an instance of RateLimitedAPI
-    connection = RateLimitedAPI(session)
+    connection = RateLimitedAPI(session if session is not None else ImpectSession())
 
     return getAccessTokenFromUrl(username, password, connection, "https://login.impect.com/auth/realms/production/protocol/openid-connect/token")
 

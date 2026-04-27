@@ -31,9 +31,9 @@ from .data import getDataFromHost
 
 
 class Impect:
-    def __init__(self, config: Config = Config(), connection: RateLimitedAPI = RateLimitedAPI()):
-        self.__config = config
-        self.connection = connection
+    def __init__(self, config: Optional[Config] = None, connection: Optional[RateLimitedAPI] = None):
+        self.__config = config if config is not None else Config()
+        self.connection = connection if connection is not None else RateLimitedAPI()
 
     # login with username and password
     def login(self, username: str, password: str) -> str:
