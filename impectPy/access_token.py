@@ -1,6 +1,6 @@
 # load packages
 import urllib
-import requests
+from typing import Optional
 from impectPy.helpers import RateLimitedAPI, ImpectSession
 
 ######
@@ -11,15 +11,19 @@ from impectPy.helpers import RateLimitedAPI, ImpectSession
 
 
 # define function
-def getAccessToken(username: str, password: str, session: ImpectSession = ImpectSession()) -> str:
-
+def getAccessToken(username: str, password: str, session: Optional[ImpectSession] = None) -> str:
+    """Authenticate with the Impect API and return an access token."""
     # create an instance of RateLimitedAPI
-    connection = RateLimitedAPI(session)
+    connection = RateLimitedAPI(session if session is not None else ImpectSession())
 
     return getAccessTokenFromUrl(username, password, connection, "https://login.impect.com/auth/realms/production/protocol/openid-connect/token")
 
 def getAccessTokenFromUrl(username: str, password: str, connection: RateLimitedAPI, token_url: str) -> str:
+    """Authenticate against the given token URL and return an access token.
 
+    Sends a password-grant request to `token_url` using the provided credentials and
+    returns the resulting access token string.
+    """
     # define request parameters
     login = 'client_id=api&grant_type=password&username=' + urllib.parse.quote(
         username) + '&password=' + urllib.parse.quote(password)

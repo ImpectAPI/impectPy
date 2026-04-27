@@ -1,8 +1,6 @@
 # load packages
 import pandas as pd
-import requests
-import warnings
-from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
+from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute, resolve_matches
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -15,7 +13,7 @@ from .iterations import getIterationsFromHost
 
 
 def getSquadMatchScores(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of per-squad scores for the given list of match IDs."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -25,65 +23,23 @@ def getSquadMatchScores(matches: list, token: str, session: ImpectSession = Impe
     return getSquadMatchScoresFromHost(matches, connection, "https://api.impect.com")
 
 def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch per-squad scores for the given matches from the given host and return them as a DataFrame.
 
-    # check input for matches argument
-    if not isinstance(matches, list):
-        raise Exception("Argument 'matches' must be a list of integers.")
-
-    # create list to store matches that are forbidden (HTTP 403)
+    Pivots raw score data per squad, merges squad IDs, coach names, and competition metadata,
+    and returns one row per squad per match.
+    """
+    resolved = resolve_matches(matches, connection, host)
+    match_data = resolved.match_data
+    matches = resolved.matches
+    iterations = resolved.iterations
     forbidden_matches = []
-
-    # get match info
-    def fetch_match_info(connection, url):
-        return connection.make_api_request_limited(
-            url=url,
-            method="GET"
-        ).process_response(endpoint="Match Info")
-
-    # create list to store dfs
-    match_data_list = []
-    for match in matches:
-        match_data = safe_execute(
-            fetch_match_info,
-            connection,
-            url=f"{host}/v5/customerapi/matches/{match}",
-            identifier=match,
-            forbidden_list=forbidden_matches
-        )
-        match_data_list.append(match_data)
-    match_data = pd.concat(match_data_list)
-
-    # filter for matches that are unavailable
-    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
-
-    # drop matches that are unavailable from list of matches
-    matches = [match for match in matches if match not in unavailable_matches]
-
-    # drop matches that are forbidden
-    matches = [match for match in matches if match not in forbidden_matches]
-
-    # configure warning format
-    def no_line_formatter(message, category, filename, lineno, line):
-        return f"Warning: {message}\n"
-    warnings.formatwarning = no_line_formatter
-
-    # raise exception if no matches remaining or report removed matches
-    if len(matches) == 0:
-        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
-    if len(forbidden_matches) > 0:
-        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
-    if len(unavailable_matches) > 0:
-        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
-
-    # extract iterationIds
-    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get squad match scores
     def fetch_squad_match_scores(connection, url):
         return connection.make_api_request_limited(
             url=url,
             method="GET"
-        ).process_response(endpoint="Player Match Sums")
+        ).process_response(endpoint="Squad Match Sums")
 
     # create list to store dfs
     scores_list = []
@@ -138,7 +94,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         url=f"{host}/v5/customerapi/squad-scores",
         method="GET"
     ).process_response(
-        endpoint="PlayerScores"
+        endpoint="SquadScores"
     )[["id", "name"]]
 
     # get matches

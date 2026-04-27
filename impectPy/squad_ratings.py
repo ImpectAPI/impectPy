@@ -1,6 +1,5 @@
 # load packages
 import pandas as pd
-import requests
 from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df
 from .iterations import getIterationsFromHost
 
@@ -13,7 +12,7 @@ from .iterations import getIterationsFromHost
 
 # define function
 def getSquadRatings(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of squad ratings for all dates in the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -23,17 +22,17 @@ def getSquadRatings(iteration: int, token: str, session: ImpectSession = ImpectS
     return getSquadRatingsFromHost(iteration, connection, "https://api.impect.com")
 
 def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch squad ratings for the given iteration from the given host and return them as a DataFrame.
 
+    Flattens the nested ratings structure, merges competition and squad metadata, and sorts by
+    date and squad ID. Returns an empty DataFrame when no ratings are available.
+    """
     # check input for matches argument
     if not isinstance(iteration, int):
         raise Exception("Argument 'iteration' must be an integer.")
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
-
-    # raise exception if provided iteration id doesn't exist
-    if iteration not in list(iterations.id):
-        raise Exception("The supplied iteration id does not exist. Execution stopped.")
 
     # get squads
     squads = connection.make_api_request_limited(
@@ -54,8 +53,12 @@ def getSquadRatingsFromHost(iteration: int, connection: RateLimitedAPI, host: st
             endpoint="Squad Ratings"
         )
 
+    # check if response is empty
+    if ratings_raw.empty or not ratings_raw["squadRatingsEntries"].iloc[0]:
+        return pd.DataFrame()
+
     # extract JSON from the column
-    nested_data = ratings_raw["squadRatingsEntries"][0]
+    nested_data = ratings_raw["squadRatingsEntries"].iloc[0]
 
     # flatten ratings df
     ratings = []

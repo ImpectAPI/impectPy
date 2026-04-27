@@ -1,6 +1,5 @@
 # load packages
 import pandas as pd
-import requests
 import warnings
 from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
 from .iterations import getIterationsFromHost
@@ -30,7 +29,7 @@ allowed_positions = [
 def getPlayerProfileScores(
         iteration: int, positions: list, token: str, session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
-
+    """Return a DataFrame of per-player profile scores for the given iteration and positions."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -42,14 +41,19 @@ def getPlayerProfileScores(
 def getPlayerProfileScoresFromHost(
         iteration: int, positions: list, connection: RateLimitedAPI, host: str
 ) -> pd.DataFrame:
+    """Fetch per-player profile scores for the given iteration and positions from the given host and return them as a DataFrame.
 
+    Iterates over all accessible squads, pivots profile score data, and merges player
+    demographics and competition metadata. Only players who appeared at the given positions
+    are included.
+    """
     # check input for iteration argument
     if not isinstance(iteration, int):
-        raise Exception("Input for iteration argument must be an integer")
+        raise Exception("Argument 'iteration' must be an integer.")
 
     # check input for positions argument
     if not isinstance(positions, list):
-        raise Exception("Input for positions argument must be a list")
+        raise Exception("Argument 'positions' must be a list.")
 
     # check if the input positions are valid
     invalid_positions = [position for position in positions if position not in allowed_positions]
@@ -141,7 +145,7 @@ def getPlayerProfileScoresFromHost(
         url=f"{host}/v5/customerapi/countries",
         method="GET"
     ).process_response(
-        endpoint="KPIs"
+        endpoint="Countries"
     )
     country_map = countries.set_index("id")["fifaName"].to_dict()
 

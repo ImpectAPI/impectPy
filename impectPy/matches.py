@@ -1,6 +1,5 @@
 import pandas as pd
 import re
-import requests
 from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_dict, validate_response
 
 ######
@@ -12,7 +11,7 @@ from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_dict
 
 
 def getMatches(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of all matches for the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -23,7 +22,10 @@ def getMatches(iteration: int, token: str, session: ImpectSession = ImpectSessio
 
 # define function
 def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch all matches for the given iteration from the given host and return them as a DataFrame.
 
+    Merges match records with squad and country data and sorts by match day and match ID.
+    """
     # get match data
     matches = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/"
@@ -151,11 +153,8 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "available"
     ]]
 
-    # reorder matches
+    # sort matches by match day, then by id within each match day
     matches = matches.sort_values(by=["matchDayIndex", "id"])
-
-    # sort matches
-    matches = matches.sort_values(by="id")
 
     # return matches
     return matches
@@ -177,12 +176,12 @@ def clean_df(data: dict) -> pd.DataFrame:
     df = df.drop("idMappings", axis=1)
 
     # keep first entry for skillcorner, heimspiel, wyscout, opta, statsperform, transfermarkt and soccerdonna data
-    df.skillCornerId = df.skillCornerId.apply(lambda x: x[0] if x else None)
-    df.heimSpielId = df.heimSpielId.apply(lambda x: x[0] if x else None)
-    df.wyscoutId = df.wyscoutId.apply(lambda x: x[0] if x else None)
-    df.optaId = df.optaId.apply(lambda x: x[0] if x else None)
-    df.statsPerformId = df.statsPerformId.apply(lambda x: x[0] if x else None)
-    df.transfermarktId = df.transfermarktId.apply(lambda x: x[0] if x else None)
-    df.soccerdonnaId = df.soccerdonnaId.apply(lambda x: x[0] if x else None)
+    df["skillCornerId"] = df["skillCornerId"].apply(lambda x: x[0] if x else None)
+    df["heimSpielId"] = df["heimSpielId"].apply(lambda x: x[0] if x else None)
+    df["wyscoutId"] = df["wyscoutId"].apply(lambda x: x[0] if x else None)
+    df["optaId"] = df["optaId"].apply(lambda x: x[0] if x else None)
+    df["statsPerformId"] = df["statsPerformId"].apply(lambda x: x[0] if x else None)
+    df["transfermarktId"] = df["transfermarktId"].apply(lambda x: x[0] if x else None)
+    df["soccerdonnaId"] = df["soccerdonnaId"].apply(lambda x: x[0] if x else None)
 
     return df
