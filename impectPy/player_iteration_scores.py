@@ -1,6 +1,5 @@
 # load packages
 import pandas as pd
-import requests
 import warnings
 from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
@@ -31,7 +30,7 @@ allowed_positions = [
 def getPlayerIterationScores(
         iteration: int, token: str, positions: list = None, session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
-
+    """Return a DataFrame of per-player iteration-level scores for the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -43,14 +42,18 @@ def getPlayerIterationScores(
 def getPlayerIterationScoresFromHost(
         iteration: int, connection: RateLimitedAPI, host: str, positions: list = None
 ) -> pd.DataFrame:
+    """Fetch per-player iteration-level scores for the given iteration from the given host and return them as a DataFrame.
 
+    When ``positions`` is provided, only scores for players who appeared at those positions are
+    returned. Pivots raw score data per squad, merges player demographics and competition metadata.
+    """
     # check input for iteration argument
     if not isinstance(iteration, int):
-        raise Exception("Input for iteration argument must be an integer")
+        raise Exception("Argument 'iteration' must be an integer.")
 
     # check input for positions argument
     if not isinstance(positions, list) and positions is not None:
-        raise Exception("Input for positions argument must be a list")
+        raise Exception("Argument 'positions' must be a list.")
 
     # create list to store matches that are forbidden (HTTP 403)
     forbidden_matches = []
@@ -103,7 +106,7 @@ def getPlayerIterationScoresFromHost(
             # check if response is empty
             if len(scores) > 0:
                 scores_list.append(scores)
-        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True)
 
     else:
 
@@ -126,10 +129,10 @@ def getPlayerIterationScoresFromHost(
                 positions=position_string
             )
 
-            # check if resonse is empty
+            # check if response is empty
             if len(scores) > 0:
                 scores_list.append(scores)
-        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True)
 
     # raise exception if no player played at given positions in entire iteration
     if len(scores_raw) == 0:
@@ -162,7 +165,7 @@ def getPlayerIterationScoresFromHost(
         url=f"{host}/v5/customerapi/player-scores",
         method="GET"
     ).process_response(
-        endpoint="playerScores"
+        endpoint="PlayerScores"
     )[["id", "name"]]
 
     # get iterations
@@ -286,11 +289,6 @@ def getPlayerIterationScoresFromHost(
     # remove NA rows
     averages = averages[averages.iterationId.notnull()]
 
-    # fix column types
-    averages["squadId"] = averages["squadId"].astype(int)
-    averages["playerId"] = averages["playerId"].astype(int)
-    averages["iterationId"] = averages["iterationId"].astype(int)
-
     # define column order
     order = [
         "iterationId",
@@ -325,6 +323,7 @@ def getPlayerIterationScoresFromHost(
     averages = averages[order]
 
     # fix some column types
+    averages["iterationId"] = averages["iterationId"].astype("Int64")
     averages["squadId"] = averages["squadId"].astype("Int64")
     averages["playerId"] = averages["playerId"].astype("Int64")
     averages["wyscoutId"] = averages["wyscoutId"].astype("Int64")

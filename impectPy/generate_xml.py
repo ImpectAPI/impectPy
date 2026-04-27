@@ -130,8 +130,8 @@ def generateXML(
         p4Start: int,
         p5Start: int,
         codeTag: str,
-        squad: None,
-        perspective: None,
+        squad=None,
+        perspective=None,
         labels=None,
         kpis=None,
         labelSorting: bool = True,
@@ -561,10 +561,7 @@ def generateXML(
         players["teamGoals"] == players["opponentGoals"], "tied",
         np.where(
             players["teamGoals"] > players["opponentGoals"], "leading",
-            np.where(
-                players["teamGoals"] < players["opponentGoals"], "trailing",
-                np.NaN
-            )
+            "trailing"
         )
     )
 
@@ -820,7 +817,7 @@ def generateXML(
     players["actionTypeResult"] = np.where(
         players["result"].notna(),
         players["actionType"] + "_" + players["result"],
-        np.NaN
+        None
     )
 
     # add data to xml structure

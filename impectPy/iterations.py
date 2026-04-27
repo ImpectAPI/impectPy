@@ -1,7 +1,6 @@
 # load packages
 import pandas as pd
 import re
-import requests
 from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_dict, validate_response
 
 ######
@@ -12,7 +11,7 @@ from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_dict
 
 
 def getIterations(token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of all competition iterations available to the authenticated user."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -23,7 +22,10 @@ def getIterations(token: str, session: ImpectSession = ImpectSession()) -> pd.Da
 
 # define function
 def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch all competition iterations from the given host and return them as a DataFrame.
 
+    Merges iteration data with country names and sorts by iteration ID.
+    """
     # request competition iteration information from API
     response = connection.make_api_request_limited(
         f"{host}/v5/customerapi/iterations/",
@@ -46,20 +48,20 @@ def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame
     df = df.rename(columns=lambda x: re.sub("[\._](.)", lambda y: y.group(1).upper(), x))
 
     # keep first entry for skillcorner, heimspiel and wyscout data
-    df.skillCornerId = df.skillCornerId.apply(lambda x: x[0] if x else None)
-    df.heimSpielId = df.heimSpielId.apply(lambda x: x[0] if x else None)
-    df.wyscoutId = df.wyscoutId.apply(lambda x: x[0] if x else None)
-    df.optaId = df.optaId.apply(lambda x: x[0] if x else None)
-    df.statsPerformId = df.statsPerformId.apply(lambda x: x[0] if x else None)
-    df.transfermarktId = df.transfermarktId.apply(lambda x: x[0] if x else None)
-    df.soccerdonnaId = df.soccerdonnaId.apply(lambda x: x[0] if x else None)
+    df["skillCornerId"] = df["skillCornerId"].apply(lambda x: x[0] if x else None)
+    df["heimSpielId"] = df["heimSpielId"].apply(lambda x: x[0] if x else None)
+    df["wyscoutId"] = df["wyscoutId"].apply(lambda x: x[0] if x else None)
+    df["optaId"] = df["optaId"].apply(lambda x: x[0] if x else None)
+    df["statsPerformId"] = df["statsPerformId"].apply(lambda x: x[0] if x else None)
+    df["transfermarktId"] = df["transfermarktId"].apply(lambda x: x[0] if x else None)
+    df["soccerdonnaId"] = df["soccerdonnaId"].apply(lambda x: x[0] if x else None)
 
     # get country data
     countries = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/countries",
         method="GET"
     ).process_response(
-        endpoint="KPIs"
+        endpoint="Countries"
     )
 
     df = df.merge(

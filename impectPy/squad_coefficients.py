@@ -1,19 +1,18 @@
 # load packages
 import pandas as pd
-import requests
 from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df
 from .iterations import getIterationsFromHost
 
 ######
 #
-# This function returns a pandas dataframe that contains all squad ratings for a given iteration
+# This function returns a pandas dataframe that contains all squad coefficients for a given iteration
 #
 ######
 
 
 # define function
 def getSquadCoefficients(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of match-prediction model coefficients for all squads in the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -23,17 +22,18 @@ def getSquadCoefficients(iteration: int, token: str, session: ImpectSession = Im
     return getSquadCoefficientsFromHost(iteration, connection, "https://api.impect.com")
 
 def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch model coefficients for the given iteration from the given host and return them as a DataFrame.
 
+    Flattens the nested coefficients structure (date, intercept, home advantage, attack/defense
+    per squad), merges competition and squad metadata, and sorts by date and squad ID. Returns an
+    empty DataFrame when no coefficients are available.
+    """
     # check input for matches argument
     if not isinstance(iteration, int):
         raise Exception("Argument 'iteration' must be an integer.")
 
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
-
-    # raise exception if provided iteration id doesn't exist
-    if iteration not in list(iterations.id):
-        raise Exception("The supplied iteration id does not exist. Execution stopped.")
 
     # get squads
     squads = connection.make_api_request_limited(
@@ -54,8 +54,12 @@ def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, hos
         endpoint="Squad Coefficients"
     )
 
+    # check if response is empty
+    if coefficients_raw.empty or not coefficients_raw["entries"].iloc[0]:
+        return pd.DataFrame()
+
     # extract JSON from the column
-    nested_data = coefficients_raw["entries"][0]
+    nested_data = coefficients_raw["entries"].iloc[0]
 
     # flatten coefficients df
     coefficients = []

@@ -1,8 +1,6 @@
 # load packages
 import pandas as pd
-import requests
-import warnings
-from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
+from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute, resolve_matches
 from .matches import getMatchesFromHost
 from .iterations import getIterationsFromHost
 
@@ -31,7 +29,7 @@ allowed_positions = [
 def getPlayerMatchScores(
         matches: list, token: str, positions: list = None, session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
-
+    """Return a DataFrame of per-player scores for the given list of match IDs."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -41,14 +39,15 @@ def getPlayerMatchScores(
     return getPlayerMatchScoresFromHost(matches, connection, "https://api.impect.com", positions)
 
 def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host: str, positions: list = None) -> pd.DataFrame:
+    """Fetch per-player scores for the given matches from the given host and return them as a DataFrame.
 
-    # check input for matches argument
-    if not isinstance(matches, list):
-        raise Exception("Argument 'matches' must be a list of integers.")
-
+    When ``positions`` is provided, only scores for players who appeared at those positions are
+    returned. Pivots raw score data, merges player demographics, squad names, coach names, and
+    competition metadata.
+    """
     # check input for positions argument
     if not isinstance(positions, list) and positions is not None:
-        raise Exception("Input for positions argument must be a list")
+        raise Exception("Argument 'positions' must be a list.")
 
     # check if the input positions are valid
     if positions is not None:
@@ -59,53 +58,11 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
                 f"\nChoose one or more of: {', '.join(allowed_positions)}"
             )
 
-    # create list to store matches that are forbidden (HTTP 403)
+    resolved = resolve_matches(matches, connection, host)
+    match_data = resolved.match_data
+    matches = resolved.matches
+    iterations = resolved.iterations
     forbidden_matches = []
-
-    # get match info
-    def fetch_match_info(connection, url):
-        return connection.make_api_request_limited(
-            url=url,
-            method="GET"
-        ).process_response(endpoint="Match Info")
-
-    # create list to store dfs
-    match_data_list = []
-    for match in matches:
-        match_data = safe_execute(
-            fetch_match_info,
-            connection,
-            url=f"{host}/v5/customerapi/matches/{match}",
-            identifier=match,
-            forbidden_list=forbidden_matches
-        )
-        match_data_list.append(match_data)
-    match_data = pd.concat(match_data_list)
-
-    # filter for matches that are unavailable
-    unavailable_matches = match_data[match_data.lastCalculationDate.isnull()].id.drop_duplicates().to_list()
-
-    # drop matches that are unavailable from list of matches
-    matches = [match for match in matches if match not in unavailable_matches]
-
-    # drop matches that are forbidden
-    matches = [match for match in matches if match not in forbidden_matches]
-
-    # configure warning format
-    def no_line_formatter(message, category, filename, lineno, line):
-        return f"Warning: {message}\n"
-    warnings.formatwarning = no_line_formatter
-
-    # raise exception if no matches remaining or report removed matches
-    if len(matches) == 0:
-        raise Exception("All supplied matches are unavailable or forbidden. Execution stopped.")
-    if len(forbidden_matches) > 0:
-        warnings.warn(f"The following matches are forbidden for the user: {forbidden_matches}")
-    if len(unavailable_matches) > 0:
-        warnings.warn(f"The following matches are not available yet and were ignored: {unavailable_matches}")
-
-    # extract iterationIds
-    iterations = list(match_data[match_data.lastCalculationDate.notnull()].iterationId.unique())
 
     # get player match sums
     def fetch_player_match_scores(connection, url):
@@ -128,7 +85,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
                 forbidden_list=forbidden_matches
             ).assign(matchId=match)
             scores_list.append(scores)
-        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True)
 
     else:
 
@@ -149,7 +106,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
                 positions=position_string
             )
             scores_list.append(scores)
-        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True)
 
     # get players
     players_list = []

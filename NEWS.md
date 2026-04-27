@@ -1,3 +1,16 @@
+# impectPy 2.6.0
+
+## Minor Changes
+* Add function `getMatchPredictions()` to query match predictions for a given iteration
+* Add `simulate_season` example notebook
+* Fix crashes in all match-looping functions (`getEvents()`, `getPlayerMatchsums()`, `getSquadMatchsums()`, `getPlayerMatchScores()`, `getSquadMatchScores()`, `getPlayerIterationScores()`, `getSquadIterationScores()`, `getSetPieces()`, `getFormations()`) when API returns empty data for one or more matches
+* Fix crash in `getSquadRatings()` and `getSquadCoefficients()` when the API returns an empty response
+* Fix deprecated dot-access column assignment in `getMatches()` and `getIterations()`
+* Fix duplicate `reset_index()` calls in `getPlayerMatchScores()` and `getPlayerIterationScores()`
+* Fix mutable default arguments in `Impect.__init__()` and `getAccessToken()`
+* Fix numpy 2.0 compatibility issues in `generateXML()`
+* Centralize repeated match-resolution logic across all 9 match-looping modules into a shared `resolve_matches()` helper
+
 # impectPy 2.5.10
 
 ## Minor Changes

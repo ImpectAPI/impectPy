@@ -1,6 +1,5 @@
 # load packages
 import pandas as pd
-import requests
 import warnings
 from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_df, ForbiddenError, safe_execute
 from .matches import getMatchesFromHost
@@ -15,7 +14,7 @@ from .iterations import getIterationsFromHost
 
 
 def getSquadIterationScores(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of per-squad iteration-level scores for the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -25,10 +24,14 @@ def getSquadIterationScores(iteration: int, token: str, session: ImpectSession =
     return getSquadIterationScoresFromHost(iteration, connection, "https://api.impect.com")
 
 def getSquadIterationScoresFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch per-squad iteration-level scores for the given iteration from the given host and return them as a DataFrame.
 
+    Pivots raw squad score data, merges squad IDs and competition metadata, and returns one
+    row per squad with cumulative score totals and match count.
+    """
     # check input for matches argument
     if not isinstance(iteration, int):
-        raise Exception("Input for iteration argument must be an integer")
+        raise Exception("Argument 'iteration' must be an integer.")
 
     # get squads
     squads = connection.make_api_request_limited(

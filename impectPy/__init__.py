@@ -1,5 +1,5 @@
 # define version attribute
-__version__ = "2.5.10"
+__version__ = "2.6.0"
 
 # import modules
 from .access_token import getAccessToken
@@ -22,6 +22,7 @@ from .squad_coefficients import getSquadCoefficients
 from .formations import getFormations
 from .substitutions import getSubstitutions
 from .starting_positions import getStartingPositions
+from .match_predictions import getMatchPredictions
 from .data import getData
 from .config import Config as Config
 from .impect import Impect as Impect
