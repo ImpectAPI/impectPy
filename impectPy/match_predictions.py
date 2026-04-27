@@ -32,10 +32,6 @@ def getMatchPredictionsFromHost(iteration: int, connection: RateLimitedAPI, host
     # get iterations
     iterations = getIterationsFromHost(connection=connection, host=host)
 
-    # raise exception if provided iteration id doesn't exist
-    if iteration not in list(iterations.id):
-        raise Exception("The supplied iteration id does not exist. Execution stopped.")
-
     # get match predictions
     predictions = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/{iteration}/predictions/match-predictions",
