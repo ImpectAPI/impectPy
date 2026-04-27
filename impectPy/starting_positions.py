@@ -13,6 +13,7 @@ from .iterations import getIterationsFromHost
 
 
 def getStartingPositions(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
+    """Return a DataFrame of starting positions for all players in the given list of match IDs."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -24,6 +25,11 @@ def getStartingPositions(matches: list, token: str, session: ImpectSession = Imp
 
 # define function
 def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch starting positions for the given matches from the given host and return them as a DataFrame.
+
+    Extracts home and away starting lineup records from match data, enriches them with player
+    names, shirt numbers, and competition metadata, and sorts by match, squad, and player ID.
+    """
     resolved = resolve_matches(matches, connection, host)
     match_data = resolved.match_data
     matches = resolved.matches

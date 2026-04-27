@@ -29,7 +29,7 @@ allowed_positions = [
 def getPlayerMatchScores(
         matches: list, token: str, positions: list = None, session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
-
+    """Return a DataFrame of per-player scores for the given list of match IDs."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -39,7 +39,12 @@ def getPlayerMatchScores(
     return getPlayerMatchScoresFromHost(matches, connection, "https://api.impect.com", positions)
 
 def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host: str, positions: list = None) -> pd.DataFrame:
+    """Fetch per-player scores for the given matches from the given host and return them as a DataFrame.
 
+    When ``positions`` is provided, only scores for players who appeared at those positions are
+    returned. Pivots raw score data, merges player demographics, squad names, coach names, and
+    competition metadata.
+    """
     # check input for positions argument
     if not isinstance(positions, list) and positions is not None:
         raise Exception("Argument 'positions' must be a list.")

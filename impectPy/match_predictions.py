@@ -13,7 +13,7 @@ from .matches import getMatchesFromHost
 
 # define function
 def getMatchPredictions(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of match predictions for all matches in the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -24,7 +24,11 @@ def getMatchPredictions(iteration: int, token: str, session: ImpectSession = Imp
 
 
 def getMatchPredictionsFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch match predictions for the given iteration from the given host and return them as a DataFrame.
 
+    Merges prediction values (market, model, expert) with match schedules and competition metadata,
+    sorted by match day and match ID.
+    """
     # check input for iteration argument
     if not isinstance(iteration, int):
         raise Exception("Argument 'iteration' must be an integer.")

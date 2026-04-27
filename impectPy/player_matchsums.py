@@ -13,7 +13,7 @@ from .iterations import getIterationsFromHost
 
 
 def getPlayerMatchsums(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of per-player KPI sums for the given list of match IDs."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -23,7 +23,11 @@ def getPlayerMatchsums(matches: list, token: str, session: ImpectSession = Impec
     return getPlayerMatchsumsFromHost(matches, connection, "https://api.impect.com")
 
 def getPlayerMatchsumsFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch per-player KPI sums for the given matches from the given host and return them as a DataFrame.
 
+    Pivots raw KPI data per player and position, merges player demographics, squad names, coach
+    names, and competition metadata, and returns one row per player, position, and match.
+    """
     resolved = resolve_matches(matches, connection, host)
     match_data = resolved.match_data
     matches = resolved.matches

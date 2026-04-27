@@ -15,7 +15,7 @@ import re
 
 # define function
 def getSetPieces(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of all set-piece sub-phases for the given list of match IDs."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -25,7 +25,11 @@ def getSetPieces(matches: list, token: str, session: ImpectSession = ImpectSessi
     return getSetPiecesFromHost(matches, connection, "https://api.impect.com")
 
 def getSetPiecesFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch set-piece sub-phases for the given matches from the given host and return them as a DataFrame.
 
+    Resolves match metadata, squad names, player names, and KPI aggregates from the API and
+    merges them into the result, sorted by match and set-piece phase index.
+    """
     resolved = resolve_matches(matches, connection, host)
     match_data = resolved.match_data
     matches = resolved.matches

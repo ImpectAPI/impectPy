@@ -22,6 +22,7 @@ logger.addHandler(logging.NullHandler())
 
 class ImpectResponse(requests.Response):
     def process_response(self, endpoint: str, raise_exception: bool = True) -> pd.DataFrame:
+        """Validate the API response, flatten the JSON data, and return it as a DataFrame."""
         # validate and get data from response
         result = validate_response(response=self, endpoint=endpoint, raise_exception=raise_exception)
 
@@ -43,6 +44,7 @@ class ImpectResponse(requests.Response):
 
 class ImpectSession(requests.Session):
     def request(self, *args, **kwargs) -> ImpectResponse:
+        """Send a request and return the response cast to ImpectResponse."""
         response = super().request(*args, **kwargs)
         response.__class__ = ImpectResponse
         return response
@@ -67,12 +69,7 @@ class ForbiddenError(HTTPError):
 
 class RateLimitedAPI:
     def __init__(self, session: Optional[ImpectSession] = None):
-        """
-        Initializes a RateLimitedAPI object.
-
-        Args:
-            session (ImpectSession): The session object to use for the API calls.
-        """
+        """Initialize a RateLimitedAPI instance, using the provided session or a new ImpectSession."""
         self.session = session or ImpectSession()  # use the provided session or create a new session
         self.bucket = None  # TokenBucket object to manage rate limit tokens
 
@@ -80,12 +77,7 @@ class RateLimitedAPI:
     def make_api_request_limited(
             self, url: str, method: str, data: Optional[Dict[str, str]] = None
     ) -> ImpectResponse:
-        """
-        Executes an API call while applying the rate limit.
-
-        Returns:
-            ImpectResponse: The response returned by the API.
-        """
+        """Execute a rate-limited API call and return the response."""
 
         # check if bucket is not initialized
         if not self.bucket:
@@ -137,12 +129,7 @@ class RateLimitedAPI:
             self, url: str, method: str, data: Optional[Dict[str, Any]] = None,
             max_retries: int = 3, retry_delay: Optional[int] = None
     ) -> ImpectResponse:
-        """
-        Executes an API call.
-
-        Returns:
-            ImpectResponse: The response returned by the API.
-        """
+        """Execute an API call with retries and return the response."""
         # try API call
         for i in range(max_retries):
             response = self.session.request(method=method, url=url, data=data)
@@ -203,23 +190,14 @@ class RateLimitedAPI:
 
 class TokenBucket:
     def __init__(self, capacity: int, refill_after: int = 1, remaining: int = 0):
-        """
-        Initializes a TokenBucket object.
-
-        Args:
-            capacity (int): The maximum number of tokens the bucket can hold.
-            refill_after (int): The time period (in seconds) after which the bucket is refilled.
-            remaining (int): The amount of tokens remaining at the moment of initialization.
-        """
+        """Initialize a TokenBucket with the given capacity, refill interval, and initial token count."""
         self.capacity = capacity  # maximum number of tokens the bucket can hold
         self.refill_after = refill_after  # time period (in seconds) after which the bucket is refilled
         self.tokens = remaining  # number of tokens remaining at time of bucket creation
         self.last_refill_time = time.time()  # time of the last token refill
 
     def addTokens(self):
-        """
-        Refills the token bucket if the refill time has elapsed.
-        """
+        """Refill the token bucket to capacity if the refill interval has elapsed."""
         now = time.time()  # current time
         elapsed_time = now - self.last_refill_time  # time elapsed since the last token refill
         if elapsed_time > self.refill_after:
@@ -227,22 +205,12 @@ class TokenBucket:
             self.last_refill_time = now  # update the last refill time to the current time
 
     def isTokenAvailable(self):
-        """
-        Checks if at least one token is available in the bucket.
-
-        Returns:
-            bool: True if a token is available, False otherwise.
-        """
+        """Return True if at least one token is available in the bucket, False otherwise."""
         self.addTokens()  # ensure the token bucket is up-to-date
         return self.tokens >= 1  # return True if there is at least one token, False otherwise
 
     def consumeToken(self):
-        """
-        Consumes a token from the bucket if available.
-
-        Returns:
-            bool: True if a token was consumed successfully, False otherwise.
-        """
+        """Consume one token from the bucket and return True, or return False if none are available."""
         if not self.isTokenAvailable():  # if no token is available, return False
             return False
         self.tokens -= 1  # decrement the token count by 1
@@ -257,6 +225,11 @@ class TokenBucket:
 
 
 def unnest_mappings_dict(mapping_dict: dict) -> dict:
+    """Unnest the idMappings entries in a list of dicts and return the modified list.
+
+    Each item's ``idMappings`` list is iterated and each provider key is promoted to a
+    top-level key of the form ``<provider>Id``.
+    """
     # iterate over entry and unnest idMappings
     for entry in mapping_dict:
         # iterate over mappings
@@ -278,6 +251,11 @@ def unnest_mappings_dict(mapping_dict: dict) -> dict:
 
 
 def unnest_mappings_df(df: pd.DataFrame, mapping_col: str) -> pd.DataFrame:
+    """Unnest the idMappings column of a DataFrame and return the expanded DataFrame.
+
+    Reads the list of provider-to-ID mappings stored in ``mapping_col``, normalises
+    provider names, and concatenates the resulting columns alongside the original DataFrame.
+    """
     # create empty df to store mappings
     df_mappings = pd.DataFrame(columns=["wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId"])
 
@@ -323,6 +301,10 @@ def unnest_mappings_df(df: pd.DataFrame, mapping_col: str) -> pd.DataFrame:
 
 # define function to validate JSON response and return data
 def validate_response(response: ImpectResponse, endpoint: str, raise_exception: bool = True) -> dict:
+    """Validate the JSON response from an API call and return the data payload.
+
+    Raises an exception when the data list is empty and ``raise_exception`` is True.
+    """
     # get data from response
     data = response.json()["data"]
 
@@ -343,18 +325,10 @@ def validate_response(response: ImpectResponse, endpoint: str, raise_exception: 
 
 
 def safe_execute(func, *args, fallback=None, identifier: str, forbidden_list: list, **kwargs):
-    """
-    Executes a function safely. If an exception occurs, it logs the error
-    and returns a default fallback (empty DataFrame by default).
+    """Execute func safely and return its result, or fallback if an exception occurs.
 
-    Args:
-        func (callable): The function to execute.
-        *args, **kwargs: Arguments for the function.
-        fallback: The fallback value to return if the function fails.
-        identifier: An identifier to identify the error.
-        forbidden_list: A list to store identifiers of forbidden requests.
-    Returns:
-        The function's result or an empty DataFrame if it fails.
+    Logs errors on failure, appends the identifier to forbidden_list on HTTP 403, and
+    returns an empty DataFrame as the default fallback.
     """
     if fallback is None:
         fallback = pd.DataFrame()
@@ -396,6 +370,12 @@ class MatchResolution(NamedTuple):
 
 
 def resolve_matches(matches: list, connection: RateLimitedAPI, host: str) -> MatchResolution:
+    """Validate a list of match IDs and return their metadata, filtered IDs, and iteration IDs.
+
+    Fetches match info for each ID in ``matches``, removes forbidden and unavailable matches
+    with appropriate warnings, and returns a MatchResolution named tuple containing the full
+    match DataFrame, the filtered match ID list, and the unique iteration IDs.
+    """
     # check input for matches argument
     if not isinstance(matches, list):
         raise Exception("Argument 'matches' must be a list of integers.")

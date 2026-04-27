@@ -14,7 +14,7 @@ from .iterations import getIterationsFromHost
 def getSquadIterationAverages(
         iteration: int, token: str, session: ImpectSession = ImpectSession()
     ) -> pd.DataFrame:
-
+    """Return a DataFrame of per-squad KPI averages for the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -24,7 +24,11 @@ def getSquadIterationAverages(
     return getSquadIterationAveragesFromHost(iteration, connection, "https://api.impect.com")
 
 def getSquadIterationAveragesFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch per-squad KPI averages for the given iteration from the given host and return them as a DataFrame.
 
+    Pivots raw KPI sums per squad, merges squad IDs and competition metadata, and returns one
+    row per squad with cumulative KPI totals and match count.
+    """
     # check input for matches argument
     if not isinstance(iteration, int):
         raise Exception("Argument 'iteration' must be an integer.")

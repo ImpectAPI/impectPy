@@ -30,7 +30,7 @@ allowed_positions = [
 def getPlayerIterationScores(
         iteration: int, token: str, positions: list = None, session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
-
+    """Return a DataFrame of per-player iteration-level scores for the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -42,7 +42,11 @@ def getPlayerIterationScores(
 def getPlayerIterationScoresFromHost(
         iteration: int, connection: RateLimitedAPI, host: str, positions: list = None
 ) -> pd.DataFrame:
+    """Fetch per-player iteration-level scores for the given iteration from the given host and return them as a DataFrame.
 
+    When ``positions`` is provided, only scores for players who appeared at those positions are
+    returned. Pivots raw score data per squad, merges player demographics and competition metadata.
+    """
     # check input for iteration argument
     if not isinstance(iteration, int):
         raise Exception("Argument 'iteration' must be an integer.")

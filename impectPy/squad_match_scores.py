@@ -13,7 +13,7 @@ from .iterations import getIterationsFromHost
 
 
 def getSquadMatchScores(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of per-squad scores for the given list of match IDs."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -23,7 +23,11 @@ def getSquadMatchScores(matches: list, token: str, session: ImpectSession = Impe
     return getSquadMatchScoresFromHost(matches, connection, "https://api.impect.com")
 
 def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch per-squad scores for the given matches from the given host and return them as a DataFrame.
 
+    Pivots raw score data per squad, merges squad IDs, coach names, and competition metadata,
+    and returns one row per squad per match.
+    """
     resolved = resolve_matches(matches, connection, host)
     match_data = resolved.match_data
     matches = resolved.matches

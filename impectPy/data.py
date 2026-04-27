@@ -15,18 +15,7 @@ def getData(
         url: str, token: str, method: str = "GET", data: Optional[Dict[str, Any]] = None,
         session: Optional[ImpectSession] = None
 ) -> pd.DataFrame:
-    """Returns a processed DataFrame from any Impect API endpoint.
-
-    Args:
-        url (str): Full URL of the API endpoint.
-        token (str): Bearer token for authentication.
-        method (str): HTTP method. Defaults to "GET".
-        data (Optional[Dict[str, Any]]): Optional request body. Defaults to None.
-        session (Optional[ImpectSession]): The session object to use for the API calls. Defaults to a new ImpectSession.
-
-    Returns:
-        pd.DataFrame: Processed response data.
-    """
+    """Authenticate and call any Impect API endpoint, returning the response as a DataFrame."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session or ImpectSession())
 
@@ -39,16 +28,6 @@ def getData(
 def getDataFromHost(
         url: str, method: str, connection: RateLimitedAPI, data: Optional[Dict[str, Any]] = None
 ) -> pd.DataFrame:
-    """Core implementation: executes a rate-limited API call and returns a processed DataFrame.
-
-    Args:
-        url (str): Full URL of the API endpoint.
-        method (str): HTTP method.
-        connection (RateLimitedAPI): Authenticated connection object.
-        data (Optional[Dict[str, Any]]): Optional request body. Defaults to None.
-
-    Returns:
-        pd.DataFrame: Processed response data.
-    """
+    """Execute a rate-limited API call to the given URL and return the response as a DataFrame."""
     response = connection.make_api_request_limited(url=url, method=method, data=data)
     return response.process_response(endpoint=url)

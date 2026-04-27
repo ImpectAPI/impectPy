@@ -11,7 +11,7 @@ from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_dict
 
 
 def getIterations(token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of all competition iterations available to the authenticated user."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -22,7 +22,10 @@ def getIterations(token: str, session: ImpectSession = ImpectSession()) -> pd.Da
 
 # define function
 def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch all competition iterations from the given host and return them as a DataFrame.
 
+    Merges iteration data with country names and sorts by iteration ID.
+    """
     # request competition iteration information from API
     response = connection.make_api_request_limited(
         f"{host}/v5/customerapi/iterations/",

@@ -11,7 +11,7 @@ from impectPy.helpers import RateLimitedAPI, ImpectSession, unnest_mappings_dict
 
 
 def getMatches(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of all matches for the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -22,7 +22,10 @@ def getMatches(iteration: int, token: str, session: ImpectSession = ImpectSessio
 
 # define function
 def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch all matches for the given iteration from the given host and return them as a DataFrame.
 
+    Merges match records with squad and country data and sorts by match day and match ID.
+    """
     # get match data
     matches = connection.make_api_request_limited(
         url=f"{host}/v5/customerapi/iterations/"

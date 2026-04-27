@@ -14,6 +14,7 @@ from .iterations import getIterationsFromHost
 
 
 def getFormations(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
+    """Return a DataFrame of all formation changes for the given list of match IDs."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -25,6 +26,11 @@ def getFormations(matches: list, token: str, session: ImpectSession = ImpectSess
 
 # define function
 def getFormationsFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch formation changes for the given matches from the given host and return them as a DataFrame.
+
+    Extracts home and away formation sequences from match data, merges squad and competition
+    metadata, and sorts the result by match, squad, and game time.
+    """
     resolved = resolve_matches(matches, connection, host)
     match_data = resolved.match_data
     matches = resolved.matches

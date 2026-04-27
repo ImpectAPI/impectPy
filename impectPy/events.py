@@ -18,7 +18,7 @@ def getEvents(
         matches: list, token: str, include_kpis: bool = True,
         include_set_pieces: bool = True, session: ImpectSession = ImpectSession()
 ) -> pd.DataFrame:
-
+    """Return a DataFrame of all events for the given list of match IDs."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -31,7 +31,12 @@ def getEvents(
 def getEventsFromHost(
         matches: list, include_kpis: bool, include_set_pieces: bool, connection: RateLimitedAPI, host: str
 ) -> pd.DataFrame:
+    """Fetch events for the given matches from the given host and return them as a DataFrame.
 
+    Optionally includes event KPIs and set-piece sub-phase data depending on the
+    ``include_kpis`` and ``include_set_pieces`` flags. Resolves match metadata,
+    player names, squad names, and coach names from the API and merges them into the result.
+    """
     resolved = resolve_matches(matches, connection, host)
     match_data = resolved.match_data
     matches = resolved.matches

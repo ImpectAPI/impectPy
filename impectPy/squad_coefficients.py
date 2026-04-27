@@ -12,7 +12,7 @@ from .iterations import getIterationsFromHost
 
 # define function
 def getSquadCoefficients(iteration: int, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-
+    """Return a DataFrame of match-prediction model coefficients for all squads in the given iteration."""
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
@@ -22,7 +22,12 @@ def getSquadCoefficients(iteration: int, token: str, session: ImpectSession = Im
     return getSquadCoefficientsFromHost(iteration, connection, "https://api.impect.com")
 
 def getSquadCoefficientsFromHost(iteration: int, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+    """Fetch model coefficients for the given iteration from the given host and return them as a DataFrame.
 
+    Flattens the nested coefficients structure (date, intercept, home advantage, attack/defense
+    per squad), merges competition and squad metadata, and sorts by date and squad ID. Returns an
+    empty DataFrame when no coefficients are available.
+    """
     # check input for matches argument
     if not isinstance(iteration, int):
         raise Exception("Argument 'iteration' must be an integer.")
