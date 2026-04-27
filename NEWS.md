@@ -1,3 +1,8 @@
+# impectPy 2.5.11
+
+## Minor Changes
+* Add function `getMatchPredictions()` to query match predictions for a given iteration
+
 # impectPy 2.5.10
 
 ## Minor Changes
