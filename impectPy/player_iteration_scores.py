@@ -161,7 +161,7 @@ def getPlayerIterationScoresFromHost(
         url=f"{host}/v5/customerapi/player-scores",
         method="GET"
     ).process_response(
-        endpoint="playerScores"
+        endpoint="PlayerScores"
     )[["id", "name"]]
 
     # get iterations

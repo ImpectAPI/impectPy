@@ -140,7 +140,7 @@ def getPlayerProfileScoresFromHost(
         url=f"{host}/v5/customerapi/countries",
         method="GET"
     ).process_response(
-        endpoint="KPIs"
+        endpoint="Countries"
     )
     country_map = countries.set_index("id")["fifaName"].to_dict()
 

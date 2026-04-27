@@ -74,7 +74,7 @@ def getPlayerIterationAveragesFromHost(
         url=f"{host}/v5/customerapi/countries",
         method="GET"
     ).process_response(
-        endpoint="KPIs"
+        endpoint="Countries"
     )
 
     # create empty df to store averages

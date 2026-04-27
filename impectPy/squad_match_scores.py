@@ -35,7 +35,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         return connection.make_api_request_limited(
             url=url,
             method="GET"
-        ).process_response(endpoint="Player Match Sums")
+        ).process_response(endpoint="Squad Match Sums")
 
     # create list to store dfs
     scores_list = []
@@ -90,7 +90,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         url=f"{host}/v5/customerapi/squad-scores",
         method="GET"
     ).process_response(
-        endpoint="PlayerScores"
+        endpoint="SquadScores"
     )[["id", "name"]]
 
     # get matches

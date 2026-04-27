@@ -58,7 +58,7 @@ def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame
         url=f"{host}/v5/customerapi/countries",
         method="GET"
     ).process_response(
-        endpoint="KPIs"
+        endpoint="Countries"
     )
 
     df = df.merge(
