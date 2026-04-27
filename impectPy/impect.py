@@ -66,7 +66,7 @@ class Impect:
             matches, self.connection, self.__config.HOST
         )
 
-    def getSquadMatchsums(self, matches: list, ) -> pd.DataFrame:
+    def getSquadMatchsums(self, matches: list) -> pd.DataFrame:
         return getSquadMatchsumsFromHost(
             matches, self.connection, self.__config.HOST
         )
