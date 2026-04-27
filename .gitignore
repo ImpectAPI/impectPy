@@ -415,3 +415,9 @@ tests/
 
 # Maintenance checklist
 maintenance_checklist.md
+
+# superpower dev docs
+docs/superpowers/
+
+# Claude Code files
+.claude/
