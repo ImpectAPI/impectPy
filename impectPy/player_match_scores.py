@@ -80,7 +80,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
                 forbidden_list=forbidden_matches
             ).assign(matchId=match)
             scores_list.append(scores)
-        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True)
 
     else:
 
@@ -101,7 +101,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
                 positions=position_string
             )
             scores_list.append(scores)
-        scores_raw = pd.concat(scores_list).reset_index(drop=True).reset_index(drop=True)
+        scores_raw = pd.concat(scores_list).reset_index(drop=True)
 
     # get players
     players_list = []
