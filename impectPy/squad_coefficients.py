@@ -5,7 +5,7 @@ from .iterations import getIterationsFromHost
 
 ######
 #
-# This function returns a pandas dataframe that contains all squad ratings for a given iteration
+# This function returns a pandas dataframe that contains all squad coefficients for a given iteration
 #
 ######
 

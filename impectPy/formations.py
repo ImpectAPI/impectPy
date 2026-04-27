@@ -7,8 +7,8 @@ from .iterations import getIterationsFromHost
 
 ######
 #
-# This function returns a pandas dataframe that contains all events for a
-# given match
+# This function returns a pandas dataframe that contains all formations for a
+# given set of matches
 #
 ######
 
