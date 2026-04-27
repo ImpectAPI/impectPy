@@ -125,7 +125,7 @@ def getPlayerIterationScoresFromHost(
                 positions=position_string
             )
 
-            # check if resonse is empty
+            # check if response is empty
             if len(scores) > 0:
                 scores_list.append(scores)
         scores_raw = pd.concat(scores_list).reset_index(drop=True)
