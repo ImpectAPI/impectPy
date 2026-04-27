@@ -1,8 +1,12 @@
 import os
+import re
 from setuptools import setup
 
 with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "README.md")) as f:
     README = f.read()
+
+with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "impectPy", "__init__.py")) as f:
+    version = re.search(r'^__version__\s*=\s*["\'](.+)["\']', f.read(), re.M).group(1)
 
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
@@ -17,7 +21,7 @@ setup(
                       "pandas>=2.2.0",
                       "numpy>=1.24.2"],
     # *strongly* suggested for sharing
-    version="2.5.10",
+    version=version,
     # The license can be anything you like
     license="MIT",
     description="A Python package to facilitate interaction with the Impect customer API",
