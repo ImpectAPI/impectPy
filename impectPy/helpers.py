@@ -256,34 +256,23 @@ def unnest_mappings_df(df: pd.DataFrame, mapping_col: str) -> pd.DataFrame:
     Reads the list of provider-to-ID mappings stored in ``mapping_col``, normalises
     provider names, and concatenates the resulting columns alongside the original DataFrame.
     """
-    # create empty df to store mappings
-    df_mappings = pd.DataFrame(columns=["wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId"])
-
-    # iterate over entry and unnest idMappings
+    # collect mappings dynamically — no hardcoded provider list
+    rows = {}
     for index, entry in df.iterrows():
-        # iterate over mappings
+        row = {}
         for mapping in entry[mapping_col]:
-            # get mapping data
             for provider, mapping_ids in mapping.items():
-                # fix provider name
-                if provider == "heim_spiel":
-                    provider = "heimSpiel"
-                elif provider == "skill_corner":
-                    provider = "skillCorner"
-                elif provider == "stats_perform":
-                    provider = "statsPerform"
-                elif provider in ("wyscout", "opta", "transfermarkt", "soccerdonna"):
-                    pass
-                else:
-                    raise Exception(f"Unknown provider: {provider}")
+                # normalise snake_case provider names to camelCase
+                provider = re.sub(r"_([a-z])", lambda m: m.group(1).upper(), provider)
 
-                # check if mapping is a dict with at least one entry
+                # store first mapping id, or NaN when none available
                 if isinstance(mapping_ids, list):
-                    if len(mapping_ids) > 0:
-                        # add first mapping as key on iteration level
-                        df_mappings.loc[index, provider + "Id"] = mapping_ids[0]
+                    row[provider + "Id"] = mapping_ids[0] if mapping_ids else np.nan
                 else:
-                    df_mappings.loc[index, provider + "Id"] = np.nan
+                    row[provider + "Id"] = np.nan
+        rows[index] = row
+
+    df_mappings = pd.DataFrame.from_dict(rows, orient="index")
 
     # merge with original df
     df = pd.concat([df, df_mappings], axis=1, ignore_index=False)
