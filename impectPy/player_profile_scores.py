@@ -44,11 +44,11 @@ def getPlayerProfileScoresFromHost(
 
     # check input for iteration argument
     if not isinstance(iteration, int):
-        raise Exception("Input for iteration argument must be an integer")
+        raise Exception("Argument 'iteration' must be an integer.")
 
     # check input for positions argument
     if not isinstance(positions, list):
-        raise Exception("Input for positions argument must be a list")
+        raise Exception("Argument 'positions' must be a list.")
 
     # check if the input positions are valid
     invalid_positions = [position for position in positions if position not in allowed_positions]

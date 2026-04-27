@@ -27,7 +27,7 @@ def getSquadIterationAveragesFromHost(iteration: int, connection: RateLimitedAPI
 
     # check input for matches argument
     if not isinstance(iteration, int):
-        raise Exception("Input vor iteration argument must be an integer")
+        raise Exception("Argument 'iteration' must be an integer.")
 
     # get squads
     squads = connection.make_api_request_limited(

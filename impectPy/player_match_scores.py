@@ -42,7 +42,7 @@ def getPlayerMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host
 
     # check input for positions argument
     if not isinstance(positions, list) and positions is not None:
-        raise Exception("Input for positions argument must be a list")
+        raise Exception("Argument 'positions' must be a list.")
 
     # check if the input positions are valid
     if positions is not None:

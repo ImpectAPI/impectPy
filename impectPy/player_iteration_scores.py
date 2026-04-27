@@ -45,11 +45,11 @@ def getPlayerIterationScoresFromHost(
 
     # check input for iteration argument
     if not isinstance(iteration, int):
-        raise Exception("Input for iteration argument must be an integer")
+        raise Exception("Argument 'iteration' must be an integer.")
 
     # check input for positions argument
     if not isinstance(positions, list) and positions is not None:
-        raise Exception("Input for positions argument must be a list")
+        raise Exception("Argument 'positions' must be a list.")
 
     # create list to store matches that are forbidden (HTTP 403)
     forbidden_matches = []
