@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.5.10
+Version: v2.6.0
 
-**Updated: April 13th 2026**
+**Updated: April 27th 2026**
 
 ---
 
@@ -35,7 +35,7 @@ pip install impectPy
 You can also install it from [GitHub](https://github.com/) with:
 
 ```cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.5.10
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.6.0
 ```
 
 ## Usage
@@ -109,9 +109,9 @@ events = ip.getEvents(
 )
 
 # get match info
-formations = ip.getFormations(matches, token)
-substitutions = ip.getSubstitutions(matches, token)
-starting_positions = ip.getStartingPositions(matches, token)
+formations = ip.getFormations(matches=matches, token=token)
+substitutions = ip.getSubstitutions(matches=matches, token=token)
+starting_positions = ip.getStartingPositions(matches=matches, token=token)
 
 # print first few rows from events dataframe to console
 events.head()
@@ -250,6 +250,9 @@ squadRatings = ip.getSquadRatings(iteration=iteration, token=token)
 
 # get squad coefficients for iteration
 squadCoefficients = ip.getSquadCoefficients(iteration=iteration, token=token)
+
+# get match predictions for iteration
+matchPredictions = ip.getMatchPredictions(iteration=iteration, token=token)
 ```
 
 You can now also retrieve the positional profile scores for players via our API. This 
@@ -301,7 +304,7 @@ degree using the following in put variables:
 * `buckets`: Disable Label/KPI buckets (e.g. conversion from value `0.1` to bucket `[0,1[`)
 
 To see a full list of available codeTags, labels, KPIs and allowed combinations of these,
-please see the beginning of the [function definition](https://github.com/ImpectAPI/impectPy/blob/release/impectPy/xml.py).
+please see the beginning of the [function definition](https://github.com/ImpectAPI/impectPy/blob/release/ImpectPy/generate_xml.py).
 
 Please make sure to only retrieve event data for
 one game at a time. Let's use the Bayern vs Dortmund game from earlier as an example:
@@ -392,6 +395,9 @@ ratings = api.getSquadRatings(iteration=iteration)
 
 # get squad coefficients
 coefficients = api.getSquadCoefficients(iteration=iteration)
+
+# get match predictions
+matchPredictions = api.getMatchPredictions(iteration=iteration)
 
 # get matches
 matchplan = api.getMatches(iteration=iteration)
