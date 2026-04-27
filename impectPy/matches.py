@@ -150,11 +150,8 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "available"
     ]]
 
-    # reorder matches
+    # sort matches by match day, then by id within each match day
     matches = matches.sort_values(by=["matchDayIndex", "id"])
-
-    # sort matches
-    matches = matches.sort_values(by="id")
 
     # return matches
     return matches
