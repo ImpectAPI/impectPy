@@ -68,6 +68,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
     matches = matches.rename(columns={
         "name": "homeSquadName",
         "type": "homeSquadType",
+        "gender": "homeSquadGender",
         "skillCornerId_home": "homeSquadSkillCornerId",
         "heimSpielId_home": "homeSquadHeimSpielId",
         "wyscoutId_home": "homeSquadWyscoutId",
@@ -84,6 +85,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
     matches = matches.rename(columns={
         "name": "awaySquadName",
         "type": "awaySquadType",
+        "gender": "awaySquadGender",
         "skillCornerId_away": "awaySquadSkillCornerId",
         "heimSpielId_away": "awaySquadHeimSpielId",
         "wyscoutId_away": "awaySquadWyscoutId",
@@ -111,6 +113,21 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
     )
     matches = matches.rename(columns={"fifaName": "awaySquadCountryName"})
 
+    # derive final goals per team based on resultType
+    result_type_to_suffix = {
+        "REGULAR": "FullTime",
+        "EXTRA_TIME": "ExtraTime2",
+        "PENALTIES": "Penalties",
+    }
+    for side, out_col in [("Home", "homeSquadGoals"), ("Away", "awaySquadGoals")]:
+        matches[out_col] = pd.NA
+        for result_type, suffix in result_type_to_suffix.items():
+            src_col = f"goals{side}{suffix}"
+            if src_col in matches.columns:
+                mask = matches["resultType"] == result_type
+                matches.loc[mask, out_col] = matches.loc[mask, src_col]
+        matches[out_col] = matches[out_col].astype("Int64")
+
     # reorder columns
     matches = matches[[
         "id",
@@ -124,9 +141,11 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "iterationId",
         "matchDayIndex",
         "matchDayName",
+        "stadiumId",
         "homeSquadId",
         "homeSquadName",
         "homeSquadType",
+        "homeSquadGender",
         "homeSquadCountryId",
         "homeSquadCountryName",
         "homeSquadSkillCornerId",
@@ -139,6 +158,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "awaySquadId",
         "awaySquadName",
         "awaySquadType",
+        "awaySquadGender",
         "awaySquadCountryId",
         "awaySquadCountryName",
         "awaySquadSkillCornerId",
@@ -150,7 +170,11 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "awaySquadSoccerdonnaId",
         "scheduledDate",
         "lastCalculationDate",
-        "available"
+        "available",
+        "homeSquadGoals",
+        "awaySquadGoals",
+        "result",
+        "resultType"
     ]]
 
     # sort matches by match day, then by id within each match day
