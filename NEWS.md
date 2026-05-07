@@ -1,3 +1,11 @@
+# impectPy 2.6.1
+
+## Minor Changes
+* Surface additional API response fields previously dropped by the package:
+  * `getMatches()`: add `stadiumId`, `homeSquadGoals`, `awaySquadGoals`, `result`, `resultType`, `homeSquadGender`, `awaySquadGender`. `homeSquadGoals` / `awaySquadGoals` reflect the final score and are derived from `resultType` (`REGULAR` → full-time, `EXTRA_TIME` → extra-time, `PENALTIES` → penalty shootout).
+  * `getIterations()`: add `competitionAgeGroup`
+  * `getSetPieces()`: add `setPieceStartTime`, `setPieceStartTimeInSec`, `setPieceEndTime`, `setPieceEndTimeInSec`
+
 # impectPy 2.6.0
 
 ## Minor Changes
