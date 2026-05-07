@@ -68,6 +68,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
     matches = matches.rename(columns={
         "name": "homeSquadName",
         "type": "homeSquadType",
+        "gender": "homeSquadGender",
         "skillCornerId_home": "homeSquadSkillCornerId",
         "heimSpielId_home": "homeSquadHeimSpielId",
         "wyscoutId_home": "homeSquadWyscoutId",
@@ -84,6 +85,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
     matches = matches.rename(columns={
         "name": "awaySquadName",
         "type": "awaySquadType",
+        "gender": "awaySquadGender",
         "skillCornerId_away": "awaySquadSkillCornerId",
         "heimSpielId_away": "awaySquadHeimSpielId",
         "wyscoutId_away": "awaySquadWyscoutId",
@@ -124,9 +126,11 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "iterationId",
         "matchDayIndex",
         "matchDayName",
+        "stadiumId",
         "homeSquadId",
         "homeSquadName",
         "homeSquadType",
+        "homeSquadGender",
         "homeSquadCountryId",
         "homeSquadCountryName",
         "homeSquadSkillCornerId",
@@ -139,6 +143,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "awaySquadId",
         "awaySquadName",
         "awaySquadType",
+        "awaySquadGender",
         "awaySquadCountryId",
         "awaySquadCountryName",
         "awaySquadSkillCornerId",
@@ -150,7 +155,10 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "awaySquadSoccerdonnaId",
         "scheduledDate",
         "lastCalculationDate",
-        "available"
+        "available",
+        "goals",
+        "result",
+        "resultType"
     ]]
 
     # sort matches by match day, then by id within each match day

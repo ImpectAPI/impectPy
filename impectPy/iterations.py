@@ -85,6 +85,7 @@ def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame
         "competitionCountryId",
         "competitionCountryName",
         "competitionGender",
+        "competitionAgeGroup",
         "dataVersion",
         "lastChangeTimestamp",
         "wyscoutId",
