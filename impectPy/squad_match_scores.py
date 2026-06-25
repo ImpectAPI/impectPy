@@ -177,7 +177,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         how="left",
         suffixes=("", "_iterations")
     ).merge(
-        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "name"]].rename(
+        squads[["id", "wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "dflId", "name"]].rename(
             columns={"id": "squadId", "name": "squadName"}
         ),
         left_on="squadId",
@@ -219,6 +219,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
         "statsPerformId",
         "transfermarktId",
         "soccerdonnaId",
+        "dflId",
         "squadName",
         "coachId",
         "coachName"
@@ -247,6 +248,7 @@ def getSquadMatchScoresFromHost(matches: list, connection: RateLimitedAPI, host:
     squad_scores["statsPerformId"] = squad_scores["statsPerformId"].astype("string")
     squad_scores["transfermarktId"] = squad_scores["transfermarktId"].astype("string")
     squad_scores["soccerdonnaId"] = squad_scores["soccerdonnaId"].astype("string")
+    squad_scores["dflId"] = squad_scores["dflId"].astype("string")
 
     # return data
     return squad_scores

@@ -1,3 +1,8 @@
+# impectPy 2.6.2
+
+## Minor Changes
+* Surface the new `DFL ID` mapping provider as a `dflId` column wherever external provider IDs are already exposed: `getMatches()` (match level plus `homeSquadDflId` / `awaySquadDflId`), `getIterations()`, `getPlayerIterationScores()`, `getPlayerProfileScores()`, `getPlayerMatchScores()`, `getPlayerMatchsums()`, `getPlayerIterationAverages()`, `getSquadRatings()`, `getSquadCoefficients()`, `getSquadMatchScores()`, `getSquadIterationScores()`, `getSquadIterationAverages()` and `getSquadMatchsums()`
+
 # impectPy 2.6.1
 
 ## Minor Changes

@@ -76,6 +76,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "statsPerformId_home": "homeSquadStatsPerformId",
         "transfermarktId_home": "homeSquadTransfermarktId",
         "soccerdonnaId_home": "homeSquadSoccerdonnaId",
+        "dflId_home": "homeSquadDflId",
         "countryId": "homeSquadCountryId"
     })
     matches = matches.merge(squads,
@@ -93,6 +94,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "statsPerformId_away": "awaySquadStatsPerformId",
         "transfermarktId_away": "awaySquadTransfermarktId",
         "soccerdonnaId_away": "awaySquadSoccerdonnaId",
+        "dflId_away": "awaySquadDflId",
         "countryId": "awaySquadCountryId"
     })
 
@@ -138,6 +140,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "statsPerformId",
         "transfermarktId",
         "soccerdonnaId",
+        "dflId",
         "iterationId",
         "matchDayIndex",
         "matchDayName",
@@ -155,6 +158,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "homeSquadStatsPerformId",
         "homeSquadTransfermarktId",
         "homeSquadSoccerdonnaId",
+        "homeSquadDflId",
         "awaySquadId",
         "awaySquadName",
         "awaySquadType",
@@ -168,6 +172,7 @@ def getMatchesFromHost(iteration: int, connection: RateLimitedAPI, host: str) ->
         "awaySquadStatsPerformId",
         "awaySquadTransfermarktId",
         "awaySquadSoccerdonnaId",
+        "awaySquadDflId",
         "scheduledDate",
         "lastCalculationDate",
         "available",
@@ -207,5 +212,6 @@ def clean_df(data: dict) -> pd.DataFrame:
     df["statsPerformId"] = df["statsPerformId"].apply(lambda x: x[0] if x else None)
     df["transfermarktId"] = df["transfermarktId"].apply(lambda x: x[0] if x else None)
     df["soccerdonnaId"] = df["soccerdonnaId"].apply(lambda x: x[0] if x else None)
+    df["dflId"] = df["dflId"].apply(lambda x: x[0] if x else None)
 
     return df
