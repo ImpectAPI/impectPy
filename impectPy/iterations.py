@@ -55,6 +55,7 @@ def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame
     df["statsPerformId"] = df["statsPerformId"].apply(lambda x: x[0] if x else None)
     df["transfermarktId"] = df["transfermarktId"].apply(lambda x: x[0] if x else None)
     df["soccerdonnaId"] = df["soccerdonnaId"].apply(lambda x: x[0] if x else None)
+    df["dflId"] = df["dflId"].apply(lambda x: x[0] if x else None)
 
     # get country data
     countries = connection.make_api_request_limited(
@@ -95,6 +96,7 @@ def getIterationsFromHost(connection: RateLimitedAPI, host: str) -> pd.DataFrame
         "statsPerformId",
         "transfermarktId",
         "soccerdonnaId",
+        "dflId",
     ]
 
     # select columns

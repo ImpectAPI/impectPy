@@ -215,7 +215,7 @@ def getPlayerProfileScoresFromHost(
         suffixes=("", "_squads")
     ).merge(
         players[[
-            "id", "wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "commonname",
+            "id", "wyscoutId", "heimSpielId", "skillCornerId", "optaId", "statsPerformId", "transfermarktId", "soccerdonnaId", "dflId", "commonname",
             "firstname", "lastname", "birthdate", "birthplace", "countryId", "leg"
         ]].rename(
             columns={"commonname": "playerName"}
@@ -241,6 +241,7 @@ def getPlayerProfileScoresFromHost(
     profile_scores["statsPerformId"] = profile_scores["statsPerformId"].astype("string")
     profile_scores["transfermarktId"] = profile_scores["transfermarktId"].astype("string")
     profile_scores["soccerdonnaId"] = profile_scores["soccerdonnaId"].astype("string")
+    profile_scores["dflId"] = profile_scores["dflId"].astype("string")
 
     # define column order
     order = [
@@ -257,6 +258,7 @@ def getPlayerProfileScoresFromHost(
         "statsPerformId",
         "transfermarktId",
         "soccerdonnaId",
+        "dflId",
         "playerName",
         "firstname",
         "lastname",
