@@ -1,3 +1,8 @@
+# impectPy 2.6.3
+
+## Minor Changes
+* Fix crash in `getSubstitutions()` when a match had no substitutions (e.g. match `245326`); the function now returns an empty DataFrame with the expected columns instead of raising
+
 # impectPy 2.6.2
 
 ## Minor Changes

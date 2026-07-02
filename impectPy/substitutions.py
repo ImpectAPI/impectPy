@@ -116,6 +116,38 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     # drop emtpy row that occurs if one team did not substitute
     substitutions = substitutions[substitutions.squadSubstitutions.notnull()].reset_index(drop=True)
 
+    # define desired column order
+    cols = [
+        "matchId",
+        "dateTime",
+        "competitionId",
+        "competitionName",
+        "competitionType",
+        "iterationId",
+        "season",
+        "matchDayIndex",
+        "matchDayName",
+        "squadId",
+        "squadName",
+        "gameTime",
+        "gameTimeInSec",
+        "substitutionType",
+        "playerId",
+        "playerName",
+        "shirtNumber",
+        "fromPosition",
+        "fromPositionSide",
+        "toPosition",
+        "toPositionSide",
+        "exchangedPlayerId",
+        "exchangedPlayerName",
+        "exchangedShirtNumber",
+    ]
+
+    # handle matches without any substitutions: return empty df with the expected schema
+    if len(substitutions) == 0:
+        return pd.DataFrame(columns=cols)
+
     # normalize the JSON structure into separate columns
     substitutions = substitutions.join(pd.json_normalize(substitutions["squadSubstitutions"]))
 
@@ -182,34 +214,6 @@ def getSubstitutionsFromHost(matches: list, connection: RateLimitedAPI, host: st
     # fix column types
     substitutions["shirtNumber"] = substitutions["shirtNumber"].astype("Int64")
     substitutions["exchangedShirtNumber"] = substitutions["exchangedShirtNumber"].astype("Int64")
-
-    # define desired column order
-    cols = [
-        "matchId",
-        "dateTime",
-        "competitionId",
-        "competitionName",
-        "competitionType",
-        "iterationId",
-        "season",
-        "matchDayIndex",
-        "matchDayName",
-        "squadId",
-        "squadName",
-        "gameTime",
-        "gameTimeInSec",
-        "substitutionType",
-        "playerId",
-        "playerName",
-        "shirtNumber",
-        "fromPosition",
-        "fromPositionSide",
-        "toPosition",
-        "toPositionSide",
-        "exchangedPlayerId",
-        "exchangedPlayerName",
-        "exchangedShirtNumber",
-    ]
 
     # reorder data
     substitutions = substitutions[cols]
