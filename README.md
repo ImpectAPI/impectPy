@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.6.3
+Version: v2.7.0
 
-**Updated: July 2nd 2026**
+**Updated: July 7th 2026**
 
 ---
 
@@ -35,7 +35,7 @@ pip install impectPy
 You can also install it from [GitHub](https://github.com/) with:
 
 ```cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.6.3
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.7.0
 ```
 
 ## Usage
@@ -359,6 +359,46 @@ with open(f"match{matches[0]}_"
                    encoding='utf-8',
                    method="xml")
 ```
+
+### Video Clips
+
+You can also cut a short video clip around each event of an event dataframe and merge them
+into a single video file. This is useful to quickly assemble a highlight reel, e.g. all
+dribbles of a given player across several matches.
+
+> **Note:** This is an interim solution. The video API currently serves full match clips
+> that are cut client-side, which requires [`ffmpeg`](https://ffmpeg.org/download.html) to be
+> installed and available on your `PATH`. This will most likely be replaced by an API endpoint
+> that returns already-cut clips.
+
+Simply pass a (filtered) event dataframe and an output path. The clip order follows the row
+order of the dataframe, so sort or filter it beforehand as needed:
+
+```python
+# get event data for one or more matches
+events = ip.getEvents(matches=[202766, 202764], token=token)
+
+# filter for the events you want to include (e.g. long dribbles of a single player)
+player_sample = events[
+    (events.playerName == "Said El Mala") &
+    (events.actionType == "DRIBBLE") &
+    (events.duration >= 5)
+]
+
+# cut and merge the clips into a single video file
+ip.getVideoClips(
+    events=player_sample,
+    output_path="el_mala_dribbles.mp4",
+    token=token,
+    lead=3,  # seconds of footage to include before each event (default: 3)
+    lag=3,   # seconds of footage to include after each event (default: 3)
+)
+```
+
+The following optional parameters let you customize the output:
+* `lead` / `lag`: Seconds of footage to include before/after each event (both default to `3`)
+* `target_width` / `target_height` / `target_fps`: Output resolution and frame rate (default `1920`x`1080` at `25` fps)
+* `warn_above_seconds`: Emit a warning (without blocking) when the expected total video length exceeds this many seconds (default `600`)
 
 ## Object-Oriented Package Version
 

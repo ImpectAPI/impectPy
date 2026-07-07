@@ -1,5 +1,5 @@
 # define version attribute
-__version__ = "2.6.3"
+__version__ = "2.7.0"
 
 # import modules
 from .access_token import getAccessToken
@@ -16,6 +16,7 @@ from .squad_match_scores import getSquadMatchScores
 from .squad_iteration_scores import getSquadIterationScores
 from .player_profile_scores import getPlayerProfileScores
 from .generate_xml import generateXML
+from .video_clips import getVideoClips
 from .set_pieces import getSetPieces
 from .squad_ratings import getSquadRatings
 from .squad_coefficients import getSquadCoefficients
