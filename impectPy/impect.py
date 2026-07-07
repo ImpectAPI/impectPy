@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Optional, Dict, Any
 from xml.etree import ElementTree as ET
 
@@ -20,6 +21,7 @@ from .squad_match_scores import getSquadMatchScoresFromHost
 from .squad_iteration_scores import getSquadIterationScoresFromHost
 from .player_profile_scores import getPlayerProfileScoresFromHost
 from .generate_xml import generateXML
+from .video_clips import getVideoClipsFromHost
 from .set_pieces import getSetPiecesFromHost
 from .squad_ratings import getSquadRatingsFromHost
 from .squad_coefficients import getSquadCoefficientsFromHost
@@ -197,4 +199,24 @@ class Impect:
         return generateXML(
             events, lead, lag, p1Start, p2Start, p3Start, p4Start, p5Start, codeTag, squad,
             perspective, labels, kpis, labelSorting, sequencing, buckets
+        )
+
+    def getVideoClips(
+            self,
+            events: pd.DataFrame,
+            output_path: str,
+            lead: int = 3,
+            lag: int = 3,
+            target_width: int = 1920,
+            target_height: int = 1080,
+            target_fps: int = 25,
+            warn_above_seconds: float = 600
+    ) -> Path:
+        """Cut a video clip for each row of an events DataFrame and merge them into one file.
+
+        Interim, client-side solution: requires the ``ffmpeg`` binary on ``PATH``.
+        """
+        return getVideoClipsFromHost(
+            events, output_path, lead, lag, target_width, target_height, target_fps,
+            warn_above_seconds, self.connection, self.__config.HOST
         )
