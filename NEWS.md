@@ -1,3 +1,8 @@
+# impectPy 2.7.0
+
+## Major Changes
+* Add `getVideoClips()` (also available as a method on the `Impect` class): cuts a short video clip around each event of an event dataframe and merges them into a single video file. This is an interim solution that cuts full match clips client-side and therefore requires `ffmpeg` to be installed and available on `PATH`; it will most likely be replaced by an API endpoint that returns already-cut clips.
+
 # impectPy 2.6.3
 
 ## Minor Changes
