@@ -400,6 +400,10 @@ The following optional parameters let you customize the output:
 * `target_width` / `target_height` / `target_fps`: Output resolution and frame rate (default `1920`x`1080` at `25` fps)
 * `warn_above_seconds`: Emit a warning (without blocking) when the expected total video length exceeds this many seconds (default `600`)
 
+Events whose match video is not available to your user (HTTP 403) are skipped with a warning
+and the remaining clips are still merged; an exception is only raised if none of the requested
+videos are available.
+
 ## Object-Oriented Package Version
 
 Since version 2.4.0, there is another way to call the familiar functions in a more object-oriented way. 
