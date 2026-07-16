@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from impectPy.helpers import RateLimitedAPI, ImpectSession
+from impectPy.helpers import RateLimitedAPI, ImpectSession, ForbiddenError
 from .data import getDataFromHost
 
 ######
@@ -68,6 +68,9 @@ def getVideoClips(
     video is fetched from the Impect API and cut with ffmpeg, and all clips are merged
     into a single file at ``output_path``. Input row order is preserved.
 
+    Events whose match video is not available to the user (HTTP 403) are skipped with a
+    warning; an exception is only raised if none of the requested clips are available.
+
     Requires the ``ffmpeg`` binary to be installed and available on ``PATH``.
     """
     # create an instance of RateLimitedAPI
@@ -94,7 +97,11 @@ def getVideoClipsFromHost(
         connection: RateLimitedAPI,
         host: str
 ) -> Path:
-    """Cut a clip per event from the given host's match videos and merge them into one file."""
+    """Cut a clip per event from the given host's match videos and merge them into one file.
+
+    Clips whose video is forbidden to the user (HTTP 403) are skipped with a warning; an
+    exception is raised only if no clips could be created at all.
+    """
     # warn that this is an interim, client-side solution
     warnings.warn(
         "getVideoClips() cuts full match clips client-side using ffmpeg. This is an "
@@ -151,18 +158,41 @@ def getVideoClipsFromHost(
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
         clip_files = []
+        skipped = []
+        forbidden_matches = set()
 
         try:
             for i, clip in enumerate(clips.to_dict("records")):
+                match_id = clip["matchId"]
+
+                # once a match is known to be forbidden, skip its remaining clips without
+                # re-requesting or warning again
+                if match_id in forbidden_matches:
+                    skipped.append(match_id)
+                    continue
+
                 # get the video url and the actual video timestamps for this clip's match
-                video = getDataFromHost(
-                    url=(
-                        f"{host}/v5/customerapi/matches/{clip['matchId']}/videos"
-                        f"?start={clip['startTime']}&end={clip['endTime']}"
-                    ),
-                    method="GET",
-                    connection=connection,
-                )
+                try:
+                    video = getDataFromHost(
+                        url=(
+                            f"{host}/v5/customerapi/matches/{match_id}/videos"
+                            f"?start={clip['startTime']}&end={clip['endTime']}"
+                        ),
+                        method="GET",
+                        connection=connection,
+                    )
+                except ForbiddenError:
+                    # the user has no access to this match's video -> warn once and skip all
+                    # of its clips instead of aborting the whole reel
+                    warnings.warn(
+                        f"The video for match {match_id} is not available to this user "
+                        f"(HTTP 403); skipping all clips from this match.",
+                        UserWarning,
+                        stacklevel=2
+                    )
+                    forbidden_matches.add(match_id)
+                    skipped.append(match_id)
+                    continue
 
                 if video is None or len(video) == 0:
                     raise RuntimeError(
@@ -193,6 +223,13 @@ def getVideoClipsFromHost(
 
                 clip_files.append(clip_file)
 
+            # raise if no clip could be created because every video was unavailable
+            if not clip_files:
+                raise Exception(
+                    f"No video clips could be created: all {len(clips)} requested "
+                    f"clip(s) were unavailable to this user."
+                )
+
             # merge the clips into the final output file
             final_file.unlink(missing_ok=True)
 
@@ -212,7 +249,13 @@ def getVideoClipsFromHost(
                     ]
                 )
 
-            print(f"Created {final_file} from {len(clips)} clip(s)")
+            if skipped:
+                print(
+                    f"Created {final_file} from {len(clip_files)} clip(s); "
+                    f"skipped {len(skipped)} unavailable clip(s)"
+                )
+            else:
+                print(f"Created {final_file} from {len(clip_files)} clip(s)")
 
         except subprocess.CalledProcessError as e:
             # surface ffmpeg's own error output to help debugging

@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.7.0
+Version: v2.7.1
 
-**Updated: July 7th 2026**
+**Updated: July 16th 2026**
 
 ---
 
@@ -35,7 +35,7 @@ pip install impectPy
 You can also install it from [GitHub](https://github.com/) with:
 
 ```cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.7.0
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.7.1
 ```
 
 ## Usage
@@ -399,6 +399,10 @@ The following optional parameters let you customize the output:
 * `lead` / `lag`: Seconds of footage to include before/after each event (both default to `3`)
 * `target_width` / `target_height` / `target_fps`: Output resolution and frame rate (default `1920`x`1080` at `25` fps)
 * `warn_above_seconds`: Emit a warning (without blocking) when the expected total video length exceeds this many seconds (default `600`)
+
+Events whose match video is not available to your user (HTTP 403) are skipped with a warning
+and the remaining clips are still merged; an exception is only raised if none of the requested
+videos are available.
 
 ## Object-Oriented Package Version
 

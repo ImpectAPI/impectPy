@@ -1,3 +1,8 @@
+# impectPy 2.7.1
+
+## Minor Changes
+* `getVideoClips()` now skips events whose match video is not available to the user (HTTP 403), warning once per match and continuing with the remaining clips, instead of aborting the whole run; an exception is raised only if none of the requested clips are available.
+
 # impectPy 2.7.0
 
 ## Major Changes
