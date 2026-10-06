@@ -1,3 +1,11 @@
+# impectPy 2.8.0
+
+## Major Changes
+* Breaking: in the standalone `getStartingPositions()`, `include_bench` is now the second parameter and `token` / `session` are keyword-only. Calls that pass `token` positionally (e.g. `getStartingPositions(matches, token)`) must be changed to `getStartingPositions(matches, token=token)`. The `Impect.getStartingPositions()` method is not affected.
+
+## Minor Changes
+* Add `include_bench` parameter to `getStartingPositions()` (default `False`). When `True`, squad members who did not start are appended after the starters of their squad with `position = "BENCH"` and `positionSide = None`. The default output is unchanged.
+
 # impectPy 2.7.1
 
 ## Minor Changes

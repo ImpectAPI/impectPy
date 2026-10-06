@@ -13,7 +13,7 @@ setup(
     name="impectPy",
     url="https://github.com/ImpectAPI/impectPy",
     author="Impect",
-    author_email="info@impect.com",
+    author_email="florian.schmitt@catapultsports.com",
     # Needed to actually package something
     packages=["impectPy"],
     # Needed for dependencies

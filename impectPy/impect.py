@@ -152,10 +152,14 @@ class Impect:
             matches, self.connection, self.__config.HOST
         )
 
-    def getStartingPositions(self, matches: list) -> pd.DataFrame:
-        """Return a DataFrame of starting positions for all players in the given list of match IDs."""
+    def getStartingPositions(self, matches: list, include_bench: bool = False) -> pd.DataFrame:
+        """Return a DataFrame of starting positions for all players in the given list of match IDs.
+
+        If ``include_bench`` is True, squad members who did not start are appended with
+        ``position = "BENCH"`` and ``positionSide = None``.
+        """
         return getStartingPositionsFromHost(
-            matches, self.connection, self.__config.HOST
+            matches, include_bench, self.connection, self.__config.HOST
         )
 
     def getMatchPredictions(self, iteration: int) -> pd.DataFrame:
