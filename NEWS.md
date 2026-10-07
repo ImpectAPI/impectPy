@@ -6,6 +6,11 @@
 ## Minor Changes
 * Add `include_bench` parameter to `getStartingPositions()` (default `False`). When `True`, squad members who did not start are appended after the starters of their squad with `position = "BENCH"` and `positionSide = None`. The default output is unchanged.
 
+# impectPy 2.8.0
+
+## Major Changes
+* Add `getSquadIterationStyleOfPlay()` and `getSquadMatchStyleOfPlay()` (also available as methods on the `Impect` class) to retrieve squad style of play values on iteration and match level. Both return the same metadata and provider ID columns as `getSquadIterationScores()` / `getSquadMatchScores()`, plus one column per style of play (e.g. `POSSESSION_AND_CONTROL`, `COUNTER_ATTACKING`).
+
 # impectPy 2.7.1
 
 ## Minor Changes

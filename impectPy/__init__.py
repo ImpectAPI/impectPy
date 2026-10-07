@@ -14,6 +14,8 @@ from .player_match_scores import getPlayerMatchScores
 from .player_iteration_scores import getPlayerIterationScores
 from .squad_match_scores import getSquadMatchScores
 from .squad_iteration_scores import getSquadIterationScores
+from .squad_match_style_of_play import getSquadMatchStyleOfPlay
+from .squad_iteration_style_of_play import getSquadIterationStyleOfPlay
 from .player_profile_scores import getPlayerProfileScores
 from .generate_xml import generateXML
 from .video_clips import getVideoClips

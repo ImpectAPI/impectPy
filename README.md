@@ -239,6 +239,24 @@ squadIterationScores = ip.getSquadIterationScores(
 )
 ```
 
+You can also retrieve the squad style of play values (e.g. `POSSESSION_AND_CONTROL`,
+`COUNTER_ATTACKING`) on iteration as well as on match level. Each style is a value
+between 0 and 1, where higher values indicate a more pronounced style.
+
+```python
+# get squad style of play for iteration
+squadIterationStyleOfPlay = ip.getSquadIterationStyleOfPlay(
+    iteration=iteration,
+    token=token
+)
+
+# get squad style of play for matches
+squadMatchStyleOfPlay = ip.getSquadMatchStyleOfPlay(
+    matches=matches,
+    token=token
+)
+```
+
 The squad rating values that you can find on the league ranking in the Scouting portal can 
 also be retrieved from the API. In addition, we also provide you with the more detailed squad 
 coefficients that can be used to make match predictions. See [this example script](https://github.com/ImpectAPI/impectPy/blob/release/examples/predict_matches.ipynb) 
@@ -482,6 +500,12 @@ playerIterationScoresAll = api.getPlayerIterationScores(iteration=iteration)  # 
 
 # get squad iteration scores
 squadIterationScores = api.getSquadIterationScores(iteration=iteration)
+
+# get squad match style of play
+squadMatchStyleOfPlay = api.getSquadMatchStyleOfPlay(matches=matches)
+
+# get squad iteration style of play
+squadIterationStyleOfPlay = api.getSquadIterationStyleOfPlay(iteration=iteration)
 
 # get player profile scores
 playerProfileScores = api.getPlayerProfileScores(iteration=iteration, positions=positions)
