@@ -19,6 +19,8 @@ from .player_match_scores import getPlayerMatchScoresFromHost
 from .player_iteration_scores import getPlayerIterationScoresFromHost
 from .squad_match_scores import getSquadMatchScoresFromHost
 from .squad_iteration_scores import getSquadIterationScoresFromHost
+from .squad_match_style_of_play import getSquadMatchStyleOfPlayFromHost
+from .squad_iteration_style_of_play import getSquadIterationStyleOfPlayFromHost
 from .player_profile_scores import getPlayerProfileScoresFromHost
 from .generate_xml import generateXML
 from .video_clips import getVideoClipsFromHost
@@ -116,6 +118,18 @@ class Impect:
             iteration, self.connection, self.__config.HOST
         )
 
+    def getSquadMatchStyleOfPlay(self, matches: list) -> pd.DataFrame:
+        """Return a DataFrame of per-squad style of play values for the given list of match IDs."""
+        return getSquadMatchStyleOfPlayFromHost(
+            matches, self.connection, self.__config.HOST
+        )
+
+    def getSquadIterationStyleOfPlay(self, iteration: int) -> pd.DataFrame:
+        """Return a DataFrame of per-squad iteration-level style of play values for the given iteration."""
+        return getSquadIterationStyleOfPlayFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
+
     def getPlayerProfileScores(self, iteration: int, positions: list) -> pd.DataFrame:
         """Return a DataFrame of per-player profile scores for the given iteration and positions."""
         return getPlayerProfileScoresFromHost(
@@ -152,10 +166,14 @@ class Impect:
             matches, self.connection, self.__config.HOST
         )
 
-    def getStartingPositions(self, matches: list) -> pd.DataFrame:
-        """Return a DataFrame of starting positions for all players in the given list of match IDs."""
+    def getStartingPositions(self, matches: list, include_bench: bool = False) -> pd.DataFrame:
+        """Return a DataFrame of starting positions for all players in the given list of match IDs.
+
+        If ``include_bench`` is True, squad members who did not start are appended with
+        ``position = "BENCH"`` and ``positionSide = None``.
+        """
         return getStartingPositionsFromHost(
-            matches, self.connection, self.__config.HOST
+            matches, include_bench, self.connection, self.__config.HOST
         )
 
     def getMatchPredictions(self, iteration: int) -> pd.DataFrame:

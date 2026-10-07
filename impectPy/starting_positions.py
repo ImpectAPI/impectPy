@@ -12,23 +12,33 @@ from .iterations import getIterationsFromHost
 ######
 
 
-def getStartingPositions(matches: list, token: str, session: ImpectSession = ImpectSession()) -> pd.DataFrame:
-    """Return a DataFrame of starting positions for all players in the given list of match IDs."""
+def getStartingPositions(
+        matches: list, include_bench: bool = False, *, token: str, session: ImpectSession = ImpectSession()
+) -> pd.DataFrame:
+    """Return a DataFrame of starting positions for all players in the given list of match IDs.
+
+    If ``include_bench`` is True, squad members who did not start are appended with
+    ``position = "BENCH"`` and ``positionSide = None``.
+    """
     # create an instance of RateLimitedAPI
     connection = RateLimitedAPI(session)
 
     # construct header with access token
     connection.session.headers.update({"Authorization": f"Bearer {token}"})
 
-    return getStartingPositionsFromHost(matches, connection, "https://api.impect.com")
+    return getStartingPositionsFromHost(matches, include_bench, connection, "https://api.impect.com")
 
 
 # define function
-def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host: str) -> pd.DataFrame:
+def getStartingPositionsFromHost(
+        matches: list, include_bench: bool, connection: RateLimitedAPI, host: str
+) -> pd.DataFrame:
     """Fetch starting positions for the given matches from the given host and return them as a DataFrame.
 
     Extracts home and away starting lineup records from match data, enriches them with player
     names, shirt numbers, and competition metadata, and sorts by match, squad, and player ID.
+    If ``include_bench`` is True, squad members who did not start are appended after the
+    starters of their squad with ``position = "BENCH"`` and ``positionSide = None``.
     """
     resolved = resolve_matches(matches, connection, host)
     match_data = resolved.match_data
@@ -129,6 +139,19 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
         suffixes=("", "_x")
     )
 
+    # append squad members that did not start as bench players
+    if include_bench:
+        bench = shirt_numbers[shirt_numbers["playerId"].notnull()].merge(
+            starting_positions[["id", "squadId", "playerId"]],
+            on=["id", "squadId", "playerId"],
+            how="left",
+            indicator=True
+        )
+        bench = bench[bench["_merge"] == "left_only"].drop(columns=["_merge"])
+        bench["position"] = "BENCH"
+        bench["positionSide"] = pd.Series(None, index=bench.index, dtype=starting_positions["positionSide"].dtype)
+        starting_positions = pd.concat([starting_positions, bench], axis=0, ignore_index=True)
+
     # merge substitutions with squads
     starting_positions["squadName"] = starting_positions.squadId.map(squad_map)
     starting_positions["playerName"] = starting_positions.playerId.map(player_map)
@@ -190,8 +213,11 @@ def getStartingPositionsFromHost(matches: list, connection: RateLimitedAPI, host
     # reorder data
     starting_positions = starting_positions[cols]
 
-    # reorder rows
-    starting_positions = starting_positions.sort_values(["matchId", "squadId", "playerId"])
+    # reorder rows (bench players after starters of their squad)
+    starting_positions = starting_positions.sort_values(
+        ["matchId", "squadId", "position", "playerId"],
+        key=lambda col: col.eq("BENCH") if col.name == "position" else col
+    )
 
     # return events
     return starting_positions

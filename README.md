@@ -2,9 +2,9 @@
 
 A package provided by: Impect GmbH
 
-Version: v2.7.1
+Version: v2.8.0
 
-**Updated: July 16th 2026**
+**Updated: October 7th 2026**
 
 ---
 
@@ -35,7 +35,7 @@ pip install impectPy
 You can also install it from [GitHub](https://github.com/) with:
 
 ```cmd
-pip install git+https://github.com/ImpectAPI/impectPy.git@v2.7.1
+pip install git+https://github.com/ImpectAPI/impectPy.git@v2.8.0
 ```
 
 ## Usage
@@ -235,6 +235,24 @@ playerIterationScores = ip.getPlayerIterationScores(
 # get squad scores and ratios for iteration
 squadIterationScores = ip.getSquadIterationScores(
     iteration=iteration,
+    token=token
+)
+```
+
+You can also retrieve the squad style of play values (e.g. `POSSESSION_AND_CONTROL`,
+`COUNTER_ATTACKING`) on iteration as well as on match level. Each style is a value
+between 0 and 1, where higher values indicate a more pronounced style.
+
+```python
+# get squad style of play for iteration
+squadIterationStyleOfPlay = ip.getSquadIterationStyleOfPlay(
+    iteration=iteration,
+    token=token
+)
+
+# get squad style of play for matches
+squadMatchStyleOfPlay = ip.getSquadMatchStyleOfPlay(
+    matches=matches,
     token=token
 )
 ```
@@ -482,6 +500,12 @@ playerIterationScoresAll = api.getPlayerIterationScores(iteration=iteration)  # 
 
 # get squad iteration scores
 squadIterationScores = api.getSquadIterationScores(iteration=iteration)
+
+# get squad match style of play
+squadMatchStyleOfPlay = api.getSquadMatchStyleOfPlay(matches=matches)
+
+# get squad iteration style of play
+squadIterationStyleOfPlay = api.getSquadIterationStyleOfPlay(iteration=iteration)
 
 # get player profile scores
 playerProfileScores = api.getPlayerProfileScores(iteration=iteration, positions=positions)
