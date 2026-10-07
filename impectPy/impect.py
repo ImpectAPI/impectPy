@@ -19,6 +19,8 @@ from .player_match_scores import getPlayerMatchScoresFromHost
 from .player_iteration_scores import getPlayerIterationScoresFromHost
 from .squad_match_scores import getSquadMatchScoresFromHost
 from .squad_iteration_scores import getSquadIterationScoresFromHost
+from .squad_match_style_of_play import getSquadMatchStyleOfPlayFromHost
+from .squad_iteration_style_of_play import getSquadIterationStyleOfPlayFromHost
 from .player_profile_scores import getPlayerProfileScoresFromHost
 from .generate_xml import generateXML
 from .video_clips import getVideoClipsFromHost
@@ -113,6 +115,18 @@ class Impect:
     def getSquadIterationScores(self, iteration: int) -> pd.DataFrame:
         """Return a DataFrame of per-squad iteration-level scores for the given iteration."""
         return getSquadIterationScoresFromHost(
+            iteration, self.connection, self.__config.HOST
+        )
+
+    def getSquadMatchStyleOfPlay(self, matches: list) -> pd.DataFrame:
+        """Return a DataFrame of per-squad style of play values for the given list of match IDs."""
+        return getSquadMatchStyleOfPlayFromHost(
+            matches, self.connection, self.__config.HOST
+        )
+
+    def getSquadIterationStyleOfPlay(self, iteration: int) -> pd.DataFrame:
+        """Return a DataFrame of per-squad iteration-level style of play values for the given iteration."""
+        return getSquadIterationStyleOfPlayFromHost(
             iteration, self.connection, self.__config.HOST
         )
 
