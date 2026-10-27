@@ -1,3 +1,8 @@
+# impectPy 2.9.0
+
+## Major Changes
+* Add `getSeasonSimulations()` (also available as a method on the `Impect` class) to retrieve season simulations for an iteration. Returns one row per simulation date and squad with the actual table, the projected final points and goals and one `rankNProbability` column per finishing position, plus the same metadata and provider ID columns as `getSquadCoefficients()`. `stageName` and `groupName` identify stages and parallel tables (null for a plain league). The optional `date` argument (`YYYY-MM-DD`) returns only the latest simulation on or before that date.
+
 # impectPy 2.8.0
 
 ## Major Changes

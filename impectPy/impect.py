@@ -31,6 +31,7 @@ from .formations import getFormationsFromHost
 from .substitutions import getSubstitutionsFromHost
 from .starting_positions import getStartingPositionsFromHost
 from .match_predictions import getMatchPredictionsFromHost
+from .season_simulations import getSeasonSimulationsFromHost
 from .data import getDataFromHost
 
 
@@ -180,6 +181,15 @@ class Impect:
         """Return a DataFrame of match predictions for all matches in the given iteration."""
         return getMatchPredictionsFromHost(
             iteration, self.connection, self.__config.HOST
+        )
+
+    def getSeasonSimulations(self, iteration: int, date: Optional[str] = None) -> pd.DataFrame:
+        """Return a DataFrame of season simulations for all squads in the given iteration.
+
+        If ``date`` (YYYY-MM-DD) is given, only the latest simulation on or before that date is returned.
+        """
+        return getSeasonSimulationsFromHost(
+            iteration, date, self.connection, self.__config.HOST
         )
 
     def getData(
