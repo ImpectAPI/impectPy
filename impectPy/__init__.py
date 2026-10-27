@@ -26,6 +26,7 @@ from .formations import getFormations
 from .substitutions import getSubstitutions
 from .starting_positions import getStartingPositions
 from .match_predictions import getMatchPredictions
+from .season_simulations import getSeasonSimulations
 from .data import getData
 from .config import Config as Config
 from .impect import Impect as Impect
