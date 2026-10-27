@@ -273,6 +273,23 @@ squadCoefficients = ip.getSquadCoefficients(iteration=iteration, token=token)
 matchPredictions = ip.getMatchPredictions(iteration=iteration, token=token)
 ```
 
+You can also retrieve season simulations. For every simulation date, they contain the actual
+table, the expected final points and goals and the probability of every finishing position
+(`rank1Probability`, `rank2Probability`, ...) for each squad. The rest of the season is simulated
+20,000 times using match predictions based on the squad coefficients. For seasons with several
+stages (e.g. Apertura and Clausura) or parallel tables (e.g. groups or conferences), the
+`stageName` and `groupName` columns are populated and the rank probabilities refer to the
+squad's own group. Pass the optional `date` argument (`YYYY-MM-DD`) to only get the latest
+simulation on or before that date, e.g. today's date for the current simulation.
+
+```python
+# get all season simulations for iteration
+seasonSimulations = ip.getSeasonSimulations(iteration=iteration, token=token)
+
+# get latest season simulation on or before a given date
+seasonSimulations = ip.getSeasonSimulations(iteration=iteration, date="2026-10-21", token=token)
+```
+
 You can now also retrieve the positional profile scores for players via our API. This 
 includes profiles that you created through the scouting portal. The function requires a 
 positional input that determines which matchShares to consider when computing the scores. 
@@ -460,6 +477,9 @@ coefficients = api.getSquadCoefficients(iteration=iteration)
 
 # get match predictions
 matchPredictions = api.getMatchPredictions(iteration=iteration)
+
+# get season simulations
+seasonSimulations = api.getSeasonSimulations(iteration=iteration)
 
 # get matches
 matchplan = api.getMatches(iteration=iteration)
